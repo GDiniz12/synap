@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String      @id @default(uuid())
+  email       String      @unique
+  name        String?
+  password    String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspaces  Workspace[]
+}
+
+model Workspace {
+  id        String      @id @default(uuid())
+  nome      String
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pastas    Pasta[]
+  notas     Nota[]
+  decks     Deck[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Pasta {
+  id          String     @id @default(uuid())
+  nome        String
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Pasta?     @relation("NestedPastas", fields: [parentId], references: [id], onDelete: Cascade)
+  subpastas   Pasta[]    @relation("NestedPastas")
+  notas       Nota[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Nota {
+  id          String      @id @default(uuid())
+  titulo      String
+  conteudo    String?
+  tipo        String      @default("texto")
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pastaId     String?
+  pasta       Pasta?      @relation(fields: [pastaId], references: [id], onDelete: Cascade)
+  flashcards  Flashcard[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Deck {
+  id          String      @id @default(uuid())
+  nome        String
+  descricao   String?
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  flashcards  Flashcard[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Flashcard {
+  id             String    @id @default(uuid())
+  frente         String
+  verso          String
+  tipo           String    @default("card") // "card" | "nota"
+  deckId         String
+  deck           Deck      @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  notaId         String?
+  nota           Nota?     @relation(fields: [notaId], references: [id], onDelete: SetNull)
+  
+  // SM-2 Spaced Repetition Fields
+  reps           Int       @default(0)
+  interval       Int       @default(0) // Interval in days (0 for new)
+  easeFactor     Float     @default(2.5) // Standard starting ease factor
+  proximaRevisao DateTime  @default(now())
+  ultimaRevisao  DateTime?
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
