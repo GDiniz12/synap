@@ -1169,6 +1169,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 setIsGraphViewOpen(false);
               }}
               onClose={() => setIsGraphViewOpen(false)}
+              onUpdateWorkspace={(updated) => setWorkspace(updated)}
             />
           </div>
         ) : selectedNota?.tipo === 'desenho' ? (

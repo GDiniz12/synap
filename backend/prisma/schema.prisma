@@ -17,15 +17,16 @@ model User {
 }
 
 model Workspace {
-  id        String      @id @default(uuid())
-  nome      String
-  userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pastas    Pasta[]
-  notas     Nota[]
-  decks     Deck[]
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id          String      @id @default(uuid())
+  nome        String
+  graphConfig Json?
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pastas      Pasta[]
+  notas       Nota[]
+  decks       Deck[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Pasta {

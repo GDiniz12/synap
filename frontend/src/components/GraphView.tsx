@@ -2,6 +2,17 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import GraphDrawingPreview from './GraphDrawingPreview';
+import { api } from '@/lib/api';
+
+export type GroupRuleType = 'pasta' | 'tag' | 'titulo' | 'conteudo' | 'tipo';
+
+export interface GraphGroup {
+  id: string;
+  ruleType: GroupRuleType;
+  ruleValue: string;
+  color: string;
+  enabled: boolean;
+}
 
 export interface GraphNode {
   id: string;
@@ -38,9 +49,10 @@ interface GraphViewProps {
   notas: any[];
   onOpenNota: (nota: any) => void;
   onClose?: () => void;
+  onUpdateWorkspace?: (workspace: any) => void;
 }
 
-const FOLDER_COLORS = [
+export const FOLDER_PALETTE = [
   '#3b82f6', // blue
   '#10b981', // emerald
   '#f59e0b', // amber
@@ -52,14 +64,224 @@ const FOLDER_COLORS = [
   '#a855f7', // purple
 ];
 
+export const PRESET_GROUP_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#6366f1', // Indigo
+  '#8b5cf6', // Purple
+  '#ec4899', // Pink
+  '#14b8a6', // Teal
+  '#eab308', // Yellow
+  '#64748b', // Slate
+];
+
+export const NEUTRAL_FALLBACK_COLOR = '#525252';
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Evaluate whether a note matches an individual group rule
+export function matchNoteToGroup(nota: any, group: GraphGroup): boolean {
+  if (!group || !group.enabled || !nota) return false;
+  const val = (group.ruleValue || '').trim().toLowerCase();
+
+  switch (group.ruleType) {
+    case 'pasta': {
+      if (!val || val === 'root' || val === 'raiz') {
+        return !nota.pastaId && !nota.folderId;
+      }
+      return (
+        String(nota.pastaId || '').toLowerCase() === val ||
+        String(nota.folderId || '').toLowerCase() === val ||
+        (nota.folderName && String(nota.folderName).toLowerCase() === val)
+      );
+    }
+    case 'tag': {
+      if (!val) return false;
+      const cleanTag = val.replace(/^#/, '').trim().toLowerCase();
+      if (!cleanTag) return false;
+
+      const title = (nota.titulo || nota.title || '').toLowerCase();
+      const content = (nota.conteudo || nota.previewText || '').replace(/<[^>]*>/g, ' ').toLowerCase();
+
+      const tagRegex = new RegExp(`(^|[^a-zA-Z0-9_])#${escapeRegex(cleanTag)}([^a-zA-Z0-9_]|$)`, 'i');
+      return (
+        tagRegex.test(title) ||
+        tagRegex.test(content) ||
+        title.includes('#' + cleanTag) ||
+        content.includes('#' + cleanTag) ||
+        title.includes(cleanTag) ||
+        content.includes(cleanTag)
+      );
+    }
+    case 'titulo': {
+      if (!val) return false;
+      const title = (nota.titulo || nota.title || '').toLowerCase();
+      return title.includes(val);
+    }
+    case 'conteudo': {
+      if (!val) return false;
+      const content = (nota.conteudo || nota.previewText || '').replace(/<[^>]*>/g, ' ').toLowerCase();
+      return content.includes(val);
+    }
+    case 'tipo': {
+      const typeVal = val || 'texto';
+      return (nota.tipo || 'texto').toLowerCase() === typeVal.toLowerCase();
+    }
+    default:
+      return false;
+  }
+}
+
+// Resolve note color based on active groups or default folder colors
+export function resolveNodeColor(
+  nota: any,
+  groups: GraphGroup[],
+  folderColorMap: Record<string, string>
+): string {
+  if (!nota) return NEUTRAL_FALLBACK_COLOR;
+  const activeGroups = groups.filter((g) => g.enabled);
+
+  if (activeGroups.length > 0) {
+    for (const group of activeGroups) {
+      if (matchNoteToGroup(nota, group)) {
+        return group.color;
+      }
+    }
+    return NEUTRAL_FALLBACK_COLOR;
+  }
+
+  // If no groups exist or are enabled, fallback to the folder palette
+  const pastaId = nota.pastaId || nota.folderId;
+  if (pastaId && folderColorMap[pastaId]) {
+    return folderColorMap[pastaId];
+  }
+  return folderColorMap['root'] || '#737373';
+}
+
 export default function GraphView({
   workspace,
   pastas,
   notas,
   onOpenNota,
   onClose,
+  onUpdateWorkspace,
 }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Folder palette mapping
+  const folderColorMap = useMemo(() => {
+    const map: Record<string, string> = { root: '#737373' };
+    pastas.forEach((p, idx) => {
+      map[p.id] = FOLDER_PALETTE[idx % FOLDER_PALETTE.length];
+    });
+    return map;
+  }, [pastas]);
+
+  // Groups configuration state
+  const [groups, setGroups] = useState<GraphGroup[]>(() => {
+    if (workspace?.graphConfig?.groups && Array.isArray(workspace.graphConfig.groups)) {
+      return workspace.graphConfig.groups;
+    }
+    return [];
+  });
+
+  const [isGroupsOpen, setIsGroupsOpen] = useState(false);
+  const [activeColorPickerGroupId, setActiveColorPickerGroupId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep a ref to groups for real-time physics and canvas rendering
+  const groupsRef = useRef<GraphGroup[]>(groups);
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
+
+  // Sync groups when workspace prop changes externally
+  useEffect(() => {
+    if (workspace?.graphConfig?.groups && Array.isArray(workspace.graphConfig.groups)) {
+      setGroups(workspace.graphConfig.groups);
+    }
+  }, [workspace?.id]);
+
+  // Debounced save groups to backend
+  const persistGroups = (newGroups: GraphGroup[]) => {
+    setGroups(newGroups);
+    groupsRef.current = newGroups;
+    setSaveStatus('saving');
+
+    // Instantly update color on all loaded nodes
+    nodesRef.current.forEach((n) => {
+      n.color = resolveNodeColor(n.rawNota || n, newGroups, folderColorMap);
+    });
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await api(`/workspaces/${workspace.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            graphConfig: {
+              ...(workspace?.graphConfig || {}),
+              groups: newGroups,
+            },
+          }),
+        });
+        setSaveStatus('saved');
+        if (onUpdateWorkspace && res) {
+          onUpdateWorkspace(res);
+        }
+        setTimeout(() => setSaveStatus('idle'), 1500);
+      } catch (err) {
+        console.error('Failed to save graph groups to backend', err);
+        setSaveStatus('idle');
+      }
+    }, 500);
+  };
+
+  // Group actions
+  const handleAddGroup = () => {
+    const defaultColor = PRESET_GROUP_COLORS[groups.length % PRESET_GROUP_COLORS.length];
+    const defaultType: GroupRuleType = pastas.length > 0 ? 'pasta' : 'tag';
+    const defaultValue = defaultType === 'pasta' ? (pastas[0]?.id || 'root') : '';
+
+    const newGroup: GraphGroup = {
+      id: 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      ruleType: defaultType,
+      ruleValue: defaultValue,
+      color: defaultColor,
+      enabled: true,
+    };
+    persistGroups([...groups, newGroup]);
+  };
+
+  const handleUpdateGroup = (id: string, partial: Partial<GraphGroup>) => {
+    const updated = groups.map((g) => (g.id === id ? { ...g, ...partial } : g));
+    persistGroups(updated);
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    const updated = groups.filter((g) => g.id !== id);
+    persistGroups(updated);
+    if (activeColorPickerGroupId === id) setActiveColorPickerGroupId(null);
+  };
+
+  const handleMoveGroup = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= groups.length) return;
+    const reordered = [...groups];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(newIndex, 0, moved);
+    persistGroups(reordered);
+  };
 
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,15 +298,6 @@ export default function GraphView({
   const isPanningRef = useRef(false);
   const startPanRef = useRef({ x: 0, y: 0 });
   const draggedNodeRef = useRef<GraphNode | null>(null);
-
-  // Map folderId to a distinct palette color
-  const folderColorMap = useMemo(() => {
-    const map: Record<string, string> = { root: '#888888' };
-    pastas.forEach((p, idx) => {
-      map[p.id] = FOLDER_COLORS[idx % FOLDER_COLORS.length];
-    });
-    return map;
-  }, [pastas]);
 
   // Extract Links from HTML content of notes
   const links = useMemo<GraphLink[]>(() => {
@@ -135,11 +348,20 @@ export default function GraphView({
     return counts;
   }, [links]);
 
+  // Count matching notes for each group
+  const groupMatchCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    groups.forEach((g) => {
+      counts[g.id] = notas.filter((n) => matchNoteToGroup(n, g)).length;
+    });
+    return counts;
+  }, [groups, notas]);
+
   // Nodes reference maintained across animation loop
   const nodesRef = useRef<GraphNode[]>([]);
   const particlesRef = useRef<Particle[]>([]);
 
-  // Initialize nodes positions
+  // Initialize nodes positions and update colors
   useEffect(() => {
     const width = canvasRef.current?.width || 800;
     const height = canvasRef.current?.height || 600;
@@ -151,7 +373,7 @@ export default function GraphView({
       const connections = connectionCounts[nota.id] || 0;
       const folder = pastas.find((p) => p.id === nota.pastaId);
       const folderName = folder ? folder.nome : 'Raiz';
-      const color = folder ? (folderColorMap[folder.id] || '#888888') : '#888888';
+      const color = resolveNodeColor(nota, groups, folderColorMap);
 
       // Plain text preview
       let preview = '';
@@ -192,7 +414,7 @@ export default function GraphView({
       speed: 0.004 + Math.random() * 0.006,
       color: '#38bdf8',
     }));
-  }, [notas, connectionCounts, folderColorMap, links, pastas]);
+  }, [notas, connectionCounts, links, pastas, groups, folderColorMap]);
 
   // Center initial view
   useEffect(() => {
@@ -204,18 +426,20 @@ export default function GraphView({
     }
   }, []);
 
-  // Filtered nodes
+  // Filtered nodes directly derived from notas
   const filteredNodeIds = useMemo(() => {
     return new Set(
-      nodesRef.current
+      notas
         .filter((n) => {
-          const matchSearch = !searchTerm || n.title.toLowerCase().includes(searchTerm.toLowerCase());
-          const matchFolder = selectedFolderFilter === 'all' || (selectedFolderFilter === 'root' ? !n.folderId : n.folderId === selectedFolderFilter);
+          const matchSearch = !searchTerm || (n.titulo || '').toLowerCase().includes(searchTerm.toLowerCase());
+          const matchFolder =
+            selectedFolderFilter === 'all' ||
+            (selectedFolderFilter === 'root' ? !n.pastaId : n.pastaId === selectedFolderFilter);
           return matchSearch && matchFolder;
         })
         .map((n) => n.id)
     );
-  }, [searchTerm, selectedFolderFilter]);
+  }, [notas, searchTerm, selectedFolderFilter]);
 
   // Animation Loop (Force-Directed Physics + Particle Synapses)
   useEffect(() => {
@@ -298,8 +522,8 @@ export default function GraphView({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.scale(dpr, dpr);
 
-      // Background subtle grid
-      ctx.fillStyle = '#0d0d0d';
+      // Background subtle dark tone
+      ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(0, 0, width, height);
 
       // Apply pan & zoom transform
@@ -316,7 +540,7 @@ export default function GraphView({
         });
       }
 
-      // Draw Links (Synapse lines)
+      // Draw Links
       links.forEach((link) => {
         const s = nodeMap.get(link.source);
         const t = nodeMap.get(link.target);
@@ -330,16 +554,16 @@ export default function GraphView({
         ctx.lineTo(t.x, t.y);
 
         if (isHighlighted) {
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 2.2;
-          ctx.shadowColor = '#38bdf8';
-          ctx.shadowBlur = 8;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2.0;
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+          ctx.shadowBlur = 6;
         } else if (isDimmed) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
           ctx.lineWidth = 1;
           ctx.shadowBlur = 0;
         } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
           ctx.lineWidth = 1.2;
           ctx.shadowBlur = 0;
         }
@@ -347,7 +571,7 @@ export default function GraphView({
         ctx.shadowBlur = 0;
       });
 
-      // Draw Animated Synapse Light Particles
+      // Draw Synapse Particles
       if (synapseParticlesEnabled) {
         particlesRef.current.forEach((p) => {
           const s = nodeMap.get(p.sourceId);
@@ -361,14 +585,17 @@ export default function GraphView({
           const py = s.y + (t.y - s.y) * p.progress;
 
           ctx.beginPath();
-          ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
-          ctx.fillStyle = '#60a5fa';
-          ctx.shadowColor = '#60a5fa';
-          ctx.shadowBlur = 6;
+          ctx.arc(px, py, 2, 0, 2 * Math.PI);
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#ffffff';
+          ctx.shadowBlur = 4;
           ctx.fill();
           ctx.shadowBlur = 0;
         });
       }
+
+      // Current live groups reference
+      const currentGroups = groupsRef.current;
 
       // Draw Nodes
       nodes.forEach((node) => {
@@ -377,36 +604,44 @@ export default function GraphView({
         const isNeighbor = activeNeighborIds.has(node.id);
         const isDimmed = (hoveredNode && !isNeighbor) || !isFiltered;
 
+        // Resolve live node color dynamically
+        const nodeColor = resolveNodeColor(node.rawNota || node, currentGroups, folderColorMap);
+        node.color = nodeColor;
+
         // Glow ring for hovered node
         if (isHovered) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, node.radius + 6, 0, 2 * Math.PI);
-          ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+          ctx.arc(node.x, node.y, node.radius + 5, 0, 2 * Math.PI);
+          ctx.fillStyle = `${nodeColor}33`;
           ctx.fill();
         }
 
         // Main Node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isDimmed ? 'rgba(80, 80, 80, 0.3)' : node.color;
+        ctx.fillStyle = isDimmed ? 'rgba(50, 50, 50, 0.3)' : nodeColor;
         if (isHovered || isNeighbor) {
-          ctx.shadowColor = node.color;
+          ctx.shadowColor = nodeColor;
           ctx.shadowBlur = 12;
         }
         ctx.fill();
         ctx.shadowBlur = 0;
 
         // Node border
-        ctx.lineWidth = isHovered ? 2.5 : 1.5;
-        ctx.strokeStyle = isHovered ? '#ffffff' : (isDimmed ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)');
+        ctx.lineWidth = isHovered ? 2 : 1;
+        ctx.strokeStyle = isHovered
+          ? '#ffffff'
+          : isDimmed
+          ? 'rgba(255,255,255,0.06)'
+          : 'rgba(255,255,255,0.5)';
         ctx.stroke();
 
         // Node Label
         if (transform.k > 0.65 || isHovered || isNeighbor) {
-          ctx.font = `${isHovered ? 'bold ' : ''}11px var(--font-sans, system-ui, sans-serif)`;
+          ctx.font = `${isHovered ? '600 ' : '400 '}11px var(--font-sans, system-ui, sans-serif)`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = isDimmed ? 'rgba(255, 255, 255, 0.25)' : '#ffffff';
-          ctx.fillText(node.title, node.x, node.y + node.radius + 14);
+          ctx.fillStyle = isDimmed ? 'rgba(255, 255, 255, 0.2)' : 'var(--foreground, #ffffff)';
+          ctx.fillText(node.title, node.x, node.y + node.radius + 13);
         }
       });
 
@@ -416,9 +651,9 @@ export default function GraphView({
 
     animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [links, repulsionForce, linkDistance, transform, hoveredNode, filteredNodeIds, synapseParticlesEnabled]);
+  }, [links, repulsionForce, linkDistance, transform, hoveredNode, filteredNodeIds, synapseParticlesEnabled, folderColorMap]);
 
-  // Coordinate conversion screen -> canvas world
+  // Screen to world coordinates
   const screenToWorld = (screenX: number, screenY: number) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return { x: 0, y: 0 };
@@ -519,78 +754,147 @@ export default function GraphView({
     }
   };
 
+  const activeGroupsCount = groups.filter((g) => g.enabled).length;
+
   return (
-    <div className="relative w-full h-full flex flex-col bg-[#0d0d0d] select-none overflow-hidden font-sans">
+    <div className="relative w-full h-full flex flex-col bg-[var(--background)] select-none overflow-hidden font-sans">
       {/* Top Floating Control Bar */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
-        {/* Search & Folder Filter Pill */}
-        <div className="flex items-center gap-2 bg-[#181818]/90 backdrop-blur-md border border-[var(--accents-2)]/60 rounded-xl p-1.5 shadow-2xl pointer-events-auto">
-          {/* Search Box */}
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-[#242424] rounded-lg border border-[var(--accents-2)]/40">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-4)]">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              type="text"
-              placeholder="Buscar notas no grafo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs text-white placeholder-[var(--accents-4)] w-36 sm:w-48"
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="text-[var(--accents-4)] hover:text-white text-xs">
-                ✕
-              </button>
-            )}
+      <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2.5 pointer-events-none">
+        {/* Left: Search, Folder, and Groups toggle */}
+        <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Search & Folder Pill */}
+          <div className="flex items-center gap-1.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] p-1 shadow-sm">
+            {/* Search Input */}
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--accents-1)] rounded-[calc(var(--radius)-2px)] border border-[var(--accents-2)]">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[var(--accents-4)]"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Buscar notas no grafo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] w-28 sm:w-40"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="text-[var(--accents-4)] hover:text-[var(--foreground)] text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Folder Select */}
+            <select
+              value={selectedFolderFilter}
+              onChange={(e) => setSelectedFolderFilter(e.target.value)}
+              className="bg-[var(--accents-1)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
+            >
+              <option value="all">Todas as Pastas</option>
+              <option value="root">Sem Pasta (Raiz)</option>
+              {pastas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Folder Select */}
-          <select
-            value={selectedFolderFilter}
-            onChange={(e) => setSelectedFolderFilter(e.target.value)}
-            className="bg-[#242424] text-xs text-[#e0e0e0] border border-[var(--accents-2)]/40 rounded-lg px-2 py-1 outline-none cursor-pointer"
+          {/* Groups Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setIsGroupsOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius)] border text-xs font-medium transition-colors shadow-sm cursor-pointer ${
+              isGroupsOpen
+                ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]'
+                : 'bg-[var(--background)] text-[var(--accents-6)] hover:text-[var(--foreground)] border-[var(--accents-2)] hover:bg-[var(--accents-1)]'
+            }`}
+            title="Gerenciar Grupos de Cores do Grafo"
           >
-            <option value="all">Todas as Pastas</option>
-            <option value="root">Sem Pasta (Raiz)</option>
-            {pastas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+            </svg>
+            <span>Grupos</span>
+            {activeGroupsCount > 0 && (
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                  isGroupsOpen
+                    ? 'bg-[var(--background)] text-[var(--foreground)]'
+                    : 'bg-[var(--accents-2)] text-[var(--foreground)]'
+                }`}
+              >
+                {activeGroupsCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* View Controls & Stats */}
-        <div className="flex items-center gap-2 bg-[#181818]/90 backdrop-blur-md border border-[var(--accents-2)]/60 rounded-xl px-3 py-1.5 shadow-2xl pointer-events-auto text-xs text-[var(--accents-5)]">
-          <span className="text-[#38bdf8] font-semibold">{notas.length} notas</span>
+        {/* Right: View Controls & Stats */}
+        <div className="flex items-center gap-2 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-2.5 py-1.5 shadow-sm pointer-events-auto text-xs text-[var(--accents-5)]">
+          <span className="text-[var(--foreground)] font-medium">{notas.length} notas</span>
           <span>•</span>
-          <span className="text-[#34d399] font-semibold">{links.length} conexões</span>
+          <span className="text-[var(--foreground)] font-medium">{links.length} conexões</span>
 
-          <div className="w-[1px] h-3.5 bg-[var(--accents-2)] mx-1" />
+          <div className="w-[1px] h-3.5 bg-[var(--accents-2)] mx-0.5" />
 
           {/* Toggle Synapse Particles */}
           <button
             type="button"
             onClick={() => setSynapseParticlesEnabled((prev) => !prev)}
-            className={`px-2 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
+            className={`px-2 py-1 rounded-[calc(var(--radius)-2px)] transition-colors flex items-center gap-1.5 cursor-pointer ${
               synapseParticlesEnabled
-                ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-medium'
-                : 'text-[var(--accents-4)] hover:text-white'
+                ? 'bg-[var(--accents-2)] text-[var(--foreground)] font-medium'
+                : 'text-[var(--accents-4)] hover:text-[var(--foreground)]'
             }`}
             title="Efeito Sinapse: partículas de energia fluindo nas conexões"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
             </svg>
-            <span>Sinapses</span>
+            <span className="hidden sm:inline">Sinapses</span>
           </button>
 
           {/* Reset Zoom */}
           <button
             type="button"
             onClick={handleResetView}
-            className="px-2 py-1 rounded-md text-[var(--accents-4)] hover:text-white hover:bg-[#242424] transition-colors"
+            className="px-2 py-1 rounded-[calc(var(--radius)-2px)] text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-1)] transition-colors cursor-pointer"
             title="Recentralizar visualização"
           >
             Recentralizar
@@ -600,7 +904,7 @@ export default function GraphView({
             <button
               type="button"
               onClick={onClose}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-[var(--accents-4)] hover:text-white hover:bg-[#242424] transition-colors ml-1"
+              className="w-5 h-5 flex items-center justify-center rounded-[calc(var(--radius)-2px)] text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] transition-colors ml-0.5 cursor-pointer"
               title="Fechar Grafo"
             >
               ✕
@@ -608,6 +912,325 @@ export default function GraphView({
           )}
         </div>
       </div>
+
+      {/* Retractable Floating Color Groups Manager Panel (Geist Minimalist Theme) */}
+      {isGroupsOpen && (
+        <div className="absolute top-14 left-3 z-30 w-[350px] sm:w-[390px] max-h-[calc(100vh-120px)] bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] shadow-xl flex flex-col overflow-hidden animate-in fade-in duration-100">
+          {/* Panel Header */}
+          <div className="p-3 px-3.5 border-b border-[var(--accents-2)] bg-[var(--accents-1)] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-[var(--foreground)]"
+              >
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+              </svg>
+              <h3 className="text-xs font-semibold text-[var(--foreground)] tracking-tight">
+                Grupos de Cores
+              </h3>
+              <span className="text-[10px] text-[var(--accents-4)] font-mono">
+                ({groups.length})
+              </span>
+              {saveStatus === 'saving' && (
+                <span className="text-[10px] text-[var(--accents-4)]">Salvando...</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="text-[10px] text-[var(--foreground)]">✓ Salvo</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={handleAddGroup}
+                className="px-2 py-1 bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 rounded-[calc(var(--radius)-2px)] text-xs font-medium transition-opacity flex items-center gap-1 cursor-pointer"
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <span>Novo Grupo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsGroupsOpen(false)}
+                className="w-5 h-5 flex items-center justify-center rounded text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] text-xs transition-colors cursor-pointer"
+                title="Fechar painel"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Groups List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[50vh] no-scrollbar">
+            {groups.length === 0 ? (
+              <div className="py-6 px-4 text-center">
+                <p className="text-xs text-[var(--foreground)] mb-1 font-medium">
+                  Nenhum grupo de cores configurado
+                </p>
+                <p className="text-[11px] text-[var(--accents-4)] mb-3 leading-relaxed">
+                  Crie regras para colorir notas por pasta, tags (#), palavras-chave ou tipo de nota.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddGroup}
+                  className="px-3 py-1.5 bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 text-xs font-medium rounded-[var(--radius)] transition-opacity cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span>Adicionar Primeiro Grupo</span>
+                </button>
+              </div>
+            ) : (
+              groups.map((group, index) => {
+                const matchCount = groupMatchCounts[group.id] || 0;
+                const isColorPickerOpen = activeColorPickerGroupId === group.id;
+
+                return (
+                  <div
+                    key={group.id}
+                    className={`p-2.5 rounded-[var(--radius)] border transition-all ${
+                      group.enabled
+                        ? 'bg-[var(--accents-1)] border-[var(--accents-2)]'
+                        : 'bg-[var(--background)] border-[var(--accents-2)] opacity-50'
+                    }`}
+                  >
+                    {/* Top Row: Reorder, Enabled Toggle, Color Swatch, Criteria, Match count, Delete */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Reorder Buttons */}
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() => handleMoveGroup(index, 'up')}
+                          className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-4)] hover:text-[var(--foreground)] disabled:opacity-20 disabled:hover:text-[var(--accents-4)] cursor-pointer"
+                          title="Mover para cima"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === groups.length - 1}
+                          onClick={() => handleMoveGroup(index, 'down')}
+                          className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-4)] hover:text-[var(--foreground)] disabled:opacity-20 disabled:hover:text-[var(--accents-4)] cursor-pointer"
+                          title="Mover para baixo"
+                        >
+                          ▼
+                        </button>
+                      </div>
+
+                      {/* Enable Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={group.enabled}
+                        onChange={(e) => handleUpdateGroup(group.id, { enabled: e.target.checked })}
+                        className="rounded cursor-pointer w-3.5 h-3.5"
+                        title={group.enabled ? 'Desativar grupo' : 'Ativar grupo'}
+                      />
+
+                      {/* Color Swatch Circle */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveColorPickerGroupId((prev) =>
+                              prev === group.id ? null : group.id
+                            )
+                          }
+                          className="w-5 h-5 rounded-full border border-[var(--accents-2)] flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
+                          style={{ backgroundColor: group.color }}
+                          title="Alterar cor do grupo"
+                        />
+
+                        {/* Color Picker Palette Popover */}
+                        {isColorPickerOpen && (
+                          <div className="absolute top-7 left-0 z-50 p-2.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] shadow-2xl w-48 animate-in fade-in duration-75">
+                            <div className="text-[10px] font-medium text-[var(--accents-4)] mb-1.5 uppercase tracking-wider">
+                              Paleta de Cores
+                            </div>
+                            <div className="grid grid-cols-6 gap-1.5 mb-2.5">
+                              {PRESET_GROUP_COLORS.map((c) => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => {
+                                    handleUpdateGroup(group.id, { color: c });
+                                    setActiveColorPickerGroupId(null);
+                                  }}
+                                  className={`w-5 h-5 rounded-full border cursor-pointer transition-transform hover:scale-110 ${
+                                    group.color.toLowerCase() === c.toLowerCase()
+                                      ? 'border-[var(--foreground)] ring-2 ring-[var(--foreground)]/20 scale-105'
+                                      : 'border-transparent'
+                                  }`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--accents-2)]">
+                              <span className="text-[10px] text-[var(--accents-4)]">Hex</span>
+                              <input
+                                type="color"
+                                value={group.color}
+                                onChange={(e) => handleUpdateGroup(group.id, { color: e.target.value })}
+                                className="w-5 h-5 p-0 bg-transparent border-0 rounded cursor-pointer"
+                              />
+                              <input
+                                type="text"
+                                value={group.color}
+                                onChange={(e) => handleUpdateGroup(group.id, { color: e.target.value })}
+                                className="bg-[var(--accents-1)] text-[11px] text-[var(--foreground)] px-1.5 py-0.5 rounded border border-[var(--accents-2)] w-20 font-mono"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Criteria Type Dropdown */}
+                      <select
+                        value={group.ruleType}
+                        onChange={(e) => {
+                          const newType = e.target.value as GroupRuleType;
+                          let defaultVal = '';
+                          if (newType === 'pasta') defaultVal = pastas[0]?.id || 'root';
+                          if (newType === 'tipo') defaultVal = 'texto';
+                          handleUpdateGroup(group.id, { ruleType: newType, ruleValue: defaultVal });
+                        }}
+                        className="bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer flex-1"
+                      >
+                        <option value="pasta">Pasta</option>
+                        <option value="tag">Tag (#)</option>
+                        <option value="titulo">Título contém</option>
+                        <option value="conteudo">Conteúdo contém</option>
+                        <option value="tipo">Tipo de nota</option>
+                      </select>
+
+                      {/* Match Count Badge */}
+                      <span
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--accents-2)] text-[var(--accents-6)] whitespace-nowrap"
+                        title={`${matchCount} notas correspondem`}
+                      >
+                        {matchCount} {matchCount === 1 ? 'nota' : 'notas'}
+                      </span>
+
+                      {/* Delete Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteGroup(group.id)}
+                        className="w-5 h-5 flex items-center justify-center text-[var(--accents-4)] hover:text-red-500 hover:bg-[var(--accents-2)] rounded transition-colors text-xs cursor-pointer"
+                        title="Excluir grupo"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Bottom Row: Rule Value Input */}
+                    <div className="pl-6">
+                      {group.ruleType === 'pasta' ? (
+                        <select
+                          value={group.ruleValue || (pastas[0]?.id || 'root')}
+                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
+                        >
+                          <option value="root">Sem Pasta (Raiz)</option>
+                          {pastas.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nome}
+                            </option>
+                          ))}
+                        </select>
+                      ) : group.ruleType === 'tipo' ? (
+                        <select
+                          value={group.ruleValue || 'texto'}
+                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
+                        >
+                          <option value="texto">Nota de Texto</option>
+                          <option value="desenho">Nota de Desenho / Canvas</option>
+                        </select>
+                      ) : group.ruleType === 'tag' ? (
+                        <div className="relative flex items-center">
+                          <span className="absolute left-2 text-xs text-[var(--accents-4)] font-mono">
+                            #
+                          </span>
+                          <input
+                            type="text"
+                            placeholder="nome-da-tag"
+                            value={(group.ruleValue || '').replace(/^#/, '')}
+                            onChange={(e) =>
+                              handleUpdateGroup(group.id, {
+                                ruleValue: e.target.value.replace(/^#/, ''),
+                              })
+                            }
+                            className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] pl-5 pr-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
+                          />
+                        </div>
+                      ) : group.ruleType === 'titulo' ? (
+                        <input
+                          type="text"
+                          placeholder="Termo no título..."
+                          value={group.ruleValue || ''}
+                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="Termo no conteúdo..."
+                          value={group.ruleValue || ''}
+                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Panel Footer */}
+          {groups.length > 0 && (
+            <div className="p-2.5 px-3.5 bg-[var(--accents-1)] border-t border-[var(--accents-2)] flex items-center justify-between text-[11px] text-[var(--accents-4)]">
+              <span>Notas sem grupo: <strong className="text-[var(--accents-5)] font-normal">Cinza Neutro</strong></span>
+              <button
+                type="button"
+                onClick={handleAddGroup}
+                className="text-[var(--foreground)] hover:underline cursor-pointer font-medium"
+              >
+                + Outro grupo
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Interactive Physics Canvas */}
       <canvas
@@ -620,15 +1243,15 @@ export default function GraphView({
         className="w-full h-full cursor-grab active:cursor-grabbing"
       />
 
-      {/* Immersive Real Note Preview Side Card (Non-intrusive floating panel on the right / bottom sheet on mobile) */}
+      {/* Side Preview Card */}
       {hoveredNode && hoveredNode.rawNota && (
         <div
-          className="animate-in fade-in slide-in-from-bottom-4 md:slide-in-from-right-4 duration-150 fixed md:absolute bottom-4 md:bottom-[72px] left-4 md:left-auto right-4 md:right-6 top-auto md:top-[72px] md:w-[340px] max-h-[60vh] md:max-h-none"
+          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-16 left-3 md:left-auto right-3 md:right-4 top-auto md:top-16 md:w-[320px] max-h-[60vh] md:max-h-none"
           style={{
             background: 'var(--background)',
             border: '1px solid var(--accents-2)',
-            borderRadius: '12px',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)',
+            borderRadius: 'var(--radius)',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.35)',
             display: 'flex',
             flexDirection: 'column',
             zIndex: 30,
@@ -637,58 +1260,120 @@ export default function GraphView({
           }}
         >
           {/* Header */}
-          <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--accents-2)', background: 'var(--accents-1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div
+            style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--accents-2)',
+              background: 'var(--accents-1)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '6px',
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span
-                  style={{ width: '8px', height: '8px', borderRadius: '50%', background: hoveredNode.color, display: 'inline-block' }}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: hoveredNode.color,
+                    display: 'inline-block',
+                  }}
                 />
                 <span style={{ fontSize: '11px', color: 'var(--accents-4)', fontWeight: 500 }}>
                   {hoveredNode.folderName}
                 </span>
               </div>
-              <span style={{ fontSize: '10px', color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>
-                {hoveredNode.connectionsCount} {hoveredNode.connectionsCount === 1 ? 'conexão' : 'conexões'}
+              <span style={{ fontSize: '10px', color: 'var(--accents-4)', fontFamily: 'var(--font-mono)' }}>
+                {hoveredNode.connectionsCount}{' '}
+                {hoveredNode.connectionsCount === 1 ? 'conexão' : 'conexões'}
               </span>
             </div>
 
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.02em', lineHeight: '1.4' }}>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: '14px',
+                fontWeight: 600,
+                color: 'var(--foreground)',
+                letterSpacing: '-0.02em',
+                lineHeight: '1.4',
+              }}
+            >
               {hoveredNode.title || 'Sem Título'}
             </h3>
           </div>
 
-          {/* Real Content Preview Surface */}
-          <div style={{ flex: 1, padding: '16px 18px', overflowY: 'auto' }} className="no-scrollbar">
+          {/* Content Preview Surface */}
+          <div
+            style={{ flex: 1, padding: '14px 16px', overflowY: 'auto' }}
+            className="no-scrollbar"
+          >
             {hoveredNode.rawNota.tipo === 'desenho' ? (
               <div>
                 <GraphDrawingPreview conteudoJson={hoveredNode.rawNota.conteudo} />
-                <p style={{ fontSize: '11px', color: 'var(--accents-4)', textAlign: 'center', marginTop: '12px' }}>
+                <p
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--accents-4)',
+                    textAlign: 'center',
+                    marginTop: '10px',
+                  }}
+                >
                   Nota de Desenho / Canvas
                 </p>
               </div>
             ) : hoveredNode.rawNota.conteudo && hoveredNode.rawNota.conteudo.trim() ? (
               <div
-                className="notion-editor text-[13px] leading-[1.65] text-[var(--foreground)]"
+                className="notion-editor text-[13px] leading-[1.6] text-[var(--foreground)]"
                 dangerouslySetInnerHTML={{ __html: hoveredNode.rawNota.conteudo }}
                 style={{ wordBreak: 'break-word', userSelect: 'none', pointerEvents: 'none' }}
               />
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--accents-4)', fontSize: '12px', fontStyle: 'italic' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  color: 'var(--accents-4)',
+                  fontSize: '12px',
+                  fontStyle: 'italic',
+                }}
+              >
                 Nota vazia
               </div>
             )}
           </div>
 
           {/* Footer with Click Action */}
-          <div style={{ padding: '12px 18px', borderTop: '1px solid var(--accents-2)', background: 'var(--accents-1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>
-              Visualização Rápida
-            </span>
+          <div
+            style={{
+              padding: '10px 16px',
+              borderTop: '1px solid var(--accents-2)',
+              background: 'var(--accents-1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>Pré-visualização</span>
             <button
               type="button"
               onClick={() => onOpenNota(hoveredNode.rawNota)}
               className="geist-button"
-              style={{ height: '26px', padding: '0 10px', fontSize: '11px', borderRadius: '4px', cursor: 'pointer' }}
+              style={{
+                height: '26px',
+                padding: '0 10px',
+                fontSize: '11px',
+                borderRadius: 'var(--radius)',
+                cursor: 'pointer',
+              }}
             >
               Abrir Nota ↗
             </button>
@@ -696,8 +1381,8 @@ export default function GraphView({
         </div>
       )}
 
-      {/* Bottom Right Physics Sliders Bar */}
-      <div className="absolute bottom-4 right-4 z-20 hidden md:flex items-center gap-4 bg-[#181818]/90 backdrop-blur-md border border-[var(--accents-2)]/60 rounded-xl px-3.5 py-2 shadow-2xl text-xs text-[var(--accents-4)]">
+      {/* Bottom Right Physics Sliders */}
+      <div className="absolute bottom-3 right-3 z-20 hidden md:flex items-center gap-3.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-3 py-1.5 shadow-sm text-xs text-[var(--accents-4)]">
         <div className="flex items-center gap-2">
           <span>Repulsão</span>
           <input
@@ -706,7 +1391,7 @@ export default function GraphView({
             max="600"
             value={repulsionForce}
             onChange={(e) => setRepulsionForce(Number(e.target.value))}
-            className="w-20 accent-[#38bdf8] cursor-pointer"
+            className="w-16 accent-[var(--foreground)] cursor-pointer"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -717,7 +1402,7 @@ export default function GraphView({
             max="180"
             value={linkDistance}
             onChange={(e) => setLinkDistance(Number(e.target.value))}
-            className="w-20 accent-[#38bdf8] cursor-pointer"
+            className="w-16 accent-[var(--foreground)] cursor-pointer"
           />
         </div>
       </div>
