@@ -49,6 +49,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [isFlashcardsOpen, setIsFlashcardsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isMobileFilesSheetOpen, setIsMobileFilesSheetOpen] = useState(false);
 
   // Detect mobile viewport and handle initial sidebar collapse
   useEffect(() => {
@@ -643,6 +644,32 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const rootPastas = pastas.filter(p => !p.parentId);
   const notasSemPasta = notas.filter(n => !n.pastaId);
   const isCreatingRoot = inlineAction?.type === 'create' && inlineAction.id === 'root';
+  const renderFileTree = () => (
+    <div 
+      style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}
+      onDragOver={handleDragOver}
+      onDrop={(e) => handleDropToPasta(e, null)} // Drop to root
+    >
+      {error && <div style={{ color: 'var(--error)', fontSize: '12px', marginBottom: 16, padding: '0 8px' }}>{error}</div>}
+
+      {/* Unified Tree (Folders first, then files) */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {isCreatingRoot && (
+          <div style={{ padding: '4px' }}>
+            {renderInlineInput()}
+          </div>
+        )}
+        {rootPastas.map(pasta => renderPasta(pasta, 0))}
+        {notasSemPasta.map(nota => renderNota(nota))}
+      </div>
+
+      {!isCreatingRoot && rootPastas.length === 0 && notasSemPasta.length === 0 && (
+         <div style={{ padding: '24px 8px', fontSize: '13px', color: 'var(--accents-4)', textAlign: 'center' }}>
+           Workspace vazio. Crie uma nota ou pasta acima.
+         </div>
+      )}
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', background: 'var(--background)' }}>
@@ -770,27 +797,26 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         />
       )}
 
-      {/* SIDEBAR */}
-      <div 
-        style={{ 
-          position: isMobile ? 'fixed' : 'relative',
-          top: 0,
-          bottom: 0,
-          left: 0,
-          zIndex: isMobile ? 100 : 'auto',
-          width: isSidebarOpen ? (isMobile ? '82vw' : '280px') : '0px', 
-          maxWidth: isMobile ? '320px' : 'none',
-          minWidth: isSidebarOpen ? (isMobile ? '82vw' : '280px') : '0px', 
-          background: 'var(--accents-1)', 
-          borderRight: isSidebarOpen ? '1px solid var(--accents-2)' : 'none', 
-          display: 'flex', 
-          flexDirection: 'column', 
-          overflow: 'hidden',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          whiteSpace: 'nowrap',
-          boxShadow: isMobile && isSidebarOpen ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
-        }}
-      >
+      {/* DESKTOP SIDEBAR */}
+      {!isMobile && (
+        <div 
+          style={{ 
+            position: 'relative',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            zIndex: 'auto',
+            width: isSidebarOpen ? '280px' : '0px', 
+            minWidth: isSidebarOpen ? '280px' : '0px', 
+            background: 'var(--accents-1)', 
+            borderRight: isSidebarOpen ? '1px solid var(--accents-2)' : 'none', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            overflow: 'hidden',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            whiteSpace: 'nowrap',
+          }}
+        >
         <div style={{ width: '280px', height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '16px 16px 12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -886,30 +912,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             </button>
           </div>
 
-          <div 
-            style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}
-            onDragOver={handleDragOver}
-            onDrop={(e) => handleDropToPasta(e, null)} // Drop to root
-          >
-            {error && <div style={{ color: 'var(--error)', fontSize: '12px', marginBottom: 16, padding: '0 8px' }}>{error}</div>}
-
-            {/* Unified Tree (Folders first, then files) */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {isCreatingRoot && (
-                <div style={{ padding: '4px' }}>
-                  {renderInlineInput()}
-                </div>
-              )}
-              {rootPastas.map(pasta => renderPasta(pasta, 0))}
-              {notasSemPasta.map(nota => renderNota(nota))}
-            </div>
-
-            {!isCreatingRoot && rootPastas.length === 0 && notasSemPasta.length === 0 && (
-               <div style={{ padding: '24px 8px', fontSize: '13px', color: 'var(--accents-4)', textAlign: 'center' }}>
-                 Workspace vazio. Crie uma nota ou pasta acima.
-               </div>
-            )}
-          </div>
+          {/* Unified Tree via Helper */}
+          {renderFileTree()}
 
           {/* User Profile Area */}
           {currentUser && (
@@ -953,9 +957,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           )}
         </div>
       </div>
+      )}
 
       {/* MAIN CONTENT / EDITOR */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
         
         {/* TOP TAB BAR (JANELAS DE NOTAS) */}
         <div 
@@ -1376,6 +1381,117 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           />
         )}
       </div>
+
+      {/* MOBILE BOTTOM NAVIGATION */}
+      {isMobile && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '64px',
+            background: 'var(--background)',
+            borderTop: '1px solid var(--accents-2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            zIndex: 100,
+            paddingBottom: 'env(safe-area-inset-bottom)'
+          }}
+        >
+          <button 
+            onClick={() => setIsMobileFilesSheetOpen(true)}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isMobileFilesSheetOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+            <span style={{ fontSize: '10px', fontWeight: 500 }}>Arquivos</span>
+          </button>
+          
+          <button 
+            onClick={() => {
+              setIsGraphViewOpen(false);
+              setIsFlashcardsOpen(false);
+            }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: !isGraphViewOpen && !isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <span style={{ fontSize: '10px', fontWeight: 500 }}>Notas</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              setIsGraphViewOpen(true);
+              setIsFlashcardsOpen(false);
+            }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isGraphViewOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <span style={{ fontSize: '10px', fontWeight: 500 }}>Grafo</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              setIsFlashcardsOpen(true);
+              setIsGraphViewOpen(false);
+            }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+            <span style={{ fontSize: '10px', fontWeight: 500 }}>Cards</span>
+          </button>
+        </div>
+      )}
+
+      {/* MOBILE BOTTOM SHEET FOR FILES */}
+      {isMobile && isMobileFilesSheetOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 110, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          {/* Backdrop */}
+          <div 
+            onClick={() => setIsMobileFilesSheetOpen(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+          />
+          {/* Sheet */}
+          <div style={{ 
+            position: 'relative', 
+            background: 'var(--accents-1)', 
+            height: '75vh', 
+            borderTopLeftRadius: '16px', 
+            borderTopRightRadius: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.3)',
+            animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}>
+            {/* Drag Handle / Header */}
+            <div 
+              onClick={() => setIsMobileFilesSheetOpen(false)}
+              style={{ padding: '12px', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
+            >
+              <div style={{ width: '40px', height: '4px', background: 'var(--accents-3)', borderRadius: '2px' }} />
+            </div>
+            
+            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--accents-2)' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Arquivos</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => handleTriggerCreatePasta(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova pasta">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
+                </button>
+                <button onClick={() => handleCreateNota(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova nota">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </button>
+              </div>
+            </div>
+            
+            {/* Tree Container */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} onClick={(e) => {
+               // Optional: close sheet when clicking a file, but keeping it simple for now
+            }}>
+              {renderFileTree()}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
