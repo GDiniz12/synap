@@ -83,6 +83,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   } | null>(null);
 
   const inlineInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
@@ -151,6 +152,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       setEditTitle(selectedNota.titulo);
       setEditContent(selectedNota.conteudo || '');
       setSaveStatus('idle');
+
+      if (selectedNota.titulo === '') {
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 50);
+      }
     }
   }, [selectedNota?.id]);
 
@@ -484,6 +491,26 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     if (saveTimeout) clearTimeout(saveTimeout);
     setSaveStatus('saving');
     setSaveTimeout(setTimeout(() => autoSaveNota(val, editContent), 1000));
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedNota?.tipo === 'texto') {
+        const editorDiv = document.getElementById('synap-editor');
+        if (editorDiv) {
+          editorDiv.focus();
+          const range = document.createRange();
+          range.selectNodeContents(editorDiv);
+          range.collapse(false);
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      } else {
+        e.currentTarget.blur();
+      }
+    }
   };
 
   const handleContentChange = (val: string) => {
@@ -1232,8 +1259,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             {/* Minimal Title Header for Canvas */}
             <div style={{ padding: '8px 16px', background: 'var(--accents-1)', borderBottom: '1px solid var(--accents-2)', display: 'flex', alignItems: 'center' }}>
               <input
+                ref={titleInputRef}
                 value={editTitle}
                 onChange={handleTitleChange}
+                onKeyDown={handleTitleKeyDown}
                 placeholder="Nome do Desenho..."
                 style={{ fontSize: '15px', fontWeight: 600, border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--foreground)' }}
               />
@@ -1268,8 +1297,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? '16px' : '32px' }}>
                   <input 
+                    ref={titleInputRef}
                     value={editTitle}
                     onChange={handleTitleChange}
+                    onKeyDown={handleTitleKeyDown}
                     placeholder="Sem Título"
                     style={{ 
                       fontSize: isMobile ? '24px' : '32px', 
