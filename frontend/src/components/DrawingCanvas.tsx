@@ -781,6 +781,90 @@ export default function DrawingCanvas({
     mouseModeRef.current = 'idle';
   };
 
+  // Touch Handlers for Mobile
+  const initialTouchDistanceRef = useRef<number | null>(null);
+  const initialZoomRef = useRef<number>(1);
+
+  const getDistance = (touches: React.TouchList) => {
+    return Math.sqrt(
+      Math.pow(touches[0].clientX - touches[1].clientX, 2) +
+      Math.pow(touches[0].clientY - touches[1].clientY, 2)
+    );
+  };
+
+  const getCenter = (touches: React.TouchList) => {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2,
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    // Only map single touches to drawing/mouse actions
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const synthEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        button: 0,
+        shiftKey: false,
+        buttons: 1
+      } as unknown as React.MouseEvent<HTMLCanvasElement>;
+      handleMouseDown(synthEvent);
+    } 
+    else if (e.touches.length === 2) {
+      // 2 fingers = pan & zoom
+      // Cancel drawing if it was happening
+      if (mouseModeRef.current === 'drawing' && currentElementRef.current) {
+        currentElementRef.current = null;
+        renderCanvas();
+      }
+      mouseModeRef.current = 'panning';
+      initialTouchDistanceRef.current = getDistance(e.touches);
+      initialZoomRef.current = zoom;
+      
+      const center = getCenter(e.touches);
+      panStartRef.current = { x: center.x - pan.x, y: center.y - pan.y };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      if (mouseModeRef.current === 'panning') return;
+      const touch = e.touches[0];
+      const synthEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        buttons: 1
+      } as unknown as React.MouseEvent<HTMLCanvasElement>;
+      handleMouseMove(synthEvent);
+    } 
+    else if (e.touches.length === 2 && initialTouchDistanceRef.current !== null) {
+      const center = getCenter(e.touches);
+      const distance = getDistance(e.touches);
+      
+      // Zoom
+      const scale = distance / initialTouchDistanceRef.current;
+      const newZoom = Math.max(0.2, Math.min(3, initialZoomRef.current * scale));
+      
+      setPan({
+        x: center.x - panStartRef.current.x,
+        y: center.y - panStartRef.current.y,
+      });
+      setZoom(newZoom);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 0) {
+      if (mouseModeRef.current !== 'panning') {
+        handleMouseUp();
+      }
+      initialTouchDistanceRef.current = null;
+      mouseModeRef.current = 'idle';
+    }
+  };
+
   // Keyboard Shortcuts (Delete selected items, Undo, Redo, Tools)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -887,7 +971,7 @@ export default function DrawingCanvas({
   return (
     <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#121212] overflow-hidden select-none font-sans">
       {/* Top Floating Toolbar (Tools Menu) */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl px-2 py-1.5 shadow-2xl">
+      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
         {/* Hand Navigation Tool (1st Tool - H ou 0) */}
         <button
           type="button"
@@ -1198,9 +1282,13 @@ export default function DrawingCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
         className={`w-full h-full ${getCanvasCursor()}`}
+        style={{ touchAction: 'none' }}
       />
 
       {/* Seamless Inline Text Input Over Canvas (Pure Minimalist Excalidraw style) */}

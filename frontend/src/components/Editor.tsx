@@ -2432,6 +2432,7 @@ export default function Editor({
 
       {/* Notion-style Editor Surface */}
       <div
+        id="synap-editor"
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning

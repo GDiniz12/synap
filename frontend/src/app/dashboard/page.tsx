@@ -7,10 +7,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
+import LoadingScreen from '@/components/LoadingScreen';
 
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -19,14 +21,40 @@ export default function DashboardPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  const loadInitialData = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const [userData, workspacesData] = await Promise.all([
+        api('/auth/me'),
+        api('/workspaces'),
+      ]);
+      setCurrentUser(userData);
+      setWorkspaces(workspacesData || []);
+    } catch (err: any) {
+      console.error('Failed to load initial dashboard data', err);
+      setError(err.message);
+      if (
+        err.message === 'Token is invalid' ||
+        err.message === 'Token is missing' ||
+        err.message === 'User no longer exists'
+      ) {
+        localStorage.removeItem('token');
+        router.push('/login');
+        return;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
-    loadUser();
-    loadWorkspaces();
+    loadInitialData();
   }, [router]);
 
   // Click outside to close dropdown
@@ -40,25 +68,12 @@ export default function DashboardPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadUser = async () => {
-    try {
-      const data = await api('/auth/me');
-      setCurrentUser(data);
-    } catch (err: any) {
-      console.error('Failed to load user', err);
-    }
-  };
-
   const loadWorkspaces = async () => {
     try {
       const data = await api('/workspaces');
-      setWorkspaces(data);
+      setWorkspaces(data || []);
     } catch (err: any) {
       setError(err.message);
-      if (err.message === 'Token is invalid' || err.message === 'Token is missing' || err.message === 'User no longer exists') {
-        localStorage.removeItem('token');
-        router.push('/login');
-      }
     }
   };
 
@@ -77,6 +92,10 @@ export default function DashboardPage() {
       setError(err.message);
     }
   };
+
+  if (isLoading) {
+    return <LoadingScreen onRetry={loadInitialData} />;
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--accents-1)' }}>
