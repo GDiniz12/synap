@@ -10,6 +10,30 @@ export interface RemoteCursor {
   lastActive: number;
 }
 
+function getWebSocketUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  // 1. Explicit WebSocket URL
+  if (process.env.NEXT_PUBLIC_WS_URL) {
+    return process.env.NEXT_PUBLIC_WS_URL.replace(/\/+$/, '');
+  }
+
+  // 2. Derive from NEXT_PUBLIC_API_URL
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (apiUrl && apiUrl.startsWith('http')) {
+    const base = apiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    return base.replace(/^http/, 'ws');
+  }
+
+  // 3. In local development on HTTP
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocal) {
+    return `ws://${window.location.hostname}:3000`;
+  }
+
+  return null;
+}
+
 export function useCollaboration(
   roomId: string | undefined, 
   valueType: 'document_change' | 'drawing_change',
@@ -51,25 +75,35 @@ export function useCollaboration(
 
     const connect = () => {
       const token = localStorage.getItem('token');
-      const wsUrl = process.env.NEXT_PUBLIC_API_URL 
-        ? process.env.NEXT_PUBLIC_API_URL.replace('http', 'ws') 
-        : `ws://${window.location.hostname}:3000`;
-      
-      const ws = new WebSocket(`${wsUrl}/${roomId}?token=${token}`);
-      wsRef.current = ws;
+      const wsUrl = getWebSocketUrl();
 
-      ws.onopen = () => {
-        console.log('[useCollaboration] Connected to WS:', wsUrl, 'Room:', roomId);
-        setStatus('connected');
-      };
-      
-      ws.onclose = (event) => {
-        console.log(`[useCollaboration] Disconnected from WS (Code: ${event.code}, Reason: ${event.reason || 'None'})`);
+      if (!wsUrl) {
+        console.warn('[useCollaboration] No WebSocket URL found. Set NEXT_PUBLIC_API_URL or NEXT_PUBLIC_WS_URL in production.');
         setStatus('disconnected');
-        if (event.code !== 1000 && event.code !== 4001) {
-          reconnectTimer = setTimeout(connect, 3000);
-        }
-      };
+        return;
+      }
+
+      try {
+        const ws = new WebSocket(`${wsUrl}/${roomId}?token=${token}`);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('[useCollaboration] Connected to WS:', wsUrl, 'Room:', roomId);
+          setStatus('connected');
+        };
+        
+        ws.onclose = (event) => {
+          console.log(`[useCollaboration] Disconnected from WS (Code: ${event.code}, Reason: ${event.reason || 'None'})`);
+          setStatus('disconnected');
+          if (event.code !== 1000 && event.code !== 4001) {
+            reconnectTimer = setTimeout(connect, 3000);
+          }
+        };
+        
+        ws.onerror = (err) => {
+          console.error('[useCollaboration] WebSocket error:', err);
+          setStatus('disconnected');
+        };
       
       const myUserId = (() => {
         if (!token) return null;
@@ -113,9 +147,13 @@ export function useCollaboration(
           console.error('Failed to parse WS message', e);
         }
       };
-    };
+    } catch (err) {
+      console.error('[useCollaboration] Failed to connect WebSocket:', err);
+      setStatus('disconnected');
+    }
+  };
 
-    connect();
+  connect();
 
     return () => {
       console.log('[useCollaboration] Cleaning up WS');
