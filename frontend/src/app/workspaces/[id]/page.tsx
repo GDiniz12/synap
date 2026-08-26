@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ import FlashcardsView from '@/components/FlashcardsView';
 import CardModal from '@/components/CardModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
+import ShareWorkspaceModal from '@/components/ShareWorkspaceModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import { translations, Language } from '@/lib/i18n';
 
@@ -24,6 +25,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [pastas, setPastas] = useState<any[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   // Language State
   const [currentLang, setCurrentLang] = useState<Language>('pt-BR');
@@ -87,8 +89,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
-  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const editContentRef = useRef('');
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const [error, setError] = useState('');
@@ -149,10 +151,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     if (selectedNota) {
-      setEditTitle(selectedNota.titulo);
-      setEditContent(selectedNota.conteudo || '');
-      setSaveStatus('idle');
-
       if (selectedNota.titulo === '') {
         setTimeout(() => {
           titleInputRef.current?.focus();
@@ -371,7 +369,22 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const openNota = (nota: any) => {
+    if (saveTimeoutRef.current && selectedNota) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+      // Fire-and-forget save of the PREVIOUS note before switching
+      api(`/notas/${selectedNota.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ titulo: editTitle, conteudo: editContentRef.current }),
+      }).then((updated) => {
+        setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
+      }).catch(() => {});
+    }
+
     setSelectedNota(nota);
+    setEditTitle(nota.titulo);
+    editContentRef.current = nota.conteudo || '';
+    setSaveStatus('idle');
     setOpenTabIds((prev) => (prev.includes(nota.id) ? prev : [...prev, nota.id]));
     try {
       localStorage.setItem(`synap_last_note_${id}`, nota.id);
@@ -467,16 +480,22 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     } catch (err: any) { setError(err.message); }
   };
 
-  const autoSaveNota = async (newTitle: string, newContent: string) => {
-    if (!selectedNota) return;
+  const autoSaveNota = async (newTitle: string, newContent: string, noteIdToSave: string) => {
     setSaveStatus('saving');
     try {
-      const updated = await api(`/notas/${selectedNota.id}`, {
+      const updated = await api(`/notas/${noteIdToSave}`, {
         method: 'PUT',
         body: JSON.stringify({ titulo: newTitle, conteudo: newContent }),
       });
       setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
-      setSelectedNota(updated);
+      
+      setSelectedNota((currentSelected: any) => {
+        if (currentSelected?.id === updated.id) {
+          return updated;
+        }
+        return currentSelected;
+      });
+      
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) { 
@@ -488,16 +507,19 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setEditTitle(val);
-    if (saveTimeout) clearTimeout(saveTimeout);
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
-    setSaveTimeout(setTimeout(() => autoSaveNota(val, editContent), 1000));
+    if (selectedNota?.id) {
+      const currentNoteId = selectedNota.id;
+      saveTimeoutRef.current = setTimeout(() => autoSaveNota(val, editContentRef.current, currentNoteId), 1000);
+    }
   };
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       if (selectedNota?.tipo === 'texto') {
-        const editorDiv = document.getElementById('synap-editor');
+        const editorDiv = document.getElementById(`synap-editor-${selectedNota.id}`);
         if (editorDiv) {
           editorDiv.focus();
           const range = document.createRange();
@@ -513,12 +535,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handleContentChange = (val: string) => {
-    setEditContent(val);
-    if (saveTimeout) clearTimeout(saveTimeout);
+  const handleContentChange = useCallback((val: string) => {
+    editContentRef.current = val;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
-    setSaveTimeout(setTimeout(() => autoSaveNota(editTitle, val), 1000));
-  };
+    if (selectedNota?.id) {
+      const currentNoteId = selectedNota.id;
+      saveTimeoutRef.current = setTimeout(() => autoSaveNota(editTitle, val, currentNoteId), 1000);
+    }
+  }, [editTitle, selectedNota?.id]);
 
   // DRAG AND DROP LOGIC
   const handleDragStart = (e: React.DragEvent, type: 'pasta' | 'nota', itemId: string) => {
@@ -883,9 +908,26 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <h2 style={{ margin: '0', fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
-                {workspace.nome}
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 style={{ margin: '0', fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  {workspace.nome}
+                </h2>
+                {workspace.isCollaborative && (
+                  <button 
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="geist-button-secondary text-xs h-6 px-2 flex items-center gap-1 bg-[#1e1e1e]"
+                    title="Compartilhar Workspace"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H5c-2.2 0-4 1.8-4 4v2" />
+                      <circle cx="8.5" cy="7" r="4" />
+                      <line x1="20" y1="8" x2="20" y2="14" />
+                      <line x1="23" y1="11" x2="17" y2="11" />
+                    </svg>
+                    <span>Convidar</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1270,11 +1312,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             <div style={{ flex: 1, position: 'relative' }}>
               <DrawingCanvas
                 key={selectedNota.id}
-                initialData={editContent}
+                notaId={selectedNota?.id}
+                initialData={editContentRef.current}
                 onChange={handleContentChange}
                 title={editTitle}
                 notas={notas}
                 workspaceId={id}
+                isCollaborative={workspace?.isCollaborative}
                 onOpenNota={(n) => openNota(n)}
                 onOpenCard={(c) => setSelectedCardModal(c)}
               />
@@ -1317,12 +1361,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
                 <div style={{ flex: 1 }}>
                   <Editor 
-                    value={editContent}
+                    key={selectedNota?.id}
+                    notaId={selectedNota?.id}
+                    value={editContentRef.current}
                     onChange={handleContentChange}
                     placeholder={t('editor_placeholder')}
                     notas={notas}
                     onOpenNota={(n) => openNota(n)}
                     workspaceId={workspace?.id}
+                    isCollaborative={workspace?.isCollaborative}
                     onOpenCard={(c) => setSelectedCardModal(c)}
                     onUpdateNota={(updated) => {
                       setNotas((prev) => {
@@ -1397,6 +1444,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             notas={notas}
             onUpdateUser={(updated) => setCurrentUser(updated)}
             onClose={() => setIsSettingsOpen(false)}
+          />
+        )}
+
+        {/* Share Workspace Modal */}
+        {workspace?.isCollaborative && (
+          <ShareWorkspaceModal
+            workspaceId={workspace.id}
+            isOpen={isShareModalOpen}
+            onClose={() => setIsShareModalOpen(false)}
           />
         )}
 

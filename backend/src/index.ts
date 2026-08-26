@@ -38,6 +38,14 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Synap Backend is running successfully!' });
 });
 
-app.listen(port, () => {
+import http from 'http';
+import { WebSocketServer } from 'ws';
+import { initializeWebSockets } from './websockets';
+
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+initializeWebSockets(wss);
+
+server.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });

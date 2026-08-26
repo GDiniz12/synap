@@ -56,6 +56,27 @@ export class WorkspaceController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async inviteCollaborator(req: AuthRequest, res: Response) {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
+      
+      const collaborator = await workspaceService.inviteCollaborator(req.params.id as string, email);
+      res.status(200).json(collaborator);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async getCollaborators(req: AuthRequest, res: Response) {
+    try {
+      const collaborators = await workspaceService.getCollaborators(req.params.id as string);
+      res.status(200).json(collaborators);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 export const workspaceController = new WorkspaceController();

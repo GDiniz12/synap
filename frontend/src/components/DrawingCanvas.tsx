@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
+import LiveCursors from './LiveCursors';
 
 export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'eraser';
 
@@ -34,8 +35,12 @@ interface DrawingCanvasProps {
   title?: string;
   notas?: any[];
   workspaceId?: string;
+  isCollaborative?: boolean;
   onOpenNota?: (nota: any) => void;
   onOpenCard?: (card: any) => void;
+  notaId?: string;
+  itemNota?: any;
+  cardData?: any;
 }
 
 const STROKE_COLORS = [
@@ -62,13 +67,46 @@ const FILL_COLORS = [
 
 export default function DrawingCanvas({
   initialData = '',
-  onChange,
+  onChange: parentOnChange,
   title,
   notas = [],
   workspaceId,
+  isCollaborative,
+  notaId,
+  itemNota,
+  cardData,
   onOpenNota,
   onOpenCard,
 }: DrawingCanvasProps) {
+  const [elements, setElements] = useState<DrawingElement[]>(() => {
+    if (initialData) {
+      try {
+        return JSON.parse(initialData);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const { users, cursors, status, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
+    isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
+    'drawing_change',
+    (newVal: string) => {
+      try {
+        const parsed = JSON.parse(newVal);
+        setElements(parsed);
+      } catch (e) {}
+    }
+  );
+
+  const onChange = useCallback((val: string) => {
+    if (parentOnChange) parentOnChange(val);
+    broadcastChange(val);
+  }, [parentOnChange, broadcastChange]);
+
+
+
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -82,15 +120,6 @@ export default function DrawingCanvas({
   const [pickerModal, setPickerModal] = useState<'nota' | 'card' | null>(null);
 
   // Elements and History
-  const [elements, setElements] = useState<DrawingElement[]>(() => {
-    if (!initialData) return [];
-    try {
-      const parsed = JSON.parse(initialData);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
 
   const [history, setHistory] = useState<DrawingElement[][]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
@@ -139,21 +168,26 @@ export default function DrawingCanvas({
     }
   }, [editingText]);
 
-  // Synchronize when initialData changes from external note switch
+  const lastNotaId = useRef<string | undefined>(notaId);
+
+  // Synchronize when note changes
   useEffect(() => {
-    if (!initialData) {
-      setElements([]);
-      return;
-    }
-    try {
-      const parsed = JSON.parse(initialData);
-      if (Array.isArray(parsed)) {
-        setElements(parsed);
+    if (notaId !== lastNotaId.current) {
+      lastNotaId.current = notaId;
+      if (!initialData) {
+        setElements([]);
+        return;
       }
-    } catch {
-      // ignore
+      try {
+        const parsed = JSON.parse(initialData);
+        if (Array.isArray(parsed)) {
+          setElements(parsed);
+        }
+      } catch {
+        // ignore
+      }
     }
-  }, [initialData]);
+  }, [initialData, notaId]);
 
   // Push new state to history & propagate change
   const commitElements = useCallback(
@@ -669,6 +703,13 @@ export default function DrawingCanvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const worldPoint = screenToWorld(e.clientX, e.clientY);
+
+    // Broadcast live cursor to collaborators
+    if (isCollaborative && notaId) {
+      broadcastCursor(worldPoint.x, worldPoint.y, true);
+    }
+
     // Pan Move
     if (isPanningRef.current) {
       setPan({
@@ -677,8 +718,6 @@ export default function DrawingCanvas({
       });
       return;
     }
-
-    const worldPoint = screenToWorld(e.clientX, e.clientY);
 
     // 1. Move/Drag Selected Elements (Select Tool)
     if (mouseModeRef.current === 'dragging_elements' && selectedIds.length > 0) {
@@ -970,6 +1009,29 @@ export default function DrawingCanvas({
 
   return (
     <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#121212] overflow-hidden select-none font-sans">
+      {/* Presence UI */}
+      {workspaceId && notaId && isCollaborative && (
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-3 bg-[#1e1e1e]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#333] shadow-lg pointer-events-auto">
+          {status !== 'connected' && (
+            <div className="text-[11px] text-[var(--accents-5)]">
+              {status === 'connecting' ? 'Conectando...' : 'Desconectado'}
+            </div>
+          )}
+          <div className="flex -space-x-2">
+            {users.map((u: any, i: number) => (
+              <div 
+                key={i} 
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] text-white font-bold border-2 border-[#1e1e1e] shadow-sm"
+                style={{ backgroundColor: u.color || '#ccc' }}
+                title={u.name || 'Anon'}
+              >
+                {(u.name || 'A').charAt(0).toUpperCase()}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Top Floating Toolbar (Tools Menu) */}
       <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
         {/* Hand Navigation Tool (1st Tool - H ou 0) */}
@@ -1282,6 +1344,11 @@ export default function DrawingCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => {
+          if (isCollaborative && notaId) {
+            broadcastCursor(0, 0, false);
+          }
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1290,6 +1357,14 @@ export default function DrawingCanvas({
         className={`w-full h-full ${getCanvasCursor()}`}
         style={{ touchAction: 'none' }}
       />
+
+      {/* Real-time Multiplayer Cursors (Miro/Figma style) */}
+      {workspaceId && notaId && isCollaborative && (
+        <LiveCursors
+          cursors={cursors}
+          transformCoord={(cursor) => worldToScreen(cursor.x, cursor.y)}
+        />
+      )}
 
       {/* Seamless Inline Text Input Over Canvas (Pure Minimalist Excalidraw style) */}
       {editingText && (
