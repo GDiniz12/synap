@@ -12,8 +12,10 @@ interface EditorProps {
   notas?: any[];
   onOpenNota?: (nota: any) => void;
   workspaceId?: string;
+  isCollaborative?: boolean;
   onOpenCard?: (card: any) => void;
   onUpdateNota?: (updatedNota: any) => void;
+  notaId?: string; // New prop for Real-time
 }
 
 interface CommandItem {
@@ -27,15 +29,33 @@ interface CommandItem {
 
 export default function Editor({ 
   value, 
-  onChange, 
+  onChange: parentOnChange, 
   placeholder = "Digite '/' para comandos, '[[' para notas ou '::' para cards...",
   notas = [],
   onOpenNota,
   workspaceId,
+  isCollaborative,
+  notaId,
   onOpenCard,
   onUpdateNota
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+
+  const { users, status, broadcastChange } = require('../hooks/useCollaboration').useCollaboration(
+    isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
+    'document_change',
+    (newVal: string) => {
+      parentOnChange(newVal);
+      if (editorRef.current && editorRef.current.innerHTML !== newVal) {
+        editorRef.current.innerHTML = newVal; 
+      }
+    }
+  );
+
+  const onChange = useCallback((val: string) => {
+    parentOnChange(val);
+    broadcastChange(val);
+  }, [parentOnChange, broadcastChange]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const wikiMenuRef = useRef<HTMLDivElement>(null);
@@ -163,15 +183,7 @@ export default function Editor({
 
   const [copied, setCopied] = useState(false);
   const isKeyboardNavRef = useRef(false);
-
-  // Sync value from props only when note changes or external update
-  useEffect(() => {
-    if (editorRef.current) {
-      if (editorRef.current.innerHTML !== (value || '')) {
-        editorRef.current.innerHTML = value || '';
-      }
-    }
-  }, [value]);
+  const initialValueRef = useRef(value || '');
 
   // Global mousemove & mouseup for image & drawing resizing
   useEffect(() => {
@@ -1794,6 +1806,29 @@ export default function Editor({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Presence UI */}
+      {workspaceId && notaId && isCollaborative && (
+        <div className="w-full flex justify-end items-center gap-3 py-1 px-4 pointer-events-none sticky top-0 bg-[var(--background)]/90 backdrop-blur-md z-40 border-b border-[var(--accents-2)] mb-2">
+          {status !== 'connected' && (
+            <div className="text-[11px] text-[var(--accents-5)] pointer-events-auto">
+              {status === 'connecting' ? 'Conectando...' : 'Desconectado'}
+            </div>
+          )}
+          <div className="flex -space-x-2 pointer-events-auto">
+            {users.map((u: any, i: number) => (
+              <div 
+                key={i} 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-[var(--background)] shadow-sm"
+                style={{ backgroundColor: u.color || '#ccc' }}
+                title={u.name || 'Anon'}
+              >
+                {(u.name || 'A').charAt(0).toUpperCase()}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Hidden File Input for Image Upload */}
       <input
         type="file"
@@ -2432,8 +2467,10 @@ export default function Editor({
 
       {/* Notion-style Editor Surface */}
       <div
+        id={`synap-editor-${notaId}`}
         ref={editorRef}
         contentEditable
+        dangerouslySetInnerHTML={{ __html: initialValueRef.current }}
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}

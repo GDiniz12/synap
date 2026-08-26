@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [isCollaborative, setIsCollaborative] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function DashboardPage() {
     try {
       await api('/workspaces', {
         method: 'POST',
-        body: JSON.stringify({ nome: newWorkspaceName }),
+        body: JSON.stringify({ nome: newWorkspaceName, isCollaborative }),
       });
       setNewWorkspaceName('');
       loadWorkspaces();
@@ -245,15 +246,25 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <h1 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.04em', margin: 0 }}>Workspaces</h1>
           
-          <form onSubmit={handleCreateWorkspace} className="flex gap-2 w-full md:w-auto">
-            <input 
-              type="text" 
-              placeholder="Nome da workspace..." 
-              value={newWorkspaceName}
-              onChange={(e) => setNewWorkspaceName(e.target.value)}
-              className="geist-input flex-1 md:w-[240px]"
-            />
-            <button type="submit" className="geist-button shrink-0">Criar</button>
+          <form onSubmit={handleCreateWorkspace} className="flex flex-col gap-2 w-full md:w-auto">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                placeholder="Nome da workspace..." 
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                className="geist-input flex-1 md:w-[240px]"
+              />
+              <button type="submit" className="geist-button shrink-0">Criar</button>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-[var(--accents-5)]">
+              <input 
+                type="checkbox" 
+                checked={isCollaborative} 
+                onChange={(e) => setIsCollaborative(e.target.checked)}
+              />
+              Workspace Colaborativa (WebSockets)
+            </label>
           </form>
         </div>
 
