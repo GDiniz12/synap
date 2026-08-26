@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = rawApiUrl
+  ? (rawApiUrl.startsWith('http') 
+      ? (rawApiUrl.replace(/\/+$/, '').endsWith('/api') 
+          ? rawApiUrl.replace(/\/+$/, '') 
+          : `${rawApiUrl.replace(/\/+$/, '')}/api`)
+      : rawApiUrl)
+  : '/api';
 
 export interface ApiOptions extends RequestInit {
   retries?: number;
