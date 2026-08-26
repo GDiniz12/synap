@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useRef } from 'react';
+import { useEffect, useState, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
@@ -89,7 +89,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
-  const [editContent, setEditContent] = useState('');
+  const editContentRef = useRef('');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -375,7 +375,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       // Fire-and-forget save of the PREVIOUS note before switching
       api(`/notas/${selectedNota.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ titulo: editTitle, conteudo: editContent }),
+        body: JSON.stringify({ titulo: editTitle, conteudo: editContentRef.current }),
       }).then((updated) => {
         setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
       }).catch(() => {});
@@ -383,7 +383,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
     setSelectedNota(nota);
     setEditTitle(nota.titulo);
-    setEditContent(nota.conteudo || '');
+    editContentRef.current = nota.conteudo || '';
     setSaveStatus('idle');
     setOpenTabIds((prev) => (prev.includes(nota.id) ? prev : [...prev, nota.id]));
     try {
@@ -511,7 +511,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     setSaveStatus('saving');
     if (selectedNota?.id) {
       const currentNoteId = selectedNota.id;
-      saveTimeoutRef.current = setTimeout(() => autoSaveNota(val, editContent, currentNoteId), 1000);
+      saveTimeoutRef.current = setTimeout(() => autoSaveNota(val, editContentRef.current, currentNoteId), 1000);
     }
   };
 
@@ -535,15 +535,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handleContentChange = (val: string) => {
-    setEditContent(val);
+  const handleContentChange = useCallback((val: string) => {
+    editContentRef.current = val;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
     if (selectedNota?.id) {
       const currentNoteId = selectedNota.id;
       saveTimeoutRef.current = setTimeout(() => autoSaveNota(editTitle, val, currentNoteId), 1000);
     }
-  };
+  }, [editTitle, selectedNota?.id]);
 
   // DRAG AND DROP LOGIC
   const handleDragStart = (e: React.DragEvent, type: 'pasta' | 'nota', itemId: string) => {
@@ -1313,7 +1313,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               <DrawingCanvas
                 key={selectedNota.id}
                 notaId={selectedNota?.id}
-                initialData={editContent}
+                initialData={editContentRef.current}
                 onChange={handleContentChange}
                 title={editTitle}
                 notas={notas}
@@ -1363,7 +1363,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                   <Editor 
                     key={selectedNota?.id}
                     notaId={selectedNota?.id}
-                    value={editContent}
+                    value={editContentRef.current}
                     onChange={handleContentChange}
                     placeholder={t('editor_placeholder')}
                     notas={notas}

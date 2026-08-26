@@ -102,10 +102,21 @@ export function initializeWebSockets(wss: WebSocketServer) {
     ws.on('message', (message: string) => {
       try {
         const data = JSON.parse(message);
+        const user = socketUsers.get(ws);
         
         // Broadcast standard changes to everyone else in the room
         if (data.type === 'document_change' || data.type === 'drawing_change') {
           broadcastToRoom(roomId, data, ws);
+        } else if (data.type === 'cursor_move' && user) {
+          broadcastToRoom(roomId, {
+            type: 'cursor_move',
+            userId: user.id,
+            userName: user.name,
+            color: user.color,
+            x: data.x,
+            y: data.y,
+            active: data.active !== false
+          }, ws);
         }
       } catch (e) {
         console.error('Invalid message received', e);
@@ -113,6 +124,17 @@ export function initializeWebSockets(wss: WebSocketServer) {
     });
 
     ws.on('close', () => {
+      const user = socketUsers.get(ws);
+      if (user) {
+        broadcastToRoom(roomId, {
+          type: 'cursor_move',
+          userId: user.id,
+          userName: user.name,
+          color: user.color,
+          active: false
+        }, ws);
+      }
+
       const clients = rooms.get(roomId);
       if (clients) {
         clients.delete(ws);

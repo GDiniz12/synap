@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
+import LiveCursors from './LiveCursors';
 
 export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'eraser';
 
@@ -88,7 +89,7 @@ export default function DrawingCanvas({
     return [];
   });
 
-  const { users, status, broadcastChange } = require('../hooks/useCollaboration').useCollaboration(
+  const { users, cursors, status, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
     isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
     'drawing_change',
     (newVal: string) => {
@@ -702,6 +703,13 @@ export default function DrawingCanvas({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const worldPoint = screenToWorld(e.clientX, e.clientY);
+
+    // Broadcast live cursor to collaborators
+    if (isCollaborative && notaId) {
+      broadcastCursor(worldPoint.x, worldPoint.y, true);
+    }
+
     // Pan Move
     if (isPanningRef.current) {
       setPan({
@@ -710,8 +718,6 @@ export default function DrawingCanvas({
       });
       return;
     }
-
-    const worldPoint = screenToWorld(e.clientX, e.clientY);
 
     // 1. Move/Drag Selected Elements (Select Tool)
     if (mouseModeRef.current === 'dragging_elements' && selectedIds.length > 0) {
@@ -1338,6 +1344,11 @@ export default function DrawingCanvas({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => {
+          if (isCollaborative && notaId) {
+            broadcastCursor(0, 0, false);
+          }
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1346,6 +1357,14 @@ export default function DrawingCanvas({
         className={`w-full h-full ${getCanvasCursor()}`}
         style={{ touchAction: 'none' }}
       />
+
+      {/* Real-time Multiplayer Cursors (Miro/Figma style) */}
+      {workspaceId && notaId && isCollaborative && (
+        <LiveCursors
+          cursors={cursors}
+          transformCoord={(cursor) => worldToScreen(cursor.x, cursor.y)}
+        />
+      )}
 
       {/* Seamless Inline Text Input Over Canvas (Pure Minimalist Excalidraw style) */}
       {editingText && (
