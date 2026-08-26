@@ -13,6 +13,7 @@ import FlashcardsView from '@/components/FlashcardsView';
 import CardModal from '@/components/CardModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
+import LoadingScreen from '@/components/LoadingScreen';
 import { translations, Language } from '@/lib/i18n';
 
 export default function WorkspaceLayout({ params }: { params: Promise<{ id: string }> }) {
@@ -22,6 +23,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pastas, setPastas] = useState<any[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Language State
   const [currentLang, setCurrentLang] = useState<Language>('pt-BR');
@@ -90,11 +92,57 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [error, setError] = useState('');
   const router = useRouter();
 
+  const loadInitialWorkspaceData = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const [userData, workspaceData, pastasData, notasData] = await Promise.all([
+        api('/auth/me').catch(() => null),
+        api(`/workspaces/${id}`),
+        api(`/pastas?workspaceId=${id}`),
+        api(`/notas?workspaceId=${id}`),
+      ]);
+
+      if (userData) setCurrentUser(userData);
+      if (workspaceData) setWorkspace(workspaceData);
+      if (pastasData) setPastas(pastasData);
+      if (notasData) {
+        setNotas(notasData);
+
+        // Check startup behavior from settings
+        const startup = localStorage.getItem('synap_startup_behavior') || 'last_note';
+        if (startup === 'last_note' && Array.isArray(notasData) && notasData.length > 0) {
+          const lastVisitedId = localStorage.getItem(`synap_last_note_${id}`);
+          const targetNota = notasData.find((n: any) => n.id === lastVisitedId) || notasData[0];
+          if (targetNota) {
+            openNota(targetNota);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to load workspace data', err);
+      setError(err.message);
+      if (
+        err.message === 'Token is invalid' ||
+        err.message === 'Token is missing' ||
+        err.message === 'User no longer exists'
+      ) {
+        localStorage.removeItem('token');
+        router.push('/login');
+        return;
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadUser();
-    loadWorkspace();
-    loadPastas();
-    loadNotas();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    loadInitialWorkspaceData();
   }, [id]);
 
   useEffect(() => {
@@ -588,7 +636,9 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     );
   };
 
-  if (!workspace) return <div style={{ padding: 20 }}>Carregando...</div>;
+  if (isLoading || !workspace) {
+    return <LoadingScreen onRetry={loadInitialWorkspaceData} />;
+  }
 
   const rootPastas = pastas.filter(p => !p.parentId);
   const notasSemPasta = notas.filter(n => !n.pastaId);

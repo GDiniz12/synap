@@ -10,11 +10,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     
     try {
       await api('/auth/register', {
@@ -25,6 +27,8 @@ export default function RegisterPage() {
       router.push('/login');
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -78,7 +82,33 @@ export default function RegisterPage() {
               className="geist-input"
             />
           </div>
-          <button type="submit" className="geist-button" style={{ marginTop: '8px' }}>Sign Up</button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="geist-button"
+            style={{ marginTop: '8px', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+          >
+            {isSubmitting ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg
+                  className="animate-spin"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <span>Criando conta...</span>
+              </span>
+            ) : (
+              'Sign Up'
+            )}
+          </button>
         </form>
       </div>
 
