@@ -7,9 +7,9 @@ dotenv.config();
 
 const isDev = process.env.ELECTRON_IS_DEV === '1' || !app.isPackaged;
 
-// URLs de desenvolvimento e produção (ex: Vercel)
+// URLs de desenvolvimento e produção (Vercel)
 const DEV_URL = process.env.FRONTEND_DEV_URL || process.env.FRONTEND_URL || 'http://localhost:3001';
-const PROD_URL = process.env.FRONTEND_PROD_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://synap.app';
+const PROD_URL = process.env.FRONTEND_PROD_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://synap-mocha.vercel.app';
 
 const TARGET_URL = isDev ? DEV_URL : PROD_URL;
 
