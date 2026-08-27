@@ -86,6 +86,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   const inlineInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectTitleRef = useRef<boolean>(false);
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
@@ -151,9 +152,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   useEffect(() => {
     if (selectedNota) {
-      if (selectedNota.titulo === '') {
+      if (shouldSelectTitleRef.current || selectedNota.titulo === '') {
+        shouldSelectTitleRef.current = false;
         setTimeout(() => {
-          titleInputRef.current?.focus();
+          if (titleInputRef.current) {
+            titleInputRef.current.focus();
+            titleInputRef.current.select();
+          }
         }, 50);
       }
     }
@@ -248,7 +253,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   // Focus inline input automatically
   useEffect(() => {
     if (inlineAction) {
-      setTimeout(() => inlineInputRef.current?.focus(), 50);
+      setTimeout(() => {
+        if (inlineInputRef.current) {
+          inlineInputRef.current.focus();
+          inlineInputRef.current.select();
+        }
+      }, 50);
     }
   }, [inlineAction]);
 
@@ -344,6 +354,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const handleCreateNota = async (pastaId: string | null = null, tipo: 'texto' | 'desenho' = 'texto') => {
+    setIsGraphViewOpen(false);
     if (pastaId) {
       setExpandedFolders(prev => ({ ...prev, [pastaId]: true }));
     }
@@ -359,8 +370,9 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           pastaId 
         }),
       });
+      shouldSelectTitleRef.current = true;
       loadNotas();
-      openNota(newNota);
+      openNota(newNota, true);
     } catch (err: any) { setError(err.message); }
   };
 
@@ -368,7 +380,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     await handleCreateNota(pastaId, 'desenho');
   };
 
-  const openNota = (nota: any) => {
+  const openNota = (nota: any, autoSelectTitle: boolean = false) => {
     if (saveTimeoutRef.current && selectedNota) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -381,6 +393,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       }).catch(() => {});
     }
 
+    if (autoSelectTitle) {
+      shouldSelectTitleRef.current = true;
+    }
+
     setSelectedNota(nota);
     setEditTitle(nota.titulo);
     editContentRef.current = nota.conteudo || '';
@@ -389,6 +405,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     try {
       localStorage.setItem(`synap_last_note_${id}`, nota.id);
     } catch {}
+
+    if (autoSelectTitle) {
+      setTimeout(() => {
+        if (titleInputRef.current) {
+          titleInputRef.current.focus();
+          titleInputRef.current.select();
+        }
+      }, 50);
+    }
   };
 
   const handleCloseTab = (tabId: string, e?: React.MouseEvent) => {
