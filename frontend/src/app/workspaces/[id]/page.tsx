@@ -747,7 +747,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', background: 'var(--background)' }}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--background)' }}>
       
       {/* GLOBAL CONTEXT MENU */}
       {contextMenu && (
@@ -1058,7 +1058,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       )}
 
       {/* MAIN CONTENT / EDITOR */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
         
         {/* TOP TAB BAR (JANELAS DE NOTAS) */}
         <div 

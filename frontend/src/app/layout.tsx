@@ -27,10 +27,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className="dark h-full">
+      <body className={`${geistSans.variable} ${geistMono.variable} h-full w-full overflow-hidden flex flex-col`}>
         <TitleBar />
-        {children}
+        <main className="flex-1 min-h-0 w-full relative overflow-hidden flex flex-col">
+          {children}
+        </main>
       </body>
     </html>
   );

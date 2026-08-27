@@ -7,14 +7,17 @@
   },
   "files": [
     "dist/**/*",
-    "package.json"
+    "package.json",
+    "resources/**/*"
   ],
   "linux": {
     "target": ["AppImage", "deb"],
     "category": "Office",
-    "maintainer": "Synap <contact@synap.app>"
+    "maintainer": "Synap <contact@synap.app>",
+    "icon": "resources/icon.png"
   },
   "win": {
+    "icon": "resources/icon.ico",
     "target": [
       {
         "target": "nsis",

@@ -16,6 +16,10 @@ const TARGET_URL = isDev ? DEV_URL : PROD_URL;
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
+  const iconPath = process.platform === 'win32'
+    ? path.join(__dirname, '../../resources/icon.ico')
+    : path.join(__dirname, '../../resources/icon.png');
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -24,6 +28,7 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#000000',
+    icon: iconPath,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),

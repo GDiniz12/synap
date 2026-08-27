@@ -125,7 +125,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--accents-1)' }}>
+    <div style={{ minHeight: '100%', height: '100%', flex: 1, overflowY: 'auto', background: 'var(--accents-1)' }}>
       {/* Vercel-like header */}
       <header style={{ borderBottom: '1px solid var(--accents-2)', background: 'var(--background)' }}>
         <div className="geist-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
