@@ -26,7 +26,9 @@ export default function RegisterPage() {
       
       router.push('/login');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erro no cadastro:', err);
+      const isUserExists = err.message?.toLowerCase().includes('exists') || err.message?.toLowerCase().includes('already');
+      setError(isUserExists ? 'Este e-mail já está cadastrado. Tente fazer login.' : 'Não foi possível criar a conta. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }

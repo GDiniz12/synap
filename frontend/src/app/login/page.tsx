@@ -26,7 +26,13 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erro no login:', err);
+      const isInvalidCredentials = err.message?.toLowerCase().includes('credential') || 
+                                   err.message?.toLowerCase().includes('password') || 
+                                   err.message?.toLowerCase().includes('user') || 
+                                   err.message?.includes('400') || 
+                                   err.message?.includes('401');
+      setError(isInvalidCredentials ? 'E-mail ou senha incorretos. Verifique seus dados.' : 'Não foi possível realizar o login. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }

@@ -15,6 +15,7 @@ import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import ShareWorkspaceModal from '@/components/ShareWorkspaceModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import ToastContainer, { ToastMessage } from '@/components/Toast';
 import { translations, Language } from '@/lib/i18n';
 
 export default function WorkspaceLayout({ params }: { params: Promise<{ id: string }> }) {
@@ -26,6 +27,16 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [notas, setNotas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const showToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
+    const toastId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setToasts((prev) => [...prev, { id: toastId, message, type }]);
+  }, []);
+
+  const dismissToast = useCallback((toastId: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== toastId));
+  }, []);
   
   // Language State
   const [currentLang, setCurrentLang] = useState<Language>('pt-BR');
@@ -90,9 +101,19 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
+  const editTitleRef = useRef('');
   const editContentRef = useRef('');
+  const selectedNotaRef = useRef<any>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  useEffect(() => {
+    selectedNotaRef.current = selectedNota;
+  }, [selectedNota]);
+
+  useEffect(() => {
+    editTitleRef.current = editTitle;
+  }, [editTitle]);
 
   const [error, setError] = useState('');
   const router = useRouter();
@@ -126,7 +147,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       }
     } catch (err: any) {
       console.error('Failed to load workspace data', err);
-      setError(err.message);
       if (
         err.message === 'Token is invalid' ||
         err.message === 'Token is missing' ||
@@ -136,6 +156,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         router.push('/login');
         return;
       }
+      showToast('Não foi possível carregar os dados do workspace. Verifique sua conexão.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -223,7 +244,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             const targetNoteId = openTabIds[tabIndex];
             const targetNota = notas.find((n) => n.id === targetNoteId);
             if (targetNota) {
-              setSelectedNota(targetNota);
+              openNota(targetNota);
             }
           }
           return;
@@ -273,14 +294,20 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     try {
       const data = await api(`/workspaces/${id}`);
       setWorkspace(data);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro ao carregar workspace:', err);
+      showToast('Não foi possível carregar os dados do workspace.', 'error');
+    }
   };
 
   const loadPastas = async () => {
     try {
       const data = await api(`/pastas?workspaceId=${id}`);
       setPastas(data);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro ao carregar pastas:', err);
+      showToast('Não foi possível carregar as pastas.', 'error');
+    }
   };
 
   const loadNotas = async () => {
@@ -297,7 +324,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           openNota(targetNota);
         }
       }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro ao carregar notas:', err);
+      showToast('Não foi possível carregar as notas.', 'error');
+    }
   };
 
   // Trigger Inline Creation
@@ -339,13 +369,19 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             body: JSON.stringify({ titulo: trimmedValue }),
           });
           setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
-          if (selectedNota?.id === updated.id) {
+          if (selectedNotaRef.current?.id === updated.id) {
+            selectedNotaRef.current = updated;
+            editTitleRef.current = updated.titulo;
             setSelectedNota(updated);
             setEditTitle(updated.titulo);
           }
         }
       }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro na ação inline:', err);
+      const actionDesc = type === 'create' ? 'criar a pasta' : (itemType === 'pasta' ? 'renomear a pasta' : 'renomear a nota');
+      showToast(`Não foi possível ${actionDesc}. Tente novamente.`, 'error');
+    }
   };
 
   const handleInlineKeyDown = (e: React.KeyboardEvent) => {
@@ -373,7 +409,11 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       shouldSelectTitleRef.current = true;
       loadNotas();
       openNota(newNota, true);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro ao criar nota:', err);
+      const itemDesc = tipo === 'desenho' ? 'o desenho' : 'a nota';
+      showToast(`Não foi possível criar ${itemDesc}. Tente novamente.`, 'error');
+    }
   };
 
   const handleCreateDesenho = async (pastaId: string | null = null) => {
@@ -381,13 +421,33 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const openNota = (nota: any, autoSelectTitle: boolean = false) => {
-    if (saveTimeoutRef.current && selectedNota) {
+    if (!nota) return;
+
+    // If clicking on the currently selected note, don't overwrite current unsaved edits in state
+    if (selectedNotaRef.current?.id === nota.id) {
+      if (autoSelectTitle) {
+        shouldSelectTitleRef.current = true;
+        setTimeout(() => {
+          if (titleInputRef.current) {
+            titleInputRef.current.focus();
+            titleInputRef.current.select();
+          }
+        }, 50);
+      }
+      return;
+    }
+
+    // Flush any pending auto-save for the previously open note
+    if (saveTimeoutRef.current && selectedNotaRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
-      // Fire-and-forget save of the PREVIOUS note before switching
-      api(`/notas/${selectedNota.id}`, {
+      const prevId = selectedNotaRef.current.id;
+      const prevTitle = editTitleRef.current;
+      const prevContent = editContentRef.current;
+
+      api(`/notas/${prevId}`, {
         method: 'PUT',
-        body: JSON.stringify({ titulo: editTitle, conteudo: editContentRef.current }),
+        body: JSON.stringify({ titulo: prevTitle, conteudo: prevContent }),
       }).then((updated) => {
         setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
       }).catch(() => {});
@@ -397,9 +457,15 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       shouldSelectTitleRef.current = true;
     }
 
+    const nextTitle = nota.titulo ?? (nota.tipo === 'desenho' ? 'Novo Desenho' : '');
+    const nextContent = nota.conteudo ?? (nota.tipo === 'desenho' ? '[]' : '');
+
+    selectedNotaRef.current = nota;
+    editTitleRef.current = nextTitle;
+    editContentRef.current = nextContent;
+
     setSelectedNota(nota);
-    setEditTitle(nota.titulo);
-    editContentRef.current = nota.conteudo || '';
+    setEditTitle(nextTitle);
     setSaveStatus('idle');
     setOpenTabIds((prev) => (prev.includes(nota.id) ? prev : [...prev, nota.id]));
     try {
@@ -419,18 +485,46 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const handleCloseTab = (tabId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
 
+    // If closing the active note and it had pending changes, flush save
+    if (selectedNotaRef.current?.id === tabId && saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+      const prevId = selectedNotaRef.current.id;
+      const prevTitle = editTitleRef.current;
+      const prevContent = editContentRef.current;
+
+      api(`/notas/${prevId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ titulo: prevTitle, conteudo: prevContent }),
+      }).then((updated) => {
+        setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
+      }).catch(() => {});
+    }
+
     setOpenTabIds((prev) => {
       const nextTabs = prev.filter((id) => id !== tabId);
 
       // If we are closing the currently selected note, switch active tab
-      if (selectedNota?.id === tabId) {
+      if (selectedNotaRef.current?.id === tabId) {
         if (nextTabs.length === 0) {
+          selectedNotaRef.current = null;
+          editTitleRef.current = '';
+          editContentRef.current = '';
           setSelectedNota(null);
+          setEditTitle('');
         } else {
           const currentIndex = prev.indexOf(tabId);
           const nextActiveId = currentIndex > 0 ? prev[currentIndex - 1] : nextTabs[0];
           const nextNota = notas.find((n) => n.id === nextActiveId);
-          setSelectedNota(nextNota || null);
+          if (nextNota) {
+            openNota(nextNota);
+          } else {
+            selectedNotaRef.current = null;
+            editTitleRef.current = '';
+            editContentRef.current = '';
+            setSelectedNota(null);
+            setEditTitle('');
+          }
         }
       }
 
@@ -516,15 +610,37 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         await api(`/pastas/${targetId}`, { method: 'DELETE' });
         loadPastas();
         loadNotas();
-        if (selectedNota && deletedFolderIds.includes(selectedNota.pastaId)) {
+        if (selectedNotaRef.current && deletedFolderIds.includes(selectedNotaRef.current.pastaId)) {
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+          }
+          selectedNotaRef.current = null;
+          editTitleRef.current = '';
+          editContentRef.current = '';
           setSelectedNota(null);
+          setEditTitle('');
         }
       } else {
+        if (saveTimeoutRef.current && selectedNotaRef.current?.id === targetId) {
+          clearTimeout(saveTimeoutRef.current);
+          saveTimeoutRef.current = null;
+        }
         await api(`/notas/${targetId}`, { method: 'DELETE' });
         loadNotas();
-        if (selectedNota?.id === targetId) setSelectedNota(null);
+        if (selectedNotaRef.current?.id === targetId) {
+          selectedNotaRef.current = null;
+          editTitleRef.current = '';
+          editContentRef.current = '';
+          setSelectedNota(null);
+          setEditTitle('');
+        }
       }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: any) {
+      console.error('Erro ao excluir item:', err);
+      const itemDesc = type === 'pasta' ? 'a pasta' : 'a nota';
+      showToast(`Não foi possível excluir ${itemDesc}. Tente novamente.`, 'error');
+    }
   };
 
   const autoSaveNota = async (newTitle: string, newContent: string, noteIdToSave: string) => {
@@ -538,6 +654,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       
       setSelectedNota((currentSelected: any) => {
         if (currentSelected?.id === updated.id) {
+          selectedNotaRef.current = updated;
           return updated;
         }
         return currentSelected;
@@ -546,7 +663,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err: any) { 
-      setError(err.message);
+      console.error('Falha ao salvar nota automaticamente:', err);
       setSaveStatus('idle');
     }
   };
@@ -554,10 +671,11 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setEditTitle(val);
+    editTitleRef.current = val;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
-    if (selectedNota?.id) {
-      const currentNoteId = selectedNota.id;
+    const currentNoteId = selectedNotaRef.current?.id;
+    if (currentNoteId) {
       saveTimeoutRef.current = setTimeout(() => autoSaveNota(val, editContentRef.current, currentNoteId), 1000);
     }
   };
@@ -586,11 +704,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     editContentRef.current = val;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
-    if (selectedNota?.id) {
-      const currentNoteId = selectedNota.id;
-      saveTimeoutRef.current = setTimeout(() => autoSaveNota(editTitle, val, currentNoteId), 1000);
+    const currentNoteId = selectedNotaRef.current?.id;
+    const currentTitle = editTitleRef.current;
+    if (currentNoteId) {
+      saveTimeoutRef.current = setTimeout(() => autoSaveNota(currentTitle, val, currentNoteId), 1000);
     }
-  }, [editTitle, selectedNota?.id]);
+  }, []);
 
   // DRAG AND DROP LOGIC
   const handleDragStart = (e: React.DragEvent, type: 'pasta' | 'nota', itemId: string) => {
@@ -621,7 +740,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         });
         loadNotas();
         if (targetPastaId) setExpandedFolders(prev => ({ ...prev, [targetPastaId]: true }));
-      } catch (err: any) { setError(err.message); }
+      } catch (err: any) {
+        console.error('Erro ao mover nota:', err);
+        showToast('Não foi possível mover a nota. Tente novamente.', 'error');
+      }
     } else if (type === 'pasta') {
       if (itemId === targetPastaId) return;
       try {
@@ -631,7 +753,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         });
         loadPastas();
         if (targetPastaId) setExpandedFolders(prev => ({ ...prev, [targetPastaId]: true }));
-      } catch (err: any) { setError(err.message); }
+      } catch (err: any) {
+        console.error('Erro ao mover pasta:', err);
+        showToast('Não foi possível mover a pasta. Tente novamente.', 'error');
+      }
     }
   };
 
@@ -750,8 +875,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       onDragOver={handleDragOver}
       onDrop={(e) => handleDropToPasta(e, null)} // Drop to root
     >
-      {error && <div style={{ color: 'var(--error)', fontSize: '12px', marginBottom: 16, padding: '0 8px' }}>{error}</div>}
-
       {/* Unified Tree (Folders first, then files) */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {isCreatingRoot && (
@@ -1140,7 +1263,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 <div
                   key={tabId}
                   onClick={() => {
-                    if (tabNota) setSelectedNota(tabNota);
+                    if (tabNota) openNota(tabNota);
                   }}
                   onAuxClick={(e) => {
                     if (e.button === 1) {
@@ -1635,6 +1758,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
+      {/* Global Toast Notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

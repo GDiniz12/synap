@@ -50,7 +50,16 @@ export default function ShareWorkspaceModal({ workspaceId, isOpen, onClose }: Sh
       setEmail('');
       loadCollaborators();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erro ao convidar colaborador:', err);
+      const isNotFound = err.message?.toLowerCase().includes('not found') || err.message?.includes('404');
+      const isAlready = err.message?.toLowerCase().includes('already');
+      if (isNotFound) {
+        setError('Usuário não encontrado com este e-mail.');
+      } else if (isAlready) {
+        setError('Este usuário já possui acesso a esta workspace.');
+      } else {
+        setError('Não foi possível enviar o convite. Tente novamente.');
+      }
     } finally {
       setLoading(false);
     }

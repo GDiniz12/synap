@@ -52,7 +52,6 @@ export default function DashboardPage() {
       setWorkspaces(workspacesData || []);
     } catch (err: any) {
       console.error('Failed to load initial dashboard data', err);
-      setError(err.message);
       if (
         err.message === 'Token is invalid' ||
         err.message === 'Token is missing' ||
@@ -62,6 +61,7 @@ export default function DashboardPage() {
         router.push('/login');
         return;
       }
+      setError('Não foi possível carregar as informações do dashboard. Verifique sua conexão.');
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +100,8 @@ export default function DashboardPage() {
       const data = await api('/workspaces');
       setWorkspaces(data || []);
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erro ao carregar workspaces:', err);
+      setError('Não foi possível carregar os workspaces. Tente atualizar a página.');
     }
   };
 
@@ -116,7 +117,8 @@ export default function DashboardPage() {
       setNewWorkspaceName('');
       loadWorkspaces();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Erro ao criar workspace:', err);
+      setError('Não foi possível criar o workspace. Tente novamente.');
     }
   };
 
