@@ -242,7 +242,7 @@ export default function SettingsModal({
       onClick={onClose}
     >
       <div
-        className="mobile-fullscreen-dialog md:max-w-[860px] md:h-[620px] h-[95vh] w-full"
+        className="mobile-fullscreen-dialog md:max-w-[860px] md:h-[620px] h-[95vh] w-full animate-smooth-pop"
         style={{
           background: 'var(--background)',
           border: '1px solid var(--accents-2)',

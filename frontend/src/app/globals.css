@@ -6,39 +6,27 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #000000;
+  --background: #000000;
+  --foreground: #ffffff;
   
-  --accents-1: #fafafa;
-  --accents-2: #eaeaea;
-  --accents-3: #999999;
-  --accents-4: #888888;
-  --accents-5: #666666;
-  --accents-6: #444444;
-  --accents-7: #333333;
-  --accents-8: #111111;
+  --accents-1: #111111;
+  --accents-2: #333333;
+  --accents-3: #444444;
+  --accents-4: #666666;
+  --accents-5: #888888;
+  --accents-6: #999999;
+  --accents-7: #eaeaea;
+  --accents-8: #fafafa;
 
   --success: #0070f3;
   --error: #e00;
   --warning: #f5a623;
 
   --radius: 6px;
-}
+  --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-smooth: 220ms;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000000;
-    --foreground: #ffffff;
-    
-    --accents-1: #111111;
-    --accents-2: #333333;
-    --accents-3: #444444;
-    --accents-4: #666666;
-    --accents-5: #888888;
-    --accents-6: #999999;
-    --accents-7: #eaeaea;
-    --accents-8: #fafafa;
-  }
+  color-scheme: dark;
 }
 
 body {
@@ -48,7 +36,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Geist UI Utilities */
+/* Geist UI Utilities with Tactile Feedback */
 .geist-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -59,11 +47,14 @@ body {
   background: var(--background);
   border: 1px solid var(--accents-2);
   border-radius: var(--radius);
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  transition: border var(--duration-smooth) var(--ease-smooth), 
+              box-shadow var(--duration-smooth) var(--ease-smooth),
+              transform var(--duration-smooth) var(--ease-smooth);
 }
 
 .geist-card:hover {
-  box-shadow: 0 4px 14px 0 rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px 0 rgba(0,0,0,0.3);
+  border-color: var(--accents-3);
 }
 
 .geist-input {
@@ -74,12 +65,13 @@ body {
   padding: 0 12px;
   height: 40px;
   font-size: 14px;
-  transition: border 0.2s ease, color 0.2s ease;
+  transition: border var(--duration-smooth) var(--ease-smooth), color var(--duration-smooth) var(--ease-smooth), box-shadow var(--duration-smooth) var(--ease-smooth);
   outline: none;
 }
 
 .geist-input:focus {
   border-color: var(--accents-5);
+  box-shadow: 0 0 0 1px var(--accents-5);
 }
 
 .geist-button {
@@ -92,10 +84,11 @@ body {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--duration-smooth) var(--ease-smooth);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
 }
 
 .geist-button:hover {
@@ -103,15 +96,27 @@ body {
   color: var(--foreground);
 }
 
+.geist-button:active {
+  transform: scale(0.98);
+}
+
 .geist-button-secondary {
   background: var(--background);
   color: var(--accents-5);
   border: 1px solid var(--accents-2);
+  border-radius: var(--radius);
+  transition: all var(--duration-smooth) var(--ease-smooth);
+  user-select: none;
 }
 
 .geist-button-secondary:hover {
   color: var(--foreground);
-  border-color: var(--foreground);
+  border-color: var(--accents-4);
+  background: var(--accents-1);
+}
+
+.geist-button-secondary:active {
+  transform: scale(0.98);
 }
 
 .geist-text-secondary {
@@ -120,6 +125,22 @@ body {
 
 .geist-border {
   border-color: var(--accents-2);
+}
+
+/* Glass & Velvet Surfaces */
+.glass-surface {
+  background: rgba(18, 18, 18, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--accents-2);
+}
+
+.animate-smooth-pop {
+  animation: smoothPop var(--duration-smooth) var(--ease-smooth) forwards;
+}
+
+.animate-smooth-fade {
+  animation: smoothFade var(--duration-smooth) var(--ease-smooth) forwards;
 }
 
 /* Notion-style Rich Text Editor */
@@ -205,25 +226,33 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: var(--accents-2);
+  background: var(--accents-1);
   color: var(--foreground);
   font-weight: 500;
   text-decoration: none;
-  padding: 1px 6px;
-  border-radius: 4px;
-  border: 1px solid var(--accents-3);
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--accents-2);
   font-size: 0.9em;
   line-height: 1.4;
   vertical-align: baseline;
-  transition: all 0.15s ease;
+  transition: all var(--duration-smooth) var(--ease-smooth);
   cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .notion-editor a.synap-wikilink:hover,
 .notion-editor a.synap-cardlink:hover {
-  background: var(--accents-3);
+  background: var(--accents-2);
+  border-color: var(--accents-4);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
   opacity: 1;
-  border-color: var(--foreground);
+}
+
+.notion-editor a.synap-wikilink:active,
+.notion-editor a.synap-cardlink:active {
+  transform: scale(0.97);
 }
 
 .notion-editor ul {
@@ -485,4 +514,24 @@ body {
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+@keyframes smoothPop {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes smoothFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

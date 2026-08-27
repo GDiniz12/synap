@@ -69,3 +69,46 @@ Before considering any implementation or refactoring task complete:
 2. **Regression Prevention**:
    - Ensure existing features, keyboard shortcuts, and modals remain fully functional.
    - Preserve existing comments and docstrings unless explicitly asked to modify them.
+
+---
+
+## 5. gstack
+
+- **Web Browsing**: Always use the `/browse` skill from `gstack` for all web browsing, web testing, and dogfooding. Never use `mcp__claude-in-chrome__*` tools.
+- **Available Skills**:
+  - `/office-hours`
+  - `/plan-ceo-review`
+  - `/plan-eng-review`
+  - `/plan-design-review`
+  - `/design-consultation`
+  - `/design-shotgun`
+  - `/design-html`
+  - `/review`
+  - `/ship`
+  - `/land-and-deploy`
+  - `/canary`
+  - `/benchmark`
+  - `/browse`
+  - `/connect-chrome`
+  - `/qa`
+  - `/qa-only`
+  - `/design-review`
+  - `/setup-browser-cookies`
+  - `/setup-deploy`
+  - `/setup-gbrain`
+  - `/retro`
+  - `/investigate`
+  - `/document-release`
+  - `/document-generate`
+  - `/codex`
+  - `/cso`
+  - `/autoplan`
+  - `/plan-devex-review`
+  - `/devex-review`
+  - `/careful`
+  - `/freeze`
+  - `/guard`
+  - `/unfreeze`
+  - `/gstack-upgrade`
+  - `/learn`
+

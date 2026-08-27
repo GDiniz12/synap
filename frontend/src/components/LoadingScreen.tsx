@@ -30,12 +30,12 @@ export default function LoadingScreen({
       return 'Conectando ao Synap...';
     }
     if (elapsedSeconds < 14) {
-      return 'Iniciando servidor na nuvem...';
+      return 'Iniciando serviços na nuvem...';
     }
     if (elapsedSeconds < 30) {
-      return 'O servidor está acordando (plano gratuito do Render). Quase pronto...';
+      return 'Preparando seu ambiente de trabalho. Quase pronto...';
     }
-    return 'A inicialização do servidor está levando mais tempo que o normal...';
+    return 'A inicialização está levando mais tempo que o normal...';
   };
 
   const containerClasses = fullScreen
@@ -83,9 +83,7 @@ export default function LoadingScreen({
 
         {/* Subtitle description */}
         <p className="text-[11px] text-[var(--accents-4)] leading-relaxed mb-6">
-          {elapsedSeconds >= 4
-            ? 'Servidores inativos passam por um ciclo de boot antes de responder.'
-            : 'Carregando suas informações e workspaces com segurança.'}
+          Carregando suas informações e workspaces com segurança.
         </p>
 
         {/* Elapsed Timer Badge */}

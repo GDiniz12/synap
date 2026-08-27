@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import TitleBar from "@/components/TitleBar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,8 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <TitleBar />
         {children}
       </body>
     </html>

@@ -424,6 +424,28 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, id: itemId, type, currentName });
   };
 
+  const handleExportNota = async (notaId: string) => {
+    const nota = notas.find(n => n.id === notaId) || selectedNota;
+    if (!nota) return;
+    setContextMenu(null);
+
+    if (typeof window !== 'undefined' && window.synapDesktop?.saveNoteToFile) {
+      await window.synapDesktop.saveNoteToFile({
+        defaultTitle: nota.titulo,
+        content: nota.conteudo || '',
+        extension: 'md',
+      });
+    } else {
+      const blob = new Blob([nota.conteudo || ''], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${(nota.titulo || 'nota').replace(/[\\/:*?"<>|]/g, '_')}.md`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const handleContextRename = () => {
     if (!contextMenu) return;
     // Set inline action up
@@ -622,19 +644,20 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         draggable
         onDragStart={(e) => handleDragStart(e, 'nota', nota.id)}
         style={{ 
-          padding: '6px 4px', 
+          padding: '6px 8px', 
           fontSize: '13px', 
           color: selectedNota?.id === nota.id ? 'var(--foreground)' : 'var(--accents-5)',
           background: selectedNota?.id === nota.id ? 'var(--accents-2)' : 'transparent',
-          borderRadius: '4px',
+          borderRadius: '5px',
           cursor: 'pointer',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          display: 'flex', alignItems: 'center', gap: '8px'
+          display: 'flex', alignItems: 'center', gap: '8px',
+          transition: 'all var(--duration-smooth) var(--ease-smooth)',
         }}
-        className="hover:bg-[var(--accents-2)]"
+        className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)] active:scale-[0.99]"
       >
         {isDrawing ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: '#38bdf8' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
         ) : (
@@ -655,17 +678,17 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     return (
       <div key={pasta.id} style={{ paddingLeft: level > 0 ? '16px' : '0' }}>
         <div 
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 4px', borderRadius: '4px', background: 'transparent' }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 8px', borderRadius: '5px', background: 'transparent', transition: 'all var(--duration-smooth) var(--ease-smooth)' }}
           onClick={(e) => toggleFolder(pasta.id, e)}
           onContextMenu={(e) => handleContextMenu(e, pasta.id, 'pasta', pasta.nome)}
           onDragOver={handleDragOver}
           onDrop={(e) => handleDropToPasta(e, pasta.id)}
           draggable
           onDragStart={(e) => handleDragStart(e, 'pasta', pasta.id)}
-          className="hover:bg-[var(--accents-2)] transition-colors group"
+          className="hover:bg-[var(--accents-2)] active:scale-[0.99] group"
         >
           <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', width: '100%' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s ease' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: isExpanded ? 'rotate(90deg)' : 'none', transition: 'transform var(--duration-smooth) var(--ease-smooth)' }}>
               <path d="m9 18 6-6-6-6"/>
             </svg>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
@@ -734,6 +757,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               <div onClick={() => handleTriggerCreatePasta(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Subpasta</div>
               <div onClick={() => handleCreateNota(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Nota</div>
               <div onClick={() => handleCreateDesenho(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Novo Desenho</div>
+              <div style={{ height: 1, background: 'var(--accents-2)', margin: '4px 0' }} />
+            </>
+          )}
+          {contextMenu.type === 'nota' && (
+            <>
+              <div onClick={() => handleExportNota(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Exportar (.md)</div>
               <div style={{ height: 1, background: 'var(--accents-2)', margin: '4px 0' }} />
             </>
           )}
@@ -1110,12 +1139,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                     cursor: 'pointer',
                     flexShrink: 0,
                     maxWidth: '180px',
-                    transition: 'all 0.15s ease',
+                    boxShadow: isActive ? '0 1px 4px rgba(0, 0, 0, 0.25)' : 'none',
+                    transition: 'all var(--duration-smooth) var(--ease-smooth)',
                   }}
-                  className={`group ${!isActive ? 'hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]' : ''}`}
+                  className={`group active:scale-[0.98] ${!isActive ? 'hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]' : ''}`}
                 >
                   {isDrawing ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7, color: '#38bdf8' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
                       <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     </svg>
                   ) : (

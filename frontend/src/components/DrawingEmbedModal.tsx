@@ -53,19 +53,23 @@ export default function DrawingEmbedModal({
     <div
       style={{
         position: 'fixed',
-        inset: 0,
-        zIndex: 1001,
-        background: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(4px)',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        zIndex: 2000,
         padding: '16px',
-        userSelect: 'none',
       }}
       onClick={onClose}
     >
       <div
+        className="animate-smooth-pop"
         style={{
           background: 'var(--background)',
           border: '1px solid var(--accents-2)',
@@ -75,7 +79,7 @@ export default function DrawingEmbedModal({
           padding: '24px',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -212,7 +216,7 @@ export default function DrawingEmbedModal({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#38bdf8' }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accents-5)' }}>
                         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                       </svg>
                       <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)' }}>

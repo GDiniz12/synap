@@ -602,7 +602,7 @@ function Editor({
     wrapper.innerHTML = `
       <div class="synap-drawing-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#181818;border-bottom:1px solid #282828;">
         <div style="display:flex;align-items:center;gap:6px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accents-5);">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
           <span style="font-size:12px;font-weight:600;color:#ededed;">${drawingNota.titulo}</span>
@@ -2089,7 +2089,7 @@ function Editor({
             transform: 'translateX(-50%)',
             zIndex: 1000,
           }}
-          className="flex items-center gap-1 bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-xl px-1.5 py-1 text-sm backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 select-none"
+          className="flex items-center gap-1 bg-[var(--background)]/90 border border-[var(--accents-2)] rounded-lg shadow-2xl px-1.5 py-1 text-sm backdrop-blur-md animate-smooth-pop select-none"
         >
           <button
             type="button"
@@ -2239,7 +2239,7 @@ function Editor({
                 });
               }
             }}
-            className="w-7 h-7 flex items-center justify-center rounded text-sm text-[#38bdf8] hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded text-sm text-[var(--foreground)] hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
             title="Conectar a outra Nota ([[)"
           >
             <span className="font-bold text-xs">[[</span>
@@ -2291,7 +2291,7 @@ function Editor({
             left: linkPopover.x,
             zIndex: 1001,
           }}
-          className="w-[320px] bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-2xl p-3 text-sm backdrop-blur-md animate-in fade-in zoom-in-95 duration-100"
+          className="w-[320px] bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-3 text-sm backdrop-blur-md animate-smooth-pop"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-xs font-semibold text-[var(--foreground)] mb-2 flex items-center gap-1.5">
@@ -2315,7 +2315,7 @@ function Editor({
               placeholder="URL (ex: https://exemplo.com)..."
               value={linkPopover.url}
               onChange={(e) => setLinkPopover((prev) => (prev ? { ...prev, url: e.target.value } : null))}
-              className="w-full px-2.5 py-1.5 text-[13px] bg-[var(--background)] border border-[var(--accents-2)] rounded-md outline-none focus:border-[var(--accents-5)] text-[var(--foreground)]"
+              className="w-full px-2.5 py-1.5 text-[13px] bg-[var(--background)] border border-[var(--accents-2)] rounded-md outline-none focus:border-[var(--accents-5)] text-[var(--foreground)] transition-colors"
             />
 
             <input
@@ -2323,20 +2323,20 @@ function Editor({
               placeholder="Texto de exibição (opcional)..."
               value={linkPopover.text}
               onChange={(e) => setLinkPopover((prev) => (prev ? { ...prev, text: e.target.value } : null))}
-              className="w-full px-2.5 py-1.5 text-[13px] bg-[var(--background)] border border-[var(--accents-2)] rounded-md outline-none focus:border-[var(--accents-5)] text-[var(--foreground)]"
+              className="w-full px-2.5 py-1.5 text-[13px] bg-[var(--background)] border border-[var(--accents-2)] rounded-md outline-none focus:border-[var(--accents-5)] text-[var(--foreground)] transition-colors"
             />
 
             <div className="flex justify-end gap-2 mt-1">
               <button
                 type="button"
                 onClick={() => setLinkPopover(null)}
-                className="px-2.5 py-1 text-xs rounded-md text-[var(--accents-5)] hover:bg-[var(--accents-2)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-xs rounded-md text-[var(--accents-5)] hover:bg-[var(--accents-2)] hover:text-[var(--foreground)] transition-all active:scale-95 cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-3 py-1 text-xs font-medium rounded-md bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-opacity cursor-pointer"
+                className="px-3 py-1 text-xs font-medium rounded-md bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 transition-all active:scale-95 cursor-pointer"
               >
                 Inserir
               </button>
@@ -2355,7 +2355,7 @@ function Editor({
             left: wikiMenu.x,
             zIndex: 1000,
           }}
-          className="w-[280px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md"
+          className="w-[280px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
         >
           <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[var(--foreground)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--accents-2)] mb-1 pb-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-75">
@@ -2391,7 +2391,7 @@ function Editor({
                       setWikiMenu((prev) => ({ ...prev, selectedIndex: idx }));
                     }
                   }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-colors cursor-pointer select-none ${
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-all duration-150 active:scale-[0.98] cursor-pointer select-none ${
                     isSelected
                       ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
                       : 'text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
@@ -2428,7 +2428,7 @@ function Editor({
             left: cardMenu.x,
             zIndex: 1000,
           }}
-          className="w-[300px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md"
+          className="w-[300px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
         >
           <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[var(--foreground)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--accents-2)] mb-1 pb-1.5">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-75">
@@ -2522,7 +2522,7 @@ function Editor({
             left: slashMenu.x,
             zIndex: 1000,
           }}
-          className="w-[280px] max-h-[340px] flex flex-col bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md"
+          className="w-[280px] max-h-[340px] flex flex-col bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
         >
           {/* Search Input for Slash Commands */}
           <div className="p-1 border-b border-[var(--accents-2)] mb-1">
@@ -2545,7 +2545,7 @@ function Editor({
                 <button
                   type="button"
                   onClick={() => setSlashMenu((prev) => ({ ...prev, query: '', selectedIndex: 0 }))}
-                  className="text-[10px] text-[var(--accents-4)] hover:text-[var(--foreground)]"
+                  className="text-[10px] text-[var(--accents-4)] hover:text-[var(--foreground)] transition-colors"
                 >
                   ✕
                 </button>
@@ -2585,7 +2585,7 @@ function Editor({
                         setSlashMenu((prev) => ({ ...prev, selectedIndex: idx }));
                       }
                     }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer select-none ${
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left transition-all duration-150 active:scale-[0.98] cursor-pointer select-none ${
                       isSelected
                         ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
                         : 'text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
@@ -2760,7 +2760,7 @@ function Editor({
             e.preventDefault();
             setIsDrawingModalOpen(true);
           }}
-          className="h-8 px-2 flex items-center gap-1 rounded text-xs text-[#38bdf8] hover:bg-[var(--accents-2)] shrink-0"
+          className="h-8 px-2 flex items-center gap-1 rounded text-xs text-[var(--foreground)] hover:bg-[var(--accents-2)] shrink-0"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>

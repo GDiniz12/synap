@@ -1,0 +1,16 @@
+{
+  "name": "synap-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:desktop": "npm --prefix desktop run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:desktop": "npm --prefix desktop run build",
+    "dist:desktop": "npm --prefix desktop run dist",
+    "dist:desktop:linux": "npm --prefix desktop run dist:linux",
+    "dist:desktop:win": "npm --prefix desktop run dist:win"
+  }
+}

@@ -10,3 +10,5 @@ build
 .next
 out
 uploads
+docs
+release

@@ -1256,7 +1256,7 @@ export default function GraphView({
             flexDirection: 'column',
             zIndex: 30,
             overflow: 'hidden',
-            pointerEvents: 'auto',
+            pointerEvents: 'none',
           }}
         >
           {/* Header */}
@@ -1351,10 +1351,10 @@ export default function GraphView({
             )}
           </div>
 
-          {/* Footer with Click Action */}
+          {/* Footer */}
           <div
             style={{
-              padding: '10px 16px',
+              padding: '8px 16px',
               borderTop: '1px solid var(--accents-2)',
               background: 'var(--accents-1)',
               display: 'flex',
@@ -1363,20 +1363,7 @@ export default function GraphView({
             }}
           >
             <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>Pré-visualização</span>
-            <button
-              type="button"
-              onClick={() => onOpenNota(hoveredNode.rawNota)}
-              className="geist-button"
-              style={{
-                height: '26px',
-                padding: '0 10px',
-                fontSize: '11px',
-                borderRadius: 'var(--radius)',
-                cursor: 'pointer',
-              }}
-            >
-              Abrir Nota ↗
-            </button>
+            <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>Clique no nó para abrir</span>
           </div>
         </div>
       )}

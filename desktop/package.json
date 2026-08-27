@@ -1,0 +1,39 @@
+{
+  "name": "synap-desktop",
+  "version": "1.0.0",
+  "description": "Synap Desktop Application",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "watch:ts": "tsc -w --preserveWatchOutput",
+    "electron:dev": "cross-env ELECTRON_IS_DEV=1 electron .",
+    "dev": "npm run build:ts && concurrently -k -r \"npm run watch:ts\" \"npm --prefix ../frontend run dev -- -p 3001\" \"wait-on -t 30000 tcp:3001 && npm run electron:dev\"",
+    "build:ts": "tsc",
+    "build": "npm run build:ts",
+    "dist": "npm run build && electron-builder",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:win": "npm run build && electron-builder --win",
+    "start": "electron ."
+  },
+  "keywords": [
+    "synap",
+    "notes",
+    "graph",
+    "desktop",
+    "electron"
+  ],
+  "author": "Synap Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "wait-on": "^8.0.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}
