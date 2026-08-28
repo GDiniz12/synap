@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
+import SynapLogo from './SynapLogo';
 
 interface LoadingScreenProps {
   message?: string;
@@ -47,16 +47,8 @@ export default function LoadingScreen({
       {/* Brand & Loading Container */}
       <div className="flex flex-col items-center max-w-sm text-center animate-in fade-in duration-200">
         {/* Synap Logo */}
-        <div className="mb-8 relative">
-          <Image
-            src="/synap-logo-symbol-name.png"
-            alt="Synap Logo"
-            width={180}
-            height={50}
-            style={{ objectFit: 'contain', height: '36px', width: 'auto' }}
-            className="dark:invert-0 invert opacity-90"
-            priority
-          />
+        <div className="mb-8 flex flex-col items-center">
+          <SynapLogo size={52} priority />
         </div>
 
         {/* Minimalist Geist SVG Spinner */}

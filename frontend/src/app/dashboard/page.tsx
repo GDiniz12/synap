@@ -8,6 +8,7 @@ import Image from 'next/image';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import LoadingScreen from '@/components/LoadingScreen';
+import SynapLogo from '@/components/SynapLogo';
 
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
@@ -132,15 +133,9 @@ export default function DashboardPage() {
       <header style={{ borderBottom: '1px solid var(--accents-2)', background: 'var(--background)' }}>
         <div className="geist-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Image 
-              src="/synap-logo-symbol-name.png" 
-              alt="Synap Logo" 
-              width={200} 
-              height={56} 
-              style={{ objectFit: 'contain', height: '40px', width: 'auto' }}
-              className="dark:invert-0 invert"
-              priority
-            />
+            <Link href="/dashboard" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }} className="hover:opacity-80 transition-opacity">
+              <SynapLogo size={28} priority />
+            </Link>
           </div>
 
           {/* User Profile Area with Hover / Click Dropdown Menu */}
@@ -312,9 +307,12 @@ export default function DashboardPage() {
         {error && <p style={{ color: 'var(--error)', marginBottom: '24px' }}>{error}</p>}
         
         {workspaces.length === 0 ? (
-          <div className="geist-card" style={{ padding: '48px', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '8px' }}>No workspaces found</h3>
-            <p className="geist-text-secondary" style={{ marginBottom: '24px' }}>Create a workspace to start organizing your notes and folders.</p>
+          <div className="geist-card" style={{ padding: '56px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <SynapLogo size={48} className="mb-4 opacity-80" />
+            <h3 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--foreground)' }}>Nenhuma workspace encontrada</h3>
+            <p className="geist-text-secondary" style={{ fontSize: '13px', margin: '0 0 8px 0', maxWidth: '380px' }}>
+              Crie sua primeira workspace acima para começar a organizar suas notas, grafos e flashcards.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">

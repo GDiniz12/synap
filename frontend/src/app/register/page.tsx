@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import SynapLogo from '@/components/SynapLogo';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -37,10 +38,13 @@ export default function RegisterPage() {
   return (
     <div style={{ minHeight: '100%', height: '100%', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--accents-1)', padding: '16px' }}>
       <div className="geist-card" style={{ width: '100%', maxWidth: '400px', padding: '24px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 600, letterSpacing: '-0.02em', margin: 0 }}>Create an account</h1>
-          <p className="geist-text-secondary" style={{ fontSize: '14px', marginTop: '8px' }}>
-            Start managing your knowledge with Synap
+        <div style={{ textAlign: 'center', marginBottom: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Link href="/" style={{ textDecoration: 'none', marginBottom: '18px', display: 'inline-flex' }} className="hover:opacity-80 transition-opacity">
+            <SynapLogo size={44} priority />
+          </Link>
+          <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', margin: 0 }}>Criar conta</h1>
+          <p className="geist-text-secondary" style={{ fontSize: '13px', marginTop: '6px' }}>
+            Comece a organizar seu conhecimento e notas interligadas
           </p>
         </div>
 

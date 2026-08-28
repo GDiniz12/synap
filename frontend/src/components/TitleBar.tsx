@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import SynapLogo from './SynapLogo';
 
 export default function TitleBar() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -58,28 +59,9 @@ export default function TitleBar() {
         position: 'relative',
       } as React.CSSProperties}
     >
-      {/* Brand & App Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <img
-          src="/synap-logo-unique.png"
-          alt="Synap"
-          style={{
-            width: '16px',
-            height: '16px',
-            objectFit: 'contain',
-          }}
-          className="dark:invert-0 invert"
-        />
-        <span
-          style={{
-            fontSize: '12px',
-            fontWeight: 500,
-            color: 'var(--foreground)',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Synap
-        </span>
+      {/* Brand Icon */}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <SynapLogo size={16} priority />
       </div>
 
       {/* Window Controls (Minimize, Maximize/Restore, Close) */}

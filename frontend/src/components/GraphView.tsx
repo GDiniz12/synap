@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import GraphDrawingPreview from './GraphDrawingPreview';
+import SynapLogo from './SynapLogo';
 import { api } from '@/lib/api';
 
 export type GroupRuleType = 'pasta' | 'tag' | 'titulo' | 'conteudo' | 'tipo';
@@ -887,8 +888,13 @@ export default function GraphView({
     <div className="relative w-full h-full flex flex-col bg-[var(--background)] select-none overflow-hidden font-sans">
       {/* Top Floating Control Bar */}
       <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2.5 pointer-events-none">
-        {/* Left: Search, Folder, and Groups toggle */}
+        {/* Left: Brand badge, Search, Folder, and Groups toggle */}
         <div className="flex items-center gap-2 pointer-events-auto">
+          {/* Brand Pill */}
+          <div className="flex items-center justify-center bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] p-1.5 shadow-sm">
+            <SynapLogo size={16} />
+          </div>
+
           {/* Search & Folder Pill */}
           <div className="flex items-center gap-1.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] p-1 shadow-sm">
             {/* Search Input */}

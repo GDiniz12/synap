@@ -16,6 +16,7 @@ import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import ShareWorkspaceModal from '@/components/ShareWorkspaceModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
+import SynapLogo from '@/components/SynapLogo';
 import { translations, Language } from '@/lib/i18n';
 
 export const TOP_FONTS = [
@@ -1317,18 +1318,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                   borderRadius: '6px',
                   transition: 'opacity 0.15s ease' 
                 }} 
-                className="hover:opacity-75"
+                className="hover:opacity-80"
                 title="Voltar para o Dashboard"
               >
-                <Image 
-                  src="/synap-logo-unique.png" 
-                  alt="Synap" 
-                  width={64} 
-                  height={64} 
-                  style={{ objectFit: 'contain', width: '25px', height: '25px' }} 
-                  className="dark:invert-0 invert"
-                  priority
-                />
+                <SynapLogo size={24} priority />
               </Link>
               <button 
                 onClick={() => setIsSidebarOpen(false)}
@@ -1486,29 +1479,32 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', flex: 1, height: '100%', paddingRight: '8px' }} className="no-scrollbar">
             {/* Reopen Sidebar Button if collapsed */}
             {!isSidebarOpen && (
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="geist-button-secondary"
-                style={{
-                  width: '28px',
-                  height: '28px',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '6px',
-                  marginRight: '6px',
-                  flexShrink: 0,
-                  cursor: 'pointer'
-                }}
-                title="Abrir barra lateral (Ctrl + \)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2"/>
-                  <path d="M9 3v18"/>
-                  <path d="m14 9 3 3-3 3"/>
-                </svg>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px', flexShrink: 0 }}>
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="geist-button-secondary"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    cursor: 'pointer'
+                  }}
+                  title="Abrir barra lateral (Ctrl + \)"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2"/>
+                    <path d="M9 3v18"/>
+                    <path d="m14 9 3 3-3 3"/>
+                  </svg>
+                </button>
+                <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} className="hover:opacity-80 transition-opacity" title="Voltar ao Dashboard">
+                  <SynapLogo size={18} />
+                </Link>
+              </div>
             )}
 
             {/* List of open note tabs */}
@@ -2170,28 +2166,33 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 </div>
               </>
             ) : (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accents-4)' }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px', opacity: 0.5 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <p style={{ fontSize: '14px' }}>{t('empty_workspace_select')}</p>
-                <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accents-5)', padding: '24px', textAlign: 'center' }}>
+                <SynapLogo size={56} className="mb-4 opacity-80" />
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)', margin: '0 0 6px 0' }}>
+                  {workspace?.nome || 'Workspace'}
+                </h3>
+                <p style={{ fontSize: '13px', color: 'var(--accents-4)', margin: '0 0 20px 0', maxWidth: '360px' }}>
+                  {t('empty_workspace_select')}
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
                   <button
                     type="button"
                     onClick={() => handleCreateNota(null)}
-                    className="geist-button h-8 text-xs px-3"
+                    className="geist-button h-8 text-xs px-3.5"
                   >
                     {t('new_note')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleCreateDesenho(null)}
-                    className="geist-button-secondary h-8 text-xs px-3"
+                    className="geist-button-secondary h-8 text-xs px-3.5"
                   >
                     {t('new_drawing')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsGraphViewOpen(true)}
-                    className="geist-button-secondary h-8 text-xs px-3"
+                    className="geist-button-secondary h-8 text-xs px-3.5"
                   >
                     Grafo
                   </button>

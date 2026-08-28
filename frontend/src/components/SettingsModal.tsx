@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { translations, Language } from '@/lib/i18n';
+import SynapLogo from './SynapLogo';
 
 interface SettingsModalProps {
   currentUser: any;
@@ -415,8 +416,9 @@ export default function SettingsModal({
             </nav>
           </div>
 
-          <div style={{ padding: '8px', fontSize: '11px', color: 'var(--accents-4)', borderTop: '1px solid var(--accents-2)' }}>
-            Synap v1.0.0 • Pro
+          <div className="flex items-center gap-2" style={{ padding: '8px 10px', borderTop: '1px solid var(--accents-2)' }}>
+            <SynapLogo size={16} />
+            <span className="text-[11px] font-mono text-[var(--accents-5)]">Synap v1.0.0</span>
           </div>
         </div>
 

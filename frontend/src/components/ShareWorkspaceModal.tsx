@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
+import SynapLogo from './SynapLogo';
 
 interface ShareWorkspaceModalProps {
   workspaceId: string;
@@ -70,9 +71,11 @@ export default function ShareWorkspaceModal({ workspaceId, isOpen, onClose }: Sh
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
       <div className="bg-[#1a1a1a] border border-[#2d2d2d] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-smooth-pop">
-        
-        <div className="p-6 border-b border-[#2d2d2d] flex justify-between items-center bg-[#1e1e1e]">
-          <h2 className="text-xl font-bold text-white tracking-tight">Compartilhar Workspace</h2>
+        <div className="p-5 border-b border-[#2d2d2d] flex justify-between items-center bg-[#1e1e1e]">
+          <div className="flex items-center gap-2.5">
+            <SynapLogo size={20} />
+            <h2 className="text-base font-bold text-white tracking-tight">Compartilhar Workspace</h2>
+          </div>
           <button 
             onClick={onClose}
             className="text-[var(--accents-5)] hover:text-white transition-colors"
