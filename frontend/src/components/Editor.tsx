@@ -17,6 +17,9 @@ interface EditorProps {
   onOpenCard?: (card: any) => void;
   onUpdateNota?: (updatedNota: any) => void;
   notaId?: string; // New prop for Real-time
+  onCursorLineChange?: (line: number) => void;
+  fontFamily?: string;
+  fontSize?: string;
 }
 
 interface CommandItem {
@@ -26,6 +29,42 @@ interface CommandItem {
   keywords: string[];
   icon: React.ReactNode;
   action: (editor: HTMLDivElement) => void;
+}
+
+// Smart positioning helper to prevent menus and tooltips from clipping outside the viewport
+function computeFloatingPosition(
+  rect: DOMRect,
+  menuWidth: number,
+  menuHeight: number,
+  offset: number = 8
+): { x: number; y: number } {
+  if (typeof window === 'undefined') return { x: rect.left, y: rect.bottom + offset };
+
+  let x = rect.left;
+  if (x + menuWidth > window.innerWidth - 16) {
+    x = Math.max(16, window.innerWidth - menuWidth - 16);
+  }
+  if (x < 16) x = 16;
+
+  const spaceBelow = window.innerHeight - (rect.bottom + offset);
+  const spaceAbove = rect.top - offset;
+
+  let y = rect.bottom + offset;
+
+  // If space below is not enough and space above is sufficient or larger, pop upwards above caret
+  if (spaceBelow < menuHeight && spaceAbove >= menuHeight) {
+    y = rect.top - menuHeight - offset;
+  } else if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+    y = Math.max(16, rect.top - menuHeight - offset);
+  }
+
+  // Constrain within viewport bounds
+  if (y + menuHeight > window.innerHeight - 16) {
+    y = Math.max(16, window.innerHeight - menuHeight - 16);
+  }
+  if (y < 16) y = 16;
+
+  return { x, y };
 }
 
 function Editor({ 
@@ -38,9 +77,84 @@ function Editor({
   isCollaborative,
   notaId,
   onOpenCard,
-  onUpdateNota
+  onUpdateNota,
+  onCursorLineChange,
+  fontFamily,
+  fontSize
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Track cursor line number in contentEditable (1 to infinity, counting both Enter and wrapped visual lines)
+  const updateCursorLine = useCallback(() => {
+    if (!onCursorLineChange || !editorRef.current) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const editorEl = editorRef.current;
+    if (!editorEl.contains(range.startContainer)) return;
+
+    try {
+      let rect = range.getBoundingClientRect();
+
+      // If collapsed on an empty block or zero-height selection, locate the container block element
+      if (!rect || rect.height === 0 || (rect.top === 0 && rect.bottom === 0)) {
+        let el: HTMLElement | null =
+          range.startContainer.nodeType === Node.ELEMENT_NODE
+            ? (range.startContainer as HTMLElement)
+            : range.startContainer.parentElement;
+
+        if (el === editorEl && editorEl.children.length > 0) {
+          const childIndex = Math.min(range.startOffset, editorEl.children.length - 1);
+          el = editorEl.children[childIndex] as HTMLElement;
+        }
+
+        if (el) {
+          rect = el.getBoundingClientRect();
+        }
+      }
+
+      const editorRect = editorEl.getBoundingClientRect();
+      const editorStyle = window.getComputedStyle(editorEl);
+      const paddingTop = parseFloat(editorStyle.paddingTop) || 0;
+      const lineHeight = parseFloat(editorStyle.lineHeight) || 25.5;
+
+      if (rect && rect.top > 0 && editorRect.top > 0) {
+        const relativeY = (rect.top - editorRect.top) + editorEl.scrollTop - paddingTop;
+        if (relativeY >= 0) {
+          const lineNumber = Math.floor((relativeY + (lineHeight * 0.35)) / lineHeight) + 1;
+          onCursorLineChange(Math.max(1, lineNumber));
+          return;
+        }
+      }
+
+      // Fallback: block counting
+      let blockCount = 1;
+      let curr: Node | null = range.startContainer;
+      while (curr && curr.parentNode !== editorEl && curr !== editorEl) {
+        curr = curr.parentNode;
+      }
+      if (curr && curr.parentNode === editorEl) {
+        let prev = curr.previousSibling;
+        while (prev) {
+          blockCount++;
+          prev = prev.previousSibling;
+        }
+        onCursorLineChange(Math.max(1, blockCount));
+      }
+    } catch {
+      // Fallback
+    }
+  }, [onCursorLineChange]);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      updateCursorLine();
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, [updateCursorLine]);
 
   const { users, cursors, status, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
     isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
@@ -235,6 +349,7 @@ function Editor({
   const handleInput = () => {
     if (!editorRef.current) return;
     onChange(editorRef.current.innerHTML);
+    updateCursorLine();
     checkSlashTrigger();
     checkWikiTrigger();
     checkSelection();
@@ -797,10 +912,9 @@ function Editor({
       savedRange = range.cloneRange();
       const rect = range.getBoundingClientRect();
       if (rect.top || rect.left) {
-        x = rect.left;
-        y = rect.bottom + 8;
-        if (x + 320 > window.innerWidth) x = window.innerWidth - 340;
-        if (x < 20) x = 20;
+        const pos = computeFloatingPosition(rect, 320, 180, 8);
+        x = pos.x;
+        y = pos.y;
       }
     }
 
@@ -969,12 +1083,11 @@ function Editor({
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          let x = rect.left || 40;
-          let y = (rect.bottom || 100) + 8;
+          const pos = computeFloatingPosition(rect, 280, 300, 8);
           setWikiMenu({
             visible: true,
-            x,
-            y,
+            x: pos.x,
+            y: pos.y,
             query: '',
             selectedIndex: 0,
           });
@@ -998,12 +1111,11 @@ function Editor({
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          let x = rect.left || 40;
-          let y = (rect.bottom || 100) + 8;
+          const pos = computeFloatingPosition(rect, 280, 300, 8);
           setCardMenu({
             visible: true,
-            x,
-            y,
+            x: pos.x,
+            y: pos.y,
             query: '',
             selectedIndex: 0,
           });
@@ -1236,11 +1348,7 @@ function Editor({
           clonedRange.setEnd(textNode, caretOffset);
           const rect = clonedRange.getBoundingClientRect();
 
-          let x = rect.left;
-          let y = rect.bottom + 8;
-
-          if (x < 20) x = 20;
-          if (x + 280 > window.innerWidth) x = window.innerWidth - 300;
+          const { x, y } = computeFloatingPosition(rect, 280, 340, 8);
 
           setSlashMenu((prev) => ({
             visible: true,
@@ -1287,11 +1395,7 @@ function Editor({
           clonedRange.setEnd(textNode, caretOffset);
           const rect = clonedRange.getBoundingClientRect();
 
-          let x = rect.left;
-          let y = rect.bottom + 8;
-
-          if (x < 20) x = 20;
-          if (x + 280 > window.innerWidth) x = window.innerWidth - 300;
+          const { x, y } = computeFloatingPosition(rect, 280, 300, 8);
 
           setWikiMenu((prev) => ({
             visible: true,
@@ -1337,11 +1441,7 @@ function Editor({
           clonedRange.setEnd(textNode, caretOffset);
           const rect = clonedRange.getBoundingClientRect();
 
-          let x = rect.left;
-          let y = rect.bottom + 8;
-
-          if (x < 20) x = 20;
-          if (x + 280 > window.innerWidth) x = window.innerWidth - 300;
+          const { x, y } = computeFloatingPosition(rect, 280, 300, 8);
 
           setCardMenu((prev) => ({
             visible: true,
@@ -1505,9 +1605,15 @@ function Editor({
         }
       }
     }
+
+    // Schedule line update after keyboard action (e.g. Enter, backspace, typing)
+    requestAnimationFrame(() => {
+      updateCursorLine();
+    });
   };
 
   const handleKeyUp = (e: React.KeyboardEvent) => {
+    updateCursorLine();
     if (['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].includes(e.key)) {
       return;
     }
@@ -1714,16 +1820,12 @@ function Editor({
       }
 
       const rect = linkEl.getBoundingClientRect();
-      let x = rect.left;
-      let y = rect.bottom + 6;
-
-      if (x + 280 > window.innerWidth) x = window.innerWidth - 300;
-      if (x < 20) x = 20;
+      const pos = computeFloatingPosition(rect, 360, 45, 6);
 
       setLinkTooltip({
         visible: true,
-        x,
-        y,
+        x: pos.x,
+        y: pos.y,
         url: href,
         linkElement: linkEl,
       });
@@ -1905,46 +2007,77 @@ function Editor({
             left: linkTooltip.x,
             zIndex: 1002,
           }}
-          className="flex items-center gap-2 bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-xl px-2.5 py-1.5 text-xs backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 select-none max-w-[360px]"
+          className="flex items-center gap-1.5 bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-md shadow-2xl p-1 text-xs backdrop-blur-md animate-smooth-pop select-none max-w-[400px]"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Clean URL link */}
           <a
             href={linkTooltip.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[var(--success)] underline truncate max-w-[180px] hover:opacity-80"
+            className="flex items-center gap-1.5 px-2 py-1 rounded text-[var(--foreground)] hover:text-white hover:bg-[var(--accents-1)] transition-colors truncate max-w-[180px] font-mono text-[11px]"
             title="Abrir link em nova aba"
           >
-            {linkTooltip.url}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 shrink-0">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span className="truncate">{linkTooltip.url.replace(/^https?:\/\//, '')}</span>
           </a>
 
-          <div className="w-[1px] h-3.5 bg-[var(--accents-2)]" />
+          <div className="w-[1px] h-3 bg-[var(--accents-2)]" />
 
+          {/* Geist "Abrir" Action Button */}
           <button
             type="button"
             onClick={() => window.open(linkTooltip.url, '_blank', 'noopener,noreferrer')}
-            className="px-1.5 py-0.5 rounded text-[var(--foreground)] hover:bg-[var(--accents-2)] transition-colors cursor-pointer flex items-center gap-1 font-medium"
-            title="Abrir link (ou Ctrl + Clique no texto)"
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-[var(--foreground)] bg-[var(--accents-1)] border border-[var(--accents-2)] hover:border-[var(--accents-4)] hover:bg-[var(--accents-2)] transition-all cursor-pointer shadow-xs active:scale-[0.97]"
+            title="Abrir link em nova aba (Ctrl + Clique)"
           >
-            Abrir ↗
+            <span>Abrir</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
           </button>
 
+          {/* Geist "Copiar" Action Button */}
           <button
             type="button"
             onClick={handleCopyLink}
-            className="px-1.5 py-0.5 rounded text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
-            title="Copiar URL"
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-1)] transition-colors cursor-pointer"
+            title="Copiar URL para a área de transferência"
           >
-            {copied ? 'Copiado!' : 'Copiar'}
+            {copied ? (
+              <>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span className="text-[var(--foreground)] font-medium">Copiado</span>
+              </>
+            ) : (
+              <>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="13" height="13" x="9" y="9" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>Copiar</span>
+              </>
+            )}
           </button>
 
+          {/* Geist "Remover" Action Button */}
           <button
             type="button"
             onClick={handleRemoveLink}
-            className="px-1.5 py-0.5 rounded text-[var(--error)] hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
-            title="Remover link"
+            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-[var(--accents-4)] hover:text-[var(--error)] hover:bg-[var(--accents-1)] transition-colors cursor-pointer"
+            title="Remover hiperlink do texto"
           >
-            Remover
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Remover</span>
           </button>
         </div>
       )}
@@ -2373,6 +2506,7 @@ function Editor({
           ) : (
             filteredWikiNotas.map((nota, idx) => {
               const isSelected = idx === wikiMenu.selectedIndex;
+              const isDrawing = nota.tipo === 'desenho';
               return (
                 <button
                   key={nota.id}
@@ -2398,17 +2532,30 @@ function Editor({
                   }`}
                 >
                   <div className="flex items-center justify-center w-5 h-5 shrink-0 text-[var(--accents-5)]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
+                    {isDrawing ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                        <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                        <path d="M2 2l7.586 7.586"/>
+                        <circle cx="11" cy="11" r="2"/>
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                    )}
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="font-medium text-[13px] text-[var(--foreground)] truncate leading-snug">
-                      {nota.titulo}
+                      {nota.titulo || (isDrawing ? 'Desenho sem título' : 'Nota sem título')}
                     </span>
                     <span className="text-[11px] text-[var(--accents-4)] truncate leading-snug">
-                      {nota.conteudo ? (nota.conteudo.replace(/<[^>]*>?/gm, '').slice(0, 40) || 'Nota vazia') : 'Nota vazia'}
+                      {isDrawing
+                        ? 'Canvas / Desenho vetorial'
+                        : nota.conteudo
+                          ? (nota.conteudo.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim().slice(0, 45) || 'Nota vazia')
+                          : 'Nota vazia'}
                     </span>
                   </div>
                 </button>
@@ -2508,7 +2655,11 @@ function Editor({
           checkSelection();
         }}
         onClick={handleEditorClick}
-        className="notion-editor min-h-[450px] w-full flex-1 outline-none text-[15px] leading-[1.7] text-[var(--foreground)]"
+        style={{
+          fontFamily: fontFamily || 'inherit',
+          fontSize: fontSize || '15px',
+        }}
+        className="notion-editor min-h-[450px] w-full flex-1 outline-none leading-[1.7] text-[var(--foreground)]"
         data-placeholder={placeholder}
       />
 

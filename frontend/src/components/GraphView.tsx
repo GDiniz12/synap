@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import GraphDrawingPreview from './GraphDrawingPreview';
 import { api } from '@/lib/api';
 
@@ -28,6 +28,10 @@ export interface GraphNode {
   vx: number;
   vy: number;
   radius: number;
+  seed?: number;
+  renderX?: number;
+  renderY?: number;
+  renderRadius?: number;
 }
 
 export interface GraphLink {
@@ -360,12 +364,81 @@ export default function GraphView({
   // Nodes reference maintained across animation loop
   const nodesRef = useRef<GraphNode[]>([]);
   const particlesRef = useRef<Particle[]>([]);
+  const alphaRef = useRef<number>(0.05);
 
-  // Initialize nodes positions and update colors
+  // Helper physics simulation step (Force-directed around (0, 0))
+  const stepPhysics = useCallback(
+    (
+      nodes: GraphNode[],
+      graphLinks: GraphLink[],
+      repulsion: number,
+      linkDist: number,
+      alpha: number,
+      draggedNode: GraphNode | null = null
+    ) => {
+      if (alpha <= 0.0001 || nodes.length === 0) return;
+      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+      // 1. Repulsion between all nodes
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n1 = nodes[i];
+          const n2 = nodes[j];
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const distSq = dx * dx + dy * dy || 1;
+          const dist = Math.sqrt(distSq);
+
+          if (dist < 450) {
+            const force = (repulsion * 16 * alpha) / distSq;
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+            n1.vx -= fx;
+            n1.vy -= fy;
+            n2.vx += fx;
+            n2.vy += fy;
+          }
+        }
+      }
+
+      // 2. Attraction along connected links
+      for (const link of graphLinks) {
+        const source = nodeMap.get(link.source);
+        const target = nodeMap.get(link.target);
+        if (source && target) {
+          const dx = target.x - source.x;
+          const dy = target.y - source.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const force = (dist - linkDist) * 0.04 * alpha;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+
+          source.vx += fx;
+          source.vy += fy;
+          target.vx -= fx;
+          target.vy -= fy;
+        }
+      }
+
+      // 3. Gentle center gravity pull towards (0, 0) and friction
+      for (const node of nodes) {
+        node.vx -= node.x * 0.0025 * alpha;
+        node.vy -= node.y * 0.0025 * alpha;
+
+        node.vx *= 0.82;
+        node.vy *= 0.82;
+
+        if (draggedNode !== node) {
+          node.x += node.vx;
+          node.y += node.vy;
+        }
+      }
+    },
+    []
+  );
+
+  // Initialize nodes positions, pre-warm physics layout, and auto-center
   useEffect(() => {
-    const width = canvasRef.current?.width || 800;
-    const height = canvasRef.current?.height || 600;
-
     const existingMap = new Map(nodesRef.current.map((n) => [n.id, n]));
 
     const initializedNodes: GraphNode[] = notas.map((nota, i) => {
@@ -383,9 +456,10 @@ export default function GraphView({
         preview = (div.innerText || div.textContent || '').slice(0, 140);
       }
 
-      // Initial distributed circle
-      const angle = (i / Math.max(1, notas.length)) * 2 * Math.PI;
-      const radiusDist = 120 + Math.random() * 80;
+      // Golden ratio spiral centered at origin (0, 0)
+      const angle = i * 2.39996;
+      const radiusDist = i === 0 ? 0 : Math.sqrt(i) * 55;
+      const seed = i * 1.61803398875;
 
       return {
         id: nota.id,
@@ -396,15 +470,27 @@ export default function GraphView({
         connectionsCount: connections,
         previewText: preview || 'Nota sem conteúdo.',
         rawNota: nota,
-        x: existing ? existing.x : width / 2 + Math.cos(angle) * radiusDist,
-        y: existing ? existing.y : height / 2 + Math.sin(angle) * radiusDist,
-        vx: existing ? existing.vx : (Math.random() - 0.5) * 2,
-        vy: existing ? existing.vy : (Math.random() - 0.5) * 2,
+        x: existing ? existing.x : Math.cos(angle) * radiusDist,
+        y: existing ? existing.y : Math.sin(angle) * radiusDist,
+        vx: 0,
+        vy: 0,
         radius: Math.max(6, Math.min(18, 7 + connections * 2.5)),
+        seed,
+        renderX: existing ? existing.x : Math.cos(angle) * radiusDist,
+        renderY: existing ? existing.y : Math.sin(angle) * radiusDist,
+        renderRadius: Math.max(6, Math.min(18, 7 + connections * 2.5)),
       };
     });
 
+    // Run 100 pre-warming iterations so the graph opens 100% stabilized
+    let preWarmAlpha = 1.0;
+    for (let tick = 0; tick < 100; tick++) {
+      stepPhysics(initializedNodes, links, repulsionForce, linkDistance, preWarmAlpha);
+      preWarmAlpha *= 0.95;
+    }
+
     nodesRef.current = initializedNodes;
+    alphaRef.current = 0.05;
 
     // Reset particles on connections change
     particlesRef.current = links.map((l) => ({
@@ -414,17 +500,42 @@ export default function GraphView({
       speed: 0.004 + Math.random() * 0.006,
       color: '#38bdf8',
     }));
-  }, [notas, connectionCounts, links, pastas, groups, folderColorMap]);
 
-  // Center initial view
-  useEffect(() => {
+    // Auto-fit & Center the graph in canvas viewport
     if (canvasRef.current) {
-      const { width, height } = canvasRef.current.getBoundingClientRect();
+      const rect = canvasRef.current.getBoundingClientRect();
+      const width = rect.width || 800;
+      const height = rect.height || 600;
       canvasRef.current.width = width * window.devicePixelRatio;
       canvasRef.current.height = height * window.devicePixelRatio;
-      setTransform({ x: width / 2, y: height / 2, k: 1 });
+
+      if (initializedNodes.length > 0) {
+        const minX = Math.min(...initializedNodes.map((n) => n.x));
+        const maxX = Math.max(...initializedNodes.map((n) => n.x));
+        const minY = Math.min(...initializedNodes.map((n) => n.y));
+        const maxY = Math.max(...initializedNodes.map((n) => n.y));
+
+        const graphW = Math.max(160, maxX - minX + 200);
+        const graphH = Math.max(160, maxY - minY + 200);
+        const idealK = Math.min(1.0, Math.max(0.4, Math.min((width - 80) / graphW, (height - 80) / graphH)));
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        setTransform({
+          x: width / 2 - centerX * idealK,
+          y: height / 2 - centerY * idealK,
+          k: idealK,
+        });
+      } else {
+        setTransform({ x: width / 2, y: height / 2, k: 1 });
+      }
     }
-  }, []);
+  }, [notas, connectionCounts, links, pastas, groups, folderColorMap, repulsionForce, linkDistance, stepPhysics]);
+
+  // Re-heat physics gently when sliders change
+  useEffect(() => {
+    alphaRef.current = 0.25;
+  }, [repulsionForce, linkDistance]);
 
   // Filtered nodes directly derived from notas
   const filteredNodeIds = useMemo(() => {
@@ -441,7 +552,7 @@ export default function GraphView({
     );
   }, [notas, searchTerm, selectedFolderFilter]);
 
-  // Animation Loop (Force-Directed Physics + Particle Synapses)
+  // Animation Loop (Force-Directed Physics with Alpha Cooling + Particle Synapses)
   useEffect(() => {
     let animationFrameId: number;
 
@@ -455,67 +566,40 @@ export default function GraphView({
       const width = canvas.width / dpr;
       const height = canvas.height / dpr;
 
-      // PHYSICS STEP
       const nodes = nodesRef.current;
       const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
-      // 1. Repulsion between all nodes
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n1 = nodes[i];
-          const n2 = nodes[j];
-          const dx = n2.x - n1.x;
-          const dy = n2.y - n1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-
-          if (dist < 350) {
-            const force = (repulsionForce * 15) / (dist * dist);
-            const fx = (dx / dist) * force;
-            const fy = (dy / dist) * force;
-            n1.vx -= fx;
-            n1.vy -= fy;
-            n2.vx += fx;
-            n2.vy += fy;
-          }
+      // PHYSICS STEP with Alpha decay (stabilizes equilibrium anchors)
+      if (alphaRef.current > 0.001) {
+        stepPhysics(nodes, links, repulsionForce, linkDistance, alphaRef.current, draggedNodeRef.current);
+        alphaRef.current *= 0.95;
+        if (alphaRef.current <= 0.001) {
+          alphaRef.current = 0;
+          nodes.forEach((n) => {
+            n.vx = 0;
+            n.vy = 0;
+          });
         }
       }
 
-      // 2. Attraction along connected links
-      for (const link of links) {
-        const source = nodeMap.get(link.source);
-        const target = nodeMap.get(link.target);
-        if (source && target) {
-          const dx = target.x - source.x;
-          const dy = target.y - source.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = (dist - linkDistance) * 0.035;
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-
-          source.vx += fx;
-          source.vy += fy;
-          target.vx -= fx;
-          target.vy -= fy;
+      // Compute Organic Breathing / Cosmic Floating positions (Alive effect)
+      const now = performance.now();
+      nodes.forEach((node, i) => {
+        if (draggedNodeRef.current === node) {
+          node.renderX = node.x;
+          node.renderY = node.y;
+          node.renderRadius = node.radius;
+        } else {
+          const s = node.seed ?? i * 1.618;
+          // Smooth asynchronous harmonic waves
+          const floatX = Math.sin(now * 0.0012 + s * 3.1) * 3.5;
+          const floatY = Math.cos(now * 0.0009 + s * 4.7) * 3.5;
+          const breathR = Math.sin(now * 0.002 + s * 2.3) * 0.7;
+          node.renderX = node.x + floatX;
+          node.renderY = node.y + floatY;
+          node.renderRadius = Math.max(4, node.radius + breathR);
         }
-      }
-
-      // 3. Gentle center gravity pull
-      for (const node of nodes) {
-        const dx = width / 2 - node.x;
-        const dy = height / 2 - node.y;
-        node.vx += dx * 0.0008;
-        node.vy += dy * 0.0008;
-
-        // Apply friction/damping
-        node.vx *= 0.88;
-        node.vy *= 0.88;
-
-        // Move if not currently dragged by user
-        if (draggedNodeRef.current !== node) {
-          node.x += node.vx;
-          node.y += node.vy;
-        }
-      }
+      });
 
       // DRAW STEP
       ctx.save();
@@ -526,7 +610,7 @@ export default function GraphView({
       ctx.fillStyle = '#0a0a0a';
       ctx.fillRect(0, 0, width, height);
 
-      // Apply pan & zoom transform
+      // Apply pan & zoom transform (camera stays steady and centered)
       ctx.translate(transform.x, transform.y);
       ctx.scale(transform.k, transform.k);
 
@@ -540,18 +624,23 @@ export default function GraphView({
         });
       }
 
-      // Draw Links
+      // Draw Links connecting organic live float coordinates
       links.forEach((link) => {
         const s = nodeMap.get(link.source);
         const t = nodeMap.get(link.target);
         if (!s || !t) return;
 
+        const sx = s.renderX ?? s.x;
+        const sy = s.renderY ?? s.y;
+        const tx = t.renderX ?? t.x;
+        const ty = t.renderY ?? t.y;
+
         const isHighlighted = hoveredNode && (s.id === hoveredNode.id || t.id === hoveredNode.id);
         const isDimmed = hoveredNode && !isHighlighted;
 
         ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(t.x, t.y);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tx, ty);
 
         if (isHighlighted) {
           ctx.strokeStyle = '#ffffff';
@@ -571,18 +660,23 @@ export default function GraphView({
         ctx.shadowBlur = 0;
       });
 
-      // Draw Synapse Particles
+      // Draw Synapse Particles traveling between live float coordinates
       if (synapseParticlesEnabled) {
         particlesRef.current.forEach((p) => {
           const s = nodeMap.get(p.sourceId);
           const t = nodeMap.get(p.targetId);
           if (!s || !t) return;
 
+          const sx = s.renderX ?? s.x;
+          const sy = s.renderY ?? s.y;
+          const tx = t.renderX ?? t.x;
+          const ty = t.renderY ?? t.y;
+
           p.progress += p.speed;
           if (p.progress > 1) p.progress = 0;
 
-          const px = s.x + (t.x - s.x) * p.progress;
-          const py = s.y + (t.y - s.y) * p.progress;
+          const px = sx + (tx - sx) * p.progress;
+          const py = sy + (ty - sy) * p.progress;
 
           ctx.beginPath();
           ctx.arc(px, py, 2, 0, 2 * Math.PI);
@@ -597,8 +691,12 @@ export default function GraphView({
       // Current live groups reference
       const currentGroups = groupsRef.current;
 
-      // Draw Nodes
+      // Draw Nodes with organic breathing float
       nodes.forEach((node) => {
+        const nx = node.renderX ?? node.x;
+        const ny = node.renderY ?? node.y;
+        const nr = node.renderRadius ?? node.radius;
+
         const isFiltered = filteredNodeIds.has(node.id);
         const isHovered = hoveredNode?.id === node.id;
         const isNeighbor = activeNeighborIds.has(node.id);
@@ -608,21 +706,29 @@ export default function GraphView({
         const nodeColor = resolveNodeColor(node.rawNota || node, currentGroups, folderColorMap);
         node.color = nodeColor;
 
+        // Dynamic breathing ambient glow
+        if (!isDimmed) {
+          ctx.beginPath();
+          ctx.arc(nx, ny, nr + 3, 0, 2 * Math.PI);
+          ctx.fillStyle = `${nodeColor}18`;
+          ctx.fill();
+        }
+
         // Glow ring for hovered node
         if (isHovered) {
           ctx.beginPath();
-          ctx.arc(node.x, node.y, node.radius + 5, 0, 2 * Math.PI);
-          ctx.fillStyle = `${nodeColor}33`;
+          ctx.arc(nx, ny, nr + 6, 0, 2 * Math.PI);
+          ctx.fillStyle = `${nodeColor}44`;
           ctx.fill();
         }
 
         // Main Node circle
         ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
+        ctx.arc(nx, ny, nr, 0, 2 * Math.PI);
         ctx.fillStyle = isDimmed ? 'rgba(50, 50, 50, 0.3)' : nodeColor;
         if (isHovered || isNeighbor) {
           ctx.shadowColor = nodeColor;
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 14;
         }
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -641,7 +747,7 @@ export default function GraphView({
           ctx.font = `${isHovered ? '600 ' : '400 '}11px var(--font-sans, system-ui, sans-serif)`;
           ctx.textAlign = 'center';
           ctx.fillStyle = isDimmed ? 'rgba(255, 255, 255, 0.2)' : 'var(--foreground, #ffffff)';
-          ctx.fillText(node.title, node.x, node.y + node.radius + 13);
+          ctx.fillText(node.title, nx, ny + nr + 13);
         }
       });
 
@@ -665,14 +771,17 @@ export default function GraphView({
     };
   };
 
-  // Find node under mouse
+  // Find node under mouse (tests against live floating render position)
   const getNodeAtPos = (worldX: number, worldY: number): GraphNode | null => {
-    const hitRadiusPadding = 6;
+    const hitRadiusPadding = 8;
     for (let i = nodesRef.current.length - 1; i >= 0; i--) {
       const node = nodesRef.current[i];
-      const dx = node.x - worldX;
-      const dy = node.y - worldY;
-      if (Math.sqrt(dx * dx + dy * dy) <= node.radius + hitRadiusPadding) {
+      const nx = node.renderX ?? node.x;
+      const ny = node.renderY ?? node.y;
+      const nr = node.renderRadius ?? node.radius;
+      const dx = nx - worldX;
+      const dy = ny - worldY;
+      if (Math.sqrt(dx * dx + dy * dy) <= nr + hitRadiusPadding) {
         return node;
       }
     }
@@ -709,6 +818,7 @@ export default function GraphView({
       draggedNodeRef.current.y = y;
       draggedNodeRef.current.vx = 0;
       draggedNodeRef.current.vy = 0;
+      alphaRef.current = 0.15;
       return;
     }
 
@@ -748,9 +858,26 @@ export default function GraphView({
   };
 
   const handleResetView = () => {
-    if (canvasRef.current) {
+    if (canvasRef.current && nodesRef.current.length > 0) {
       const rect = canvasRef.current.getBoundingClientRect();
-      setTransform({ x: rect.width / 2, y: rect.height / 2, k: 1 });
+      const width = rect.width || 800;
+      const height = rect.height || 600;
+      const nodes = nodesRef.current;
+      const minX = Math.min(...nodes.map((n) => n.x));
+      const maxX = Math.max(...nodes.map((n) => n.x));
+      const minY = Math.min(...nodes.map((n) => n.y));
+      const maxY = Math.max(...nodes.map((n) => n.y));
+      const graphW = Math.max(160, maxX - minX + 200);
+      const graphH = Math.max(160, maxY - minY + 200);
+      const idealK = Math.min(1.0, Math.max(0.4, Math.min((width - 80) / graphW, (height - 80) / graphH)));
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      setTransform({
+        x: width / 2 - centerX * idealK,
+        y: height / 2 - centerY * idealK,
+        k: idealK,
+      });
     }
   };
 

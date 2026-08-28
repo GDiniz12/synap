@@ -8,14 +8,14 @@ export class UserService {
 
   async getUsers() {
     return prisma.user.findMany({
-      select: { id: true, email: true, name: true, createdAt: true, updatedAt: true }
+      select: { id: true, email: true, name: true, preferences: true, createdAt: true, updatedAt: true }
     });
   }
 
   async getUserById(id: string) {
     return prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, createdAt: true, updatedAt: true }
+      select: { id: true, email: true, name: true, preferences: true, createdAt: true, updatedAt: true }
     });
   }
 
@@ -23,7 +23,7 @@ export class UserService {
     return prisma.user.update({
       where: { id },
       data,
-      select: { id: true, email: true, name: true, createdAt: true, updatedAt: true }
+      select: { id: true, email: true, name: true, preferences: true, createdAt: true, updatedAt: true }
     });
   }
 

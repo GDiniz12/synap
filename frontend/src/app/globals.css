@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Roboto:wght@400;500;700&family=Short+Stack&family=Source+Sans+3:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -6,17 +7,17 @@
 }
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
+  --background: #111113;
+  --foreground: #ededed;
   
-  --accents-1: #111111;
-  --accents-2: #333333;
-  --accents-3: #444444;
-  --accents-4: #666666;
-  --accents-5: #888888;
-  --accents-6: #999999;
-  --accents-7: #eaeaea;
-  --accents-8: #fafafa;
+  --accents-1: #1a1a1e;
+  --accents-2: #28282e;
+  --accents-3: #383840;
+  --accents-4: #60606a;
+  --accents-5: #8c8c96;
+  --accents-6: #b4b4be;
+  --accents-7: #dcdce2;
+  --accents-8: #f4f4f6;
 
   --success: #0070f3;
   --error: #e00;
@@ -191,10 +192,14 @@ body {
 }
 
 .notion-editor p,
-.notion-editor div {
+.notion-editor div,
+.notion-editor span,
+.notion-editor li {
   margin-top: 0.25rem;
   margin-bottom: 0.25rem;
   line-height: 1.65;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .notion-editor b,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use, useRef, useCallback } from 'react';
+import { useEffect, useState, use, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
@@ -18,6 +18,27 @@ import LoadingScreen from '@/components/LoadingScreen';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
 import { translations, Language } from '@/lib/i18n';
 
+export const TOP_FONTS = [
+  { id: 'geist', name: 'Geist Sans', family: "var(--font-sans), 'Geist Sans', sans-serif", category: 'Sans-Serif' },
+  { id: 'inter', name: 'Inter', family: "'Inter', sans-serif", category: 'Sans-Serif' },
+  { id: 'roboto', name: 'Roboto', family: "'Roboto', sans-serif", category: 'Sans-Serif' },
+  { id: 'open-sans', name: 'Open Sans', family: "'Open Sans', sans-serif", category: 'Sans-Serif' },
+  { id: 'source-sans', name: 'Source Sans 3', family: "'Source Sans 3', sans-serif", category: 'Sans-Serif' },
+  { id: 'lora', name: 'Lora', family: "'Lora', serif", category: 'Serif' },
+  { id: 'merriweather', name: 'Merriweather', family: "'Merriweather', serif", category: 'Serif' },
+  { id: 'playfair', name: 'Playfair Display', family: "'Playfair Display', serif", category: 'Serif' },
+  { id: 'jetbrains', name: 'JetBrains Mono', family: "'JetBrains Mono', monospace", category: 'Monospace' },
+  { id: 'fira-code', name: 'Fira Code', family: "'Fira Code', monospace", category: 'Monospace' },
+];
+
+export const FONT_SIZES = [
+  { label: 'Pequeno (13px)', value: '13px' },
+  { label: 'Padrão (15px)', value: '15px' },
+  { label: 'Médio (17px)', value: '17px' },
+  { label: 'Grande (19px)', value: '19px' },
+  { label: 'Extra Grande (22px)', value: '22px' },
+];
+
 export default function WorkspaceLayout({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   
@@ -28,6 +49,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [isLoading, setIsLoading] = useState(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Editor Typography & Actions Menu State
+  const [editorFontFamily, setEditorFontFamily] = useState<string>("var(--font-sans), 'Geist Sans', sans-serif");
+  const [editorFontSize, setEditorFontSize] = useState<string>('15px');
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
+  const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'font' | 'size'>('none');
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   const showToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
     const toastId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -101,6 +129,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Auto-save logic
   const [editTitle, setEditTitle] = useState('');
+  const [currentContent, setCurrentContent] = useState('');
+  const [currentLine, setCurrentLine] = useState(1);
   const editTitleRef = useRef('');
   const editContentRef = useRef('');
   const selectedNotaRef = useRef<any>(null);
@@ -114,6 +144,232 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     editTitleRef.current = editTitle;
   }, [editTitle]);
+
+  // Real-time note statistics (words, characters, links, and bidirectional connections)
+  const noteStats = useMemo(() => {
+    if (!selectedNota || selectedNota.tipo === 'desenho') {
+      return { words: 0, chars: 0, links: 0, connections: 0 };
+    }
+
+    const content = currentContent || '';
+
+    // 1. Text extraction (stripping HTML tags, styles, scripts and entities)
+    const plainText = content
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const words = plainText.length > 0 ? plainText.split(/\s+/).filter(Boolean).length : 0;
+    const chars = plainText.length;
+
+    // 2. Count internal & external links in note content
+    const aTagCount = (content.match(/<a\b[^>]*>/gi) || []).length;
+    const standaloneWikiCount = (content.replace(/<a\b[^>]*>[\s\S]*?<\/a>/gi, '').match(/\[\[(.*?)\]\]/g) || []).length;
+    const linksCount = aTagCount + standaloneWikiCount;
+
+    // 3. Bidirectional connections calculation (outgoing note links + incoming backlinks)
+    const currentNoteId = selectedNota.id;
+    const currentTitle = (editTitle || selectedNota.titulo || '').toLowerCase().trim();
+    const noteIdSet = new Set(notas.map((n) => n.id));
+    const titleToIdMap = new Map(notas.map((n) => [(n.titulo || '').toLowerCase().trim(), n.id]));
+
+    const connectedNoteIds = new Set<string>();
+
+    // Outgoing note links from current note
+    const dataIdRegex = /data-note-id=["']([^"']+)["']/g;
+    let m;
+    while ((m = dataIdRegex.exec(content)) !== null) {
+      const targetId = m[1];
+      if (targetId && targetId !== currentNoteId && noteIdSet.has(targetId)) {
+        connectedNoteIds.add(targetId);
+      }
+    }
+    const wikiRegex = /\[\[(.*?)\]\]/g;
+    while ((m = wikiRegex.exec(content)) !== null) {
+      const targetTitle = m[1].toLowerCase().trim();
+      const targetId = titleToIdMap.get(targetTitle);
+      if (targetId && targetId !== currentNoteId) {
+        connectedNoteIds.add(targetId);
+      }
+    }
+
+    // Incoming backlinks from other notes in workspace
+    notas.forEach((otherNota) => {
+      if (otherNota.id === currentNoteId) return;
+      const otherContent = otherNota.conteudo || '';
+      if (
+        otherContent.includes(`data-note-id="${currentNoteId}"`) ||
+        otherContent.includes(`data-note-id='${currentNoteId}'`)
+      ) {
+        connectedNoteIds.add(otherNota.id);
+      } else if (currentTitle && otherContent.toLowerCase().includes(`[[${currentTitle}]]`)) {
+        connectedNoteIds.add(otherNota.id);
+      }
+    });
+
+    return {
+      words,
+      chars,
+      links: Math.max(linksCount, connectedNoteIds.size),
+      connections: connectedNoteIds.size,
+    };
+  }, [selectedNota, currentContent, editTitle, notas]);
+
+  // Load preferences from currentUser
+  useEffect(() => {
+    if (currentUser?.preferences) {
+      if (currentUser.preferences.editorFontFamily) {
+        setEditorFontFamily(currentUser.preferences.editorFontFamily);
+      }
+      if (currentUser.preferences.editorFontSize) {
+        setEditorFontSize(currentUser.preferences.editorFontSize);
+      }
+    }
+  }, [currentUser]);
+
+  // Update & persist user preferences
+  const handleUpdatePreference = async (key: 'editorFontFamily' | 'editorFontSize', value: string) => {
+    if (key === 'editorFontFamily') setEditorFontFamily(value);
+    if (key === 'editorFontSize') setEditorFontSize(value);
+
+    const newPrefs = {
+      ...(currentUser?.preferences || {}),
+      [key]: value,
+    };
+
+    setCurrentUser((prev: any) => (prev ? { ...prev, preferences: newPrefs } : prev));
+
+    try {
+      await api('/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ preferences: newPrefs }),
+      });
+    } catch (err) {
+      console.error('Erro ao salvar preferências de editor:', err);
+    }
+  };
+
+  // Close actions menu when clicking outside
+  useEffect(() => {
+    if (!isActionsMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!target || !document.contains(target)) return;
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(target)) {
+        setIsActionsMenuOpen(false);
+        setActiveSubmenu('none');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isActionsMenuOpen]);
+
+  // Export note to PDF formatted document
+  const handleExportPDF = () => {
+    if (!selectedNota) return;
+    setIsActionsMenuOpen(false);
+    setActiveSubmenu('none');
+
+    const printWindow = window.open('', '_blank');
+    const title = editTitle || selectedNota.titulo || 'Nota Sem Título';
+    const content = editContentRef.current || selectedNota.conteudo || '';
+    const dateStr = new Date().toLocaleDateString('pt-BR', { dateStyle: 'long' });
+
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+  <head>
+    <title>${title}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700&family=Open+Sans:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,600&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      @page { margin: 20mm; size: A4; }
+      * { box-sizing: border-box; }
+      body {
+        font-family: ${editorFontFamily}, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: ${editorFontSize || '15px'};
+        line-height: 1.75;
+        color: #111113;
+        background: #ffffff;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+      h1.note-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+        letter-spacing: -0.03em;
+        color: #000000;
+      }
+      .meta-info {
+        font-size: 11px;
+        color: #71717a;
+        margin-bottom: 28px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e4e4e7;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+      }
+      .note-body {
+        color: #18181b;
+      }
+      img { max-width: 100%; height: auto; border-radius: 6px; }
+      a { color: #0070f3; text-decoration: underline; }
+      blockquote {
+        border-left: 3px solid #d4d4d8;
+        margin: 16px 0;
+        padding-left: 16px;
+        color: #52525b;
+        font-style: italic;
+      }
+      pre {
+        background: #f4f4f5;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        font-size: 13px;
+        overflow-x: auto;
+      }
+      table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+      th, td { border: 1px solid #e4e4e7; padding: 8px 12px; text-align: left; }
+      th { background: #fafafa; font-weight: 600; }
+      @media print {
+        body { padding: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="note-title">${title}</h1>
+    <div class="meta-info">Synap • ${dateStr}</div>
+    <div class="note-body">${content}</div>
+    <script>
+      window.onload = function() {
+        setTimeout(function() {
+          window.print();
+        }, 250);
+      };
+    </script>
+  </body>
+</html>`);
+    printWindow.document.close();
+  };
 
   const [error, setError] = useState('');
   const router = useRouter();
@@ -466,6 +722,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
     setSelectedNota(nota);
     setEditTitle(nextTitle);
+    setCurrentContent(nextContent);
+    setCurrentLine(1);
     setSaveStatus('idle');
     setOpenTabIds((prev) => (prev.includes(nota.id) ? prev : [...prev, nota.id]));
     try {
@@ -702,6 +960,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   const handleContentChange = useCallback((val: string) => {
     editContentRef.current = val;
+    setCurrentContent(val);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
     const currentNoteId = selectedNotaRef.current?.id;
@@ -1360,24 +1619,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             </button>
           </div>
 
-          {/* Right: Actions (Terminal Toggle + Save Status) */}
+          {/* Right: Actions (Terminal Toggle, Graph Toggle) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {selectedNota && saveStatus !== 'idle' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--accents-5)' }}>
-                {saveStatus === 'saving' ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                    <span>Salvando...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span>Salvo</span>
-                  </>
-                )}
-              </div>
-            )}
-
             {/* Graph View Toggle Button */}
             <button
               type="button"
@@ -1501,66 +1744,431 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 onOpenCard={(c) => setSelectedCardModal(c)}
               />
             </div>
+            {/* Bottom-Right Floating Status Pill for Canvas */}
+            <div 
+              className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--background)]/90 backdrop-blur-md border border-[var(--accents-2)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--accents-5)] select-none pointer-events-auto"
+            >
+              <div className="flex items-center gap-1.5 text-[var(--accents-5)]">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  <path d="M2 2l7.586 7.586"/>
+                  <circle cx="11" cy="11" r="2"/>
+                </svg>
+                <span>Canvas</span>
+              </div>
+
+              <span className="text-[var(--accents-3)] select-none">•</span>
+
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                {saveStatus === 'saving' ? (
+                  <div className="flex items-center gap-1 text-[var(--accents-5)]">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    <span>Salvando...</span>
+                  </div>
+                ) : saveStatus === 'saved' ? (
+                  <div className="flex items-center gap-1 text-[var(--foreground)]">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Salvo</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-[var(--accents-4)] opacity-70">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                    <span>Sincronizado</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', position: 'relative' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             {selectedNota ? (
-              <div 
-                style={{ 
-                  padding: isMobile ? '20px 16px 80px' : '48px 64px 64px', 
-                  maxWidth: '800px', 
-                  width: '100%', 
-                  margin: '0 auto', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  height: '100%' 
-                }}
-              >
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? '16px' : '32px' }}>
-                  <input 
-                    ref={titleInputRef}
-                    value={editTitle}
-                    onChange={handleTitleChange}
-                    onKeyDown={handleTitleKeyDown}
-                    placeholder="Sem Título"
+              <>
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <div 
                     style={{ 
-                      fontSize: isMobile ? '24px' : '32px', 
-                      fontWeight: 600, 
-                      letterSpacing: '-0.04em', 
-                      border: 'none', 
-                      background: 'transparent', 
-                      outline: 'none', 
+                      padding: isMobile ? '20px 16px 80px' : '48px 64px 80px', 
+                      maxWidth: '800px', 
                       width: '100%', 
-                      color: 'var(--foreground)' 
+                      margin: '0 auto', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      minHeight: '100%' 
                     }}
-                  />
+                  >
+                    
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: isMobile ? '16px' : '32px' }}>
+                      <input 
+                        ref={titleInputRef}
+                        value={editTitle}
+                        onChange={handleTitleChange}
+                        onKeyDown={handleTitleKeyDown}
+                        placeholder="Sem Título"
+                        style={{ 
+                          fontFamily: editorFontFamily || 'inherit',
+                          fontSize: isMobile ? '24px' : '32px', 
+                          fontWeight: 600, 
+                          letterSpacing: '-0.04em', 
+                          border: 'none', 
+                          background: 'transparent', 
+                          outline: 'none', 
+                          width: '100%', 
+                          color: 'var(--foreground)' 
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <Editor 
+                        key={selectedNota?.id}
+                        notaId={selectedNota?.id}
+                        value={editContentRef.current}
+                        onChange={handleContentChange}
+                        onCursorLineChange={setCurrentLine}
+                        fontFamily={editorFontFamily}
+                        fontSize={editorFontSize}
+                        placeholder={t('editor_placeholder')}
+                        notas={notas}
+                        onOpenNota={(n) => openNota(n)}
+                        workspaceId={workspace?.id}
+                        isCollaborative={workspace?.isCollaborative}
+                        onOpenCard={(c) => setSelectedCardModal(c)}
+                        onUpdateNota={(updated) => {
+                          setNotas((prev) => {
+                            const exists = prev.some((n) => n.id === updated.id);
+                            if (exists) {
+                              return prev.map((n) => (n.id === updated.id ? updated : n));
+                            }
+                            return [...prev, updated];
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ flex: 1 }}>
-                  <Editor 
-                    key={selectedNota?.id}
-                    notaId={selectedNota?.id}
-                    value={editContentRef.current}
-                    onChange={handleContentChange}
-                    placeholder={t('editor_placeholder')}
-                    notas={notas}
-                    onOpenNota={(n) => openNota(n)}
-                    workspaceId={workspace?.id}
-                    isCollaborative={workspace?.isCollaborative}
-                    onOpenCard={(c) => setSelectedCardModal(c)}
-                    onUpdateNota={(updated) => {
-                      setNotas((prev) => {
-                        const exists = prev.some((n) => n.id === updated.id);
-                        if (exists) {
-                          return prev.map((n) => (n.id === updated.id ? updated : n));
-                        }
-                        return [...prev, updated];
-                      });
-                    }}
-                  />
+                {/* Bottom-Right Floating Status & Statistics Pill */}
+                <div 
+                  className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--background)]/90 backdrop-blur-md border border-[var(--accents-2)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--accents-5)] select-none pointer-events-auto"
+                >
+                  {/* Active Cursor Line */}
+                  <div className="flex items-center gap-1 text-[var(--foreground)] font-medium whitespace-nowrap" title="Linha atual onde o cursor está posicionado">
+                    <span>Ln {currentLine}</span>
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* Words count */}
+                  <div className="flex items-center gap-1 whitespace-nowrap" title="Quantidade de palavras na nota">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    <span>{noteStats.words} {noteStats.words === 1 ? 'palavra' : 'palavras'}</span>
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* Characters count */}
+                  <div className="flex items-center gap-1 whitespace-nowrap" title="Quantidade de caracteres na nota">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 7 4 4 20 4 20 7"/>
+                      <line x1="9" y1="20" x2="15" y2="20"/>
+                      <line x1="12" y1="4" x2="12" y2="20"/>
+                    </svg>
+                    <span>{noteStats.chars} {noteStats.chars === 1 ? 'caractere' : 'caracteres'}</span>
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* Links count */}
+                  <div className="flex items-center gap-1 whitespace-nowrap" title="Total de links presentes no documento">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                    <span>{noteStats.links} {noteStats.links === 1 ? 'link' : 'links'}</span>
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* Connections count */}
+                  <div className="flex items-center gap-1 whitespace-nowrap" title="Conexões bidirecionais no grafo (links + backlinks)">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="18" cy="5" r="3"/>
+                      <circle cx="6" cy="12" r="3"/>
+                      <circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                    <span>{noteStats.connections} {noteStats.connections === 1 ? 'conexão' : 'conexões'}</span>
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* Save status indicator */}
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    {saveStatus === 'saving' ? (
+                      <div className="flex items-center gap-1 text-[var(--accents-5)]">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        <span>Salvando...</span>
+                      </div>
+                    ) : saveStatus === 'saved' ? (
+                      <div className="flex items-center gap-1 text-[var(--foreground)]">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>Salvo</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[var(--accents-4)] opacity-70">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                        <span>Sincronizado</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="text-[var(--accents-3)] select-none">•</span>
+
+                  {/* 3-Dots Actions Menu Container */}
+                  <div className="relative flex items-center" ref={actionsMenuRef}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsActionsMenuOpen((prev) => !prev);
+                        setActiveSubmenu('none');
+                      }}
+                      className={`p-1 rounded-md transition-all duration-150 cursor-pointer flex items-center justify-center ${
+                        isActionsMenuOpen
+                          ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
+                          : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)]'
+                      }`}
+                      title="Mais opções da nota (Tipografia, Tamanho, PDF, Excluir)"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="1.5"/>
+                        <circle cx="19" cy="12" r="1.5"/>
+                        <circle cx="5" cy="12" r="1.5"/>
+                      </svg>
+                    </button>
+
+                    {/* Popover Dropdown (Opens upwards) */}
+                    {isActionsMenuOpen && (
+                      <div
+                        className="absolute bottom-full right-0 mb-2 w-64 bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 backdrop-blur-md animate-smooth-pop text-xs text-[var(--foreground)] z-50 select-none font-sans"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {activeSubmenu === 'none' && (
+                          <div className="flex flex-col gap-0.5">
+                            {/* Font Choice */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveSubmenu('font');
+                              }}
+                              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-[var(--accents-1)] transition-colors cursor-pointer text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
+                                  <polyline points="4 7 4 4 20 4 20 7"/>
+                                  <line x1="9" y1="20" x2="15" y2="20"/>
+                                  <line x1="12" y1="4" x2="12" y2="20"/>
+                                </svg>
+                                <span className="font-medium">Fonte do editor</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-[var(--accents-4)] font-mono">
+                                <span>{TOP_FONTS.find(f => f.family === editorFontFamily)?.name || 'Geist Sans'}</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                              </div>
+                            </button>
+
+                            {/* Font Size Choice */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setActiveSubmenu('size');
+                              }}
+                              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-[var(--accents-1)] transition-colors cursor-pointer text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
+                                  <path d="M4 12h16"/>
+                                  <path d="M4 6h16"/>
+                                  <path d="M4 18h16"/>
+                                </svg>
+                                <span className="font-medium">Tamanho da fonte</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[11px] text-[var(--accents-4)] font-mono">
+                                <span>{editorFontSize}</span>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                              </div>
+                            </button>
+
+                            {/* Export PDF */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleExportPDF();
+                              }}
+                              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-[var(--accents-1)] transition-colors cursor-pointer text-left"
+                            >
+                              <div className="flex items-center gap-2">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
+                                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                  <polyline points="14 2 14 8 20 8"/>
+                                  <line x1="16" y1="13" x2="8" y2="13"/>
+                                  <line x1="16" y1="17" x2="8" y2="17"/>
+                                  <polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                                <span className="font-medium">Exportar para PDF</span>
+                              </div>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-4)]">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                              </svg>
+                            </button>
+
+                            <div className="w-full h-[1px] bg-[var(--accents-2)] my-1" />
+
+                            {/* Delete Note */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setIsActionsMenuOpen(false);
+                                setDeleteModal({
+                                  visible: true,
+                                  id: selectedNota.id,
+                                  type: 'nota',
+                                  name: selectedNota.titulo || 'Sem Título',
+                                });
+                              }}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[var(--error)] hover:bg-[var(--accents-1)] transition-colors cursor-pointer text-left"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                              </svg>
+                              <span className="font-medium">Excluir nota</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {activeSubmenu === 'font' && (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 px-1 py-1 border-b border-[var(--accents-2)] mb-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setActiveSubmenu('none');
+                                }}
+                                className="p-1 rounded hover:bg-[var(--accents-2)] transition-colors cursor-pointer text-[var(--accents-5)] hover:text-[var(--foreground)]"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                              </button>
+                              <span className="font-medium text-xs text-[var(--foreground)]">Escolha a fonte</span>
+                            </div>
+                            <div className="max-h-[220px] overflow-y-auto no-scrollbar flex flex-col gap-0.5">
+                              {TOP_FONTS.map((font) => {
+                                const isSelected = editorFontFamily === font.family;
+                                return (
+                                  <button
+                                    key={font.id}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleUpdatePreference('editorFontFamily', font.family);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
+                                        : 'hover:bg-[var(--accents-1)] text-[var(--accents-6)]'
+                                    }`}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span style={{ fontFamily: font.family }} className="text-[13px] font-medium leading-tight">
+                                        {font.name}
+                                      </span>
+                                      <span className="text-[10px] text-[var(--accents-4)]">
+                                        {font.category}
+                                      </span>
+                                    </div>
+                                    {isSelected && (
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--foreground)]">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                      </svg>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {activeSubmenu === 'size' && (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 px-1 py-1 border-b border-[var(--accents-2)] mb-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setActiveSubmenu('none');
+                                }}
+                                className="p-1 rounded hover:bg-[var(--accents-2)] transition-colors cursor-pointer text-[var(--accents-5)] hover:text-[var(--foreground)]"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                              </button>
+                              <span className="font-medium text-xs text-[var(--foreground)]">Tamanho da fonte</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              {FONT_SIZES.map((size) => {
+                                const isSelected = editorFontSize === size.value;
+                                return (
+                                  <button
+                                    key={size.value}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleUpdatePreference('editorFontSize', size.value);
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
+                                        : 'hover:bg-[var(--accents-1)] text-[var(--accents-6)]'
+                                    }`}
+                                  >
+                                    <span style={{ fontSize: size.value }} className="font-medium">
+                                      {size.label}
+                                    </span>
+                                    {isSelected && (
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--foreground)]">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                      </svg>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accents-4)' }}>
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '16px', opacity: 0.5 }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

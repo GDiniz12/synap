@@ -122,9 +122,12 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
           ctx.lineTo(p2.x - headlen * Math.cos(angle + Math.PI / 6), p2.y - headlen * Math.sin(angle + Math.PI / 6));
           ctx.stroke();
         } else if (el.type === 'text' && el.text) {
-          ctx.font = '14px "Virgil", "Segoe UI", sans-serif';
+          ctx.font = '14px "Short Stack", "Virgil", cursive, sans-serif';
           ctx.fillStyle = el.strokeColor || '#ffffff';
-          ctx.fillText(el.text, el.x, el.y);
+          const lines = el.text.split('\n');
+          lines.forEach((line: string, idx: number) => {
+            ctx.fillText(line, el.x, el.y + idx * 18);
+          });
         }
         ctx.restore();
       });

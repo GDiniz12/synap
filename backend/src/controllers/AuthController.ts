@@ -76,7 +76,7 @@ export class AuthController {
     try {
       const user = await prisma.user.findUnique({
         where: { id: req.userId },
-        select: { id: true, email: true, name: true }
+        select: { id: true, email: true, name: true, preferences: true }
       });
       if (!user) return res.status(404).json({ error: 'User not found' });
       res.status(200).json(user);
@@ -87,11 +87,15 @@ export class AuthController {
 
   async updateMe(req: any, res: Response) {
     try {
-      const { nome, name, email, senha, password } = req.body;
+      const { nome, name, email, senha, password, preferences } = req.body;
       const updateData: any = {};
 
       const newName = nome || name;
       if (newName) updateData.name = newName;
+
+      if (preferences !== undefined) {
+        updateData.preferences = preferences;
+      }
 
       if (email) {
         const existing = await prisma.user.findUnique({ where: { email } });
@@ -109,7 +113,7 @@ export class AuthController {
       const updated = await prisma.user.update({
         where: { id: req.userId },
         data: updateData,
-        select: { id: true, email: true, name: true, createdAt: true, updatedAt: true }
+        select: { id: true, email: true, name: true, preferences: true, createdAt: true, updatedAt: true }
       });
 
       res.status(200).json(updated);

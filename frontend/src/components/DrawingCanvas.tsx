@@ -5,7 +5,7 @@ import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
 import LiveCursors from './LiveCursors';
 
-export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'eraser';
+export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'arrow' | 'line' | 'text' | 'image' | 'eraser';
 
 export interface Point {
   x: number;
@@ -14,11 +14,12 @@ export interface Point {
 
 export interface DrawingElement {
   id: string;
-  type: 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'note_card' | 'flashcard';
+  type: 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'image' | 'note_card' | 'flashcard';
   x: number;
   y: number;
   width?: number;
   height?: number;
+  imageUrl?: string;
   points?: Point[];
   text?: string;
   strokeColor: string;
@@ -146,7 +147,10 @@ export default function DrawingCanvas({
     worldY: number;
     text: string;
   } | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textMountedAtRef = useRef<number>(0);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Mouse action refs
   const mouseModeRef = useRef<'drawing' | 'dragging_elements' | 'marquee_selecting' | 'panning' | 'idle'>('idle');
@@ -156,14 +160,17 @@ export default function DrawingCanvas({
   const isPanningRef = useRef(false);
   const panStartRef = useRef<Point>({ x: 0, y: 0 });
 
-  // Focus input automatically whenever editingText becomes active
+  // Focus textarea automatically whenever editingText becomes active
   useEffect(() => {
     if (editingText) {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
       const focusTimer = setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
+        if (textareaRef.current) {
+          textareaRef.current.focus();
         }
-      }, 30);
+      }, 40);
       return () => clearTimeout(focusTimer);
     }
   }, [editingText]);
@@ -225,8 +232,74 @@ export default function DrawingCanvas({
     };
 
     commitElements([...elements, newEl]);
+    setTool('select');
     setSelectedIds([newEl.id]);
   };
+
+  // Insert Image into Canvas
+  const handleInsertImage = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (!dataUrl) return;
+
+        const img = new Image();
+        img.onload = () => {
+          const container = containerRef.current;
+          const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
+          const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
+
+          const maxWidth = 400;
+          const scale = img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
+          const width = img.naturalWidth * scale;
+          const height = img.naturalHeight * scale;
+
+          const newEl: DrawingElement = {
+            id: Math.random().toString(),
+            type: 'image',
+            x: viewCenterX - width / 2,
+            y: viewCenterY - height / 2,
+            width,
+            height,
+            imageUrl: dataUrl,
+            strokeColor: 'transparent',
+            fillColor: 'transparent',
+            strokeWidth: 0,
+          };
+
+          imageCacheRef.current.set(dataUrl, img);
+          commitElements([...elements, newEl]);
+          setTool('select');
+          setSelectedIds([newEl.id]);
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
+    },
+    [commitElements, elements, pan.x, pan.y, zoom]
+  );
+
+  // Paste image handler from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (editingText) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleInsertImage(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [editingText, handleInsertImage]);
 
   // Initial history snapshot
   useEffect(() => {
@@ -295,12 +368,19 @@ export default function DrawingCanvas({
       minY = Math.min(...el.points.map((p) => p.y));
       maxY = Math.max(...el.points.map((p) => p.y));
     } else if (el.type === 'text') {
-      const textLen = el.text ? el.text.length : 1;
+      const lines = (el.text || '').split('\n');
+      const maxLineLen = Math.max(...lines.map((l) => l.length), 1);
       minX = el.x;
-      maxX = el.x + Math.max(60, textLen * 13);
-      minY = el.y - 20;
-      maxY = el.y + 12;
-    } else if (el.type === 'rectangle' || el.type === 'ellipse' || el.type === 'note_card' || el.type === 'flashcard') {
+      maxX = el.x + Math.max(60, maxLineLen * 11);
+      minY = el.y - 18;
+      maxY = el.y + (lines.length - 1) * 24 + 6;
+    } else if (
+      el.type === 'rectangle' ||
+      el.type === 'ellipse' ||
+      el.type === 'image' ||
+      el.type === 'note_card' ||
+      el.type === 'flashcard'
+    ) {
       minX = Math.min(el.x, el.x + (el.width || 0));
       maxX = Math.max(el.x, el.x + (el.width || 0));
       minY = Math.min(el.y, el.y + (el.height || 0));
@@ -315,7 +395,13 @@ export default function DrawingCanvas({
     const threshold = 14 / zoom;
     const { minX, minY, maxX, maxY } = getElementBounds(el);
 
-    if (el.type === 'text' || el.type === 'rectangle' || el.type === 'note_card' || el.type === 'flashcard') {
+    if (
+      el.type === 'text' ||
+      el.type === 'rectangle' ||
+      el.type === 'image' ||
+      el.type === 'note_card' ||
+      el.type === 'flashcard'
+    ) {
       return (
         point.x >= minX - threshold &&
         point.x <= maxX + threshold &&
@@ -431,9 +517,32 @@ export default function DrawingCanvas({
         ctx.lineTo(p2.x - headlen * Math.cos(angle + Math.PI / 6), p2.y - headlen * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
       } else if (el.type === 'text' && el.text) {
-        ctx.font = '18px "Virgil", "Segoe UI", -apple-system, sans-serif';
+        ctx.font = '18px "Short Stack", "Virgil", cursive, sans-serif';
         ctx.fillStyle = el.strokeColor;
-        ctx.fillText(el.text, el.x, el.y);
+        const lines = el.text.split('\n');
+        const lineHeight = 24;
+        lines.forEach((line, idx) => {
+          ctx.fillText(line, el.x, el.y + idx * lineHeight);
+        });
+      } else if (el.type === 'image' && el.imageUrl) {
+        let img = imageCacheRef.current.get(el.imageUrl);
+        if (!img) {
+          img = new Image();
+          img.src = el.imageUrl;
+          img.onload = () => {
+            renderCanvas();
+          };
+          imageCacheRef.current.set(el.imageUrl, img);
+        }
+        if (img.complete && img.naturalWidth > 0) {
+          const w = el.width || img.naturalWidth;
+          const h = el.height || img.naturalHeight;
+          ctx.drawImage(img, el.x, el.y, w, h);
+        } else {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(el.x, el.y, el.width || 200, el.height || 150);
+        }
       }
 
       // Selection bounding box with subtle accent glow
@@ -549,6 +658,8 @@ export default function DrawingCanvas({
         const updated = [...elements];
         updated[existingIdx] = { ...updated[existingIdx], text: textVal };
         commitElements(updated);
+        setSelectedIds([editingText.id]);
+        setTool('select');
       } else {
         const newEl: DrawingElement = {
           id: editingText.id,
@@ -561,6 +672,8 @@ export default function DrawingCanvas({
           strokeWidth: 1,
         };
         commitElements([...elements, newEl]);
+        setSelectedIds([newEl.id]);
+        setTool('select');
       }
     }
     setEditingText(null);
@@ -572,6 +685,7 @@ export default function DrawingCanvas({
     const hitText = [...elements].reverse().find((el) => el.type === 'text' && isPointInElement(worldPoint, el));
 
     if (hitText) {
+      textMountedAtRef.current = Date.now();
       setEditingText({
         id: hitText.id,
         worldX: hitText.x,
@@ -583,6 +697,12 @@ export default function DrawingCanvas({
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // If text was being edited and user clicks on canvas, commit it
+    if (editingText) {
+      handleFinishText();
+      return;
+    }
+
     // Space or middle mouse click for Panning OR Hand Tool (0 / H)
     if (tool === 'hand' || isSpacePressed || e.button === 1) {
       isPanningRef.current = true;
@@ -597,6 +717,7 @@ export default function DrawingCanvas({
     // 1. TEXT TOOL (7 / T) -> Creates new text
     if (tool === 'text') {
       const newId = Math.random().toString();
+      textMountedAtRef.current = Date.now();
       setEditingText({
         id: newId,
         worldX: worldPoint.x,
@@ -814,6 +935,8 @@ export default function DrawingCanvas({
       const newEl = currentElementRef.current;
       currentElementRef.current = null;
       commitElements([...elements, newEl]);
+      setTool('select');
+      setSelectedIds([newEl.id]);
       return;
     }
 
@@ -930,7 +1053,7 @@ export default function DrawingCanvas({
           commitElements(remaining);
         }
       }
-      // Tool hotkeys
+      // Tool hotkeys (0-9)
       if (e.key === 'h' || e.key === '0') setTool('hand');
       if (e.key === 'v' || e.key === '1') setTool('select');
       if (e.key === 'p' || e.key === '2') setTool('pencil');
@@ -939,7 +1062,8 @@ export default function DrawingCanvas({
       if (e.key === 'a' || e.key === '5') setTool('arrow');
       if (e.key === 'l' || e.key === '6') setTool('line');
       if (e.key === 't' || e.key === '7') setTool('text');
-      if (e.key === 'e' || e.key === '8') setTool('eraser');
+      if (e.key === 'i' || e.key === '8') imageInputRef.current?.click();
+      if (e.key === 'e' || e.key === '9') setTool('eraser');
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -1008,7 +1132,37 @@ export default function DrawingCanvas({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col bg-[#121212] overflow-hidden select-none font-sans">
+    <div 
+      ref={containerRef} 
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+          handleInsertImage(files[0]);
+        }
+      }}
+      className="relative w-full h-full flex flex-col bg-[#121212] overflow-hidden select-none font-sans"
+    >
+      {/* Hidden Image File Input */}
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            handleInsertImage(file);
+          }
+          e.target.value = '';
+        }}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Presence UI */}
       {workspaceId && notaId && isCollaborative && (
         <div className="absolute top-4 right-4 z-50 flex items-center gap-3 bg-[#1e1e1e]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#333] shadow-lg pointer-events-auto">
@@ -1032,19 +1186,19 @@ export default function DrawingCanvas({
         </div>
       )}
 
-      {/* Top Floating Toolbar (Tools Menu) */}
+      {/* Top Floating Toolbar (Tools Menu with Number Badges) */}
       <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
-        {/* Hand Navigation Tool (1st Tool - H ou 0) */}
+        {/* Hand Navigation Tool (0) */}
         <button
           type="button"
           onClick={() => {
             setTool('hand');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'hand' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Mão / Navegar (H ou 0) - Mova o desenho livremente"
+          title="Mão / Navegar (0 ou H)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
@@ -1052,174 +1206,225 @@ export default function DrawingCanvas({
             <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
             <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            0
+          </span>
         </button>
 
-        {/* Selection Tool (V ou 1) */}
+        {/* Selection Tool (1) */}
         <button
           type="button"
           onClick={() => {
             setTool('select');
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'select' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Seleção / Mover (V ou 1) - Arraste no vazio para selecionar múltiplos (Duplo clique para editar texto)"
+          title="Seleção / Mover (1 ou V) - Arraste no vazio para selecionar múltiplos"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
             <path d="m13 13 6 6"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            1
+          </span>
         </button>
 
+        {/* Pencil Tool (2) */}
         <button
           type="button"
           onClick={() => {
             setTool('pencil');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'pencil' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Lápis / Caneta Livre (P ou 2)"
+          title="Lápis / Caneta Livre (2 ou P)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            2
+          </span>
         </button>
 
+        {/* Rectangle Tool (3) */}
         <button
           type="button"
           onClick={() => {
             setTool('rectangle');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'rectangle' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Retângulo (R ou 3)"
+          title="Retângulo (3 ou R)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            3
+          </span>
         </button>
 
+        {/* Ellipse Tool (4) */}
         <button
           type="button"
           onClick={() => {
             setTool('ellipse');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'ellipse' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Círculo / Elipse (O ou 4)"
+          title="Círculo / Elipse (4 ou O)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            4
+          </span>
         </button>
 
+        {/* Arrow Tool (5) */}
         <button
           type="button"
           onClick={() => {
             setTool('arrow');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'arrow' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Seta Conectora (A ou 5)"
+          title="Seta Conectora (5 ou A)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            5
+          </span>
         </button>
 
+        {/* Line Tool (6) */}
         <button
           type="button"
           onClick={() => {
             setTool('line');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'line' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Linha (L ou 6)"
+          title="Linha (6 ou L)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="19" x2="19" y2="5"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            6
+          </span>
         </button>
 
+        {/* Text Tool (7) */}
         <button
           type="button"
           onClick={() => {
             setTool('text');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'text' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Texto (T ou 7) - Clique na tela para escrever"
+          title="Texto (7 ou T) - Fonte Short Stack"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="4 7 4 4 20 4 20 7"/>
             <line x1="9" y1="20" x2="15" y2="20"/>
             <line x1="12" y1="4" x2="12" y2="20"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            7
+          </span>
         </button>
 
+        {/* Image Tool (8) */}
+        <button
+          type="button"
+          onClick={() => {
+            imageInputRef.current?.click();
+          }}
+          className="relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer text-[#a0a0a0] hover:text-white hover:bg-[#282828]"
+          title="Adicionar Imagem (8 ou I / Ctrl+V / Arrastar para o canvas)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <circle cx="9" cy="9" r="2"/>
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            8
+          </span>
+        </button>
+
+        {/* Eraser Tool (9) */}
         <button
           type="button"
           onClick={() => {
             setTool('eraser');
             setSelectedIds([]);
           }}
-          className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
             tool === 'eraser' ? 'bg-[#ef4444]/20 text-[#ef4444] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
           }`}
-          title="Borracha (E ou 8)"
+          title="Borracha (9 ou E)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
             <path d="M22 21H7"/>
             <path d="m5 11 9 9"/>
           </svg>
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+            9
+          </span>
         </button>
 
         <div className="w-[1px] h-4 bg-[#333333] mx-1" />
 
-        {/* Insert Note Container Button */}
+        {/* Insert Note Container Button (Icon only) */}
         <button
           type="button"
           onClick={() => setPickerModal('nota')}
-          className="h-7 px-2.5 flex items-center gap-1.5 rounded-md text-xs font-medium bg-[var(--accents-1)] hover:bg-[var(--accents-2)] text-[var(--foreground)] border border-[var(--accents-2)] transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
           title="Inserir container de Nota no Desenho"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/>
             <line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
-          <span>Nota</span>
         </button>
 
-        {/* Insert Card Container Button */}
+        {/* Insert Card Container Button (Icon only) */}
         <button
           type="button"
           onClick={() => setPickerModal('card')}
-          className="h-7 px-2.5 flex items-center gap-1.5 rounded-md text-xs font-medium bg-[var(--accents-1)] hover:bg-[var(--accents-2)] text-[var(--foreground)] border border-[var(--accents-2)] transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
           title="Inserir container de Flashcard no Desenho"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="14" x="3" y="5" rx="2"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
             <line x1="12" y1="17" x2="12" y2="13"/>
             <line x1="10" y1="15" x2="14" y2="15"/>
           </svg>
-          <span>Card</span>
         </button>
 
         <div className="w-[1px] h-4 bg-[#333333] mx-1" />
@@ -1229,7 +1434,7 @@ export default function DrawingCanvas({
           type="button"
           onClick={handleUndo}
           disabled={historyIndex <= 0}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
           title="Desfazer (Ctrl + Z)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1242,7 +1447,7 @@ export default function DrawingCanvas({
           type="button"
           onClick={handleRedo}
           disabled={historyIndex >= history.length - 1}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
           title="Refazer (Ctrl + Y)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1366,43 +1571,46 @@ export default function DrawingCanvas({
         />
       )}
 
-      {/* Seamless Inline Text Input Over Canvas (Pure Minimalist Excalidraw style) */}
+      {/* Seamless Inline Text Input Over Canvas (Short Stack Google Font, Multi-line) */}
       {editingText && (
         <div
           style={{
             position: 'absolute',
             left: `${worldToScreen(editingText.worldX, editingText.worldY).x}px`,
-            top: `${worldToScreen(editingText.worldX, editingText.worldY).y}px`,
-            transform: 'translateY(-50%)',
+            top: `${worldToScreen(editingText.worldX, editingText.worldY).y - 12 * zoom}px`,
             zIndex: 100,
           }}
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
-          <input
-            ref={inputRef}
-            type="text"
+          <textarea
+            ref={textareaRef}
             value={editingText.text}
             onChange={(e) => setEditingText((prev) => (prev ? { ...prev, text: e.target.value } : null))}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleFinishText();
+            onBlur={() => {
+              if (Date.now() - textMountedAtRef.current < 250) {
+                textareaRef.current?.focus();
+                return;
               }
+              handleFinishText();
+            }}
+            onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                setEditingText(null);
+                handleFinishText();
               }
             }}
             placeholder="Digite seu texto..."
             autoFocus
-            className="bg-transparent border-none outline-none text-white font-sans p-0 m-0"
+            rows={Math.max(2, (editingText.text.match(/\n/g) || []).length + 1)}
+            className="bg-[#181818]/95 border border-[#38bdf8] rounded-md outline-none text-white p-2 m-0 resize-none shadow-2xl"
             style={{
-              color: strokeColor,
-              fontSize: `${18 * zoom}px`,
-              lineHeight: 1,
-              fontFamily: '"Virgil", "Segoe UI", -apple-system, sans-serif',
-              minWidth: '120px',
-              width: `${Math.max(120, (editingText.text.length + 4) * 12 * zoom)}px`,
+              color: strokeColor === '#ffffff' ? '#ffffff' : strokeColor,
+              fontSize: `${Math.max(14, 18 * zoom)}px`,
+              lineHeight: 1.4,
+              fontFamily: '"Short Stack", "Virgil", cursive, sans-serif',
+              minWidth: `${Math.max(160, 160 * zoom)}px`,
+              minHeight: `${Math.max(42, 42 * zoom)}px`,
+              width: `${Math.max(180, (Math.max(...(editingText.text || '').split('\n').map((l) => l.length), 1) + 4) * 12 * zoom)}px`,
               caretColor: '#38bdf8',
             }}
           />
