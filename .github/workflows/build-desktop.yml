@@ -1,0 +1,52 @@
+name: Build & Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: Linux (AppImage & deb)
+          - os: windows-latest
+            target: Windows (NSIS Setup .exe)
+          - os: macos-latest
+            target: macOS (DMG)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'desktop/package-lock.json'
+
+      - name: Install Desktop Dependencies
+        run: |
+          cd desktop
+          npm ci
+
+      - name: Build TypeScript
+        run: |
+          cd desktop
+          npm run build:ts
+
+      - name: Build Electron App & Artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop
+          npx electron-builder --publish always

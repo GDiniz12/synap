@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { translations, Language } from '@/lib/i18n';
 import SynapLogo from './SynapLogo';
+import { useTheme } from './ThemeProvider';
 
 interface SettingsModalProps {
   currentUser: any;
@@ -47,8 +48,10 @@ export default function SettingsModal({
   const [language, setLanguage] = useState('pt-BR');
   const [startupBehavior, setStartupBehavior] = useState('last_note');
 
+  // Theme State from Context
+  const { theme, setTheme } = useTheme();
+
   // Appearance State
-  const [theme, setTheme] = useState('dark');
   const [fontSize, setFontSize] = useState('15px');
   const [fontFamily, setFontFamily] = useState('Geist Sans');
 
@@ -76,7 +79,6 @@ export default function SettingsModal({
     try {
       const savedLang = localStorage.getItem('synap_language') || 'pt-BR';
       const savedStartup = localStorage.getItem('synap_startup_behavior') || 'last_note';
-      const savedTheme = localStorage.getItem('synap_theme') || 'dark';
       const savedFontSize = localStorage.getItem('synap_font_size') || '15px';
       const savedFontFamily = localStorage.getItem('synap_font_family') || 'Geist Sans';
       const savedEditorWidth = localStorage.getItem('synap_editor_width') || '800px';
@@ -86,7 +88,6 @@ export default function SettingsModal({
 
       setLanguage(savedLang);
       setStartupBehavior(savedStartup);
-      setTheme(savedTheme);
       setFontSize(savedFontSize);
       setFontFamily(savedFontFamily);
       setEditorWidth(savedEditorWidth);
@@ -599,25 +600,56 @@ export default function SettingsModal({
                 <p style={{ fontSize: '12px', color: 'var(--accents-5)', margin: '0 0 8px' }}>
                   Alterne entre modo escuro (Dark Vercel) ou modo claro.
                 </p>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {[
-                    { id: 'dark', label: 'Dark Mode (Padrão)' },
-                    { id: 'light', label: 'Light Mode (Em breve)', disabled: true },
+                    { id: 'dark', label: 'Escuro (Dark)', icon: 'moon' },
+                    { id: 'light', label: 'Claro (Light)', icon: 'sun' },
+                    { id: 'system', label: 'Sistema (Auto)', icon: 'monitor' },
                   ].map((tItem) => (
                     <button
                       key={tItem.id}
                       type="button"
-                      disabled={tItem.disabled}
                       onClick={() => {
-                        if (!tItem.disabled) {
-                          setTheme(tItem.id);
-                          handleSaveGeneral('theme', tItem.id);
-                        }
+                        setTheme(tItem.id as any);
                       }}
                       className={theme === tItem.id ? 'geist-button' : 'geist-button-secondary'}
-                      style={{ fontSize: '12px', height: '32px', padding: '0 12px' }}
+                      style={{
+                        fontSize: '12.5px',
+                        height: '34px',
+                        padding: '0 14px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
                     >
-                      {tItem.label}
+                      {tItem.icon === 'moon' && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                        </svg>
+                      )}
+                      {tItem.icon === 'sun' && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="4"/>
+                          <path d="M12 2v2"/>
+                          <path d="M12 20v2"/>
+                          <path d="m4.93 4.93 1.41 1.41"/>
+                          <path d="m17.66 17.66 1.41 1.41"/>
+                          <path d="M2 12h2"/>
+                          <path d="M20 12h2"/>
+                          <path d="m6.34 17.66-1.41 1.41"/>
+                          <path d="m19.07 4.93-1.41 1.41"/>
+                        </svg>
+                      )}
+                      {tItem.icon === 'monitor' && (
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect width="20" height="14" x="2" y="3" rx="2"/>
+                          <line x1="8" x2="16" y1="21" y2="21"/>
+                          <line x1="12" x2="12" y1="17" y2="21"/>
+                        </svg>
+                      )}
+                      <span>{tItem.label}</span>
                     </button>
                   ))}
                 </div>

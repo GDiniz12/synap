@@ -11,7 +11,8 @@ const isDev = process.env.ELECTRON_IS_DEV === '1' || !app.isPackaged;
 const DEV_URL = process.env.FRONTEND_DEV_URL || process.env.FRONTEND_URL || 'http://localhost:3001';
 const PROD_URL = process.env.FRONTEND_PROD_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://synap-mocha.vercel.app';
 
-const TARGET_URL = isDev ? DEV_URL : PROD_URL;
+const BASE_URL = isDev ? DEV_URL : PROD_URL;
+const TARGET_URL = `${BASE_URL.replace(/\/$/, '')}/dashboard`;
 
 let mainWindow: BrowserWindow | null = null;
 

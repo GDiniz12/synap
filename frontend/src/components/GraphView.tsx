@@ -4,6 +4,9 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import GraphDrawingPreview from './GraphDrawingPreview';
 import SynapLogo from './SynapLogo';
 import { api } from '@/lib/api';
+import { useTheme } from './ThemeProvider';
+import IsometricGraph from './graph/IsometricGraph';
+import CircuitBoardGraph from './graph/CircuitBoardGraph';
 
 export type GroupRuleType = 'pasta' | 'tag' | 'titulo' | 'conteudo' | 'tipo';
 
@@ -158,10 +161,9 @@ export function resolveNodeColor(
         return group.color;
       }
     }
-    return NEUTRAL_FALLBACK_COLOR;
   }
 
-  // If no groups exist or are enabled, fallback to the folder palette
+  // If no groups exist, are enabled, or match, fallback to the folder palette
   const pastaId = nota.pastaId || nota.folderId;
   if (pastaId && folderColorMap[pastaId]) {
     return folderColorMap[pastaId];
@@ -178,6 +180,7 @@ export default function GraphView({
   onUpdateWorkspace,
 }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
 
   // Folder palette mapping
   const folderColorMap = useMemo(() => {
@@ -292,6 +295,7 @@ export default function GraphView({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFolderFilter, setSelectedFolderFilter] = useState<string>('all');
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
+  const [graphMode, setGraphMode] = useState<'isometric' | 'circuit' | 'transit'>('isometric');
 
   // Simulation physics parameters
   const [repulsionForce, setRepulsionForce] = useState(300);
@@ -607,8 +611,8 @@ export default function GraphView({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.scale(dpr, dpr);
 
-      // Background subtle dark tone
-      ctx.fillStyle = '#0a0a0a';
+      // Background subtle dark/light tone
+      ctx.fillStyle = resolvedTheme === 'light' ? '#ffffff' : '#0a0a0a';
       ctx.fillRect(0, 0, width, height);
 
       // Apply pan & zoom transform (camera stays steady and centered)
@@ -644,16 +648,16 @@ export default function GraphView({
         ctx.lineTo(tx, ty);
 
         if (isHighlighted) {
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = resolvedTheme === 'light' ? '#000000' : '#ffffff';
           ctx.lineWidth = 2.0;
-          ctx.shadowColor = 'rgba(255, 255, 255, 0.4)';
+          ctx.shadowColor = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.4)';
           ctx.shadowBlur = 6;
         } else if (isDimmed) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+          ctx.strokeStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)';
           ctx.lineWidth = 1;
           ctx.shadowBlur = 0;
         } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.strokeStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.12)';
           ctx.lineWidth = 1.2;
           ctx.shadowBlur = 0;
         }
@@ -681,8 +685,8 @@ export default function GraphView({
 
           ctx.beginPath();
           ctx.arc(px, py, 2, 0, 2 * Math.PI);
-          ctx.fillStyle = '#ffffff';
-          ctx.shadowColor = '#ffffff';
+          ctx.fillStyle = resolvedTheme === 'light' ? '#0070f3' : '#ffffff';
+          ctx.shadowColor = resolvedTheme === 'light' ? '#0070f3' : '#ffffff';
           ctx.shadowBlur = 4;
           ctx.fill();
           ctx.shadowBlur = 0;
@@ -726,7 +730,7 @@ export default function GraphView({
         // Main Node circle
         ctx.beginPath();
         ctx.arc(nx, ny, nr, 0, 2 * Math.PI);
-        ctx.fillStyle = isDimmed ? 'rgba(50, 50, 50, 0.3)' : nodeColor;
+        ctx.fillStyle = isDimmed ? (resolvedTheme === 'light' ? 'rgba(200, 200, 200, 0.3)' : 'rgba(50, 50, 50, 0.3)') : nodeColor;
         if (isHovered || isNeighbor) {
           ctx.shadowColor = nodeColor;
           ctx.shadowBlur = 14;
@@ -737,17 +741,19 @@ export default function GraphView({
         // Node border
         ctx.lineWidth = isHovered ? 2 : 1;
         ctx.strokeStyle = isHovered
-          ? '#ffffff'
+          ? (resolvedTheme === 'light' ? '#000000' : '#ffffff')
           : isDimmed
-          ? 'rgba(255,255,255,0.06)'
-          : 'rgba(255,255,255,0.5)';
+          ? (resolvedTheme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)')
+          : (resolvedTheme === 'light' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.5)');
         ctx.stroke();
 
         // Node Label
         if (transform.k > 0.65 || isHovered || isNeighbor) {
           ctx.font = `${isHovered ? '600 ' : '400 '}11px var(--font-sans, system-ui, sans-serif)`;
           ctx.textAlign = 'center';
-          ctx.fillStyle = isDimmed ? 'rgba(255, 255, 255, 0.2)' : 'var(--foreground, #ffffff)';
+          ctx.fillStyle = isDimmed 
+            ? (resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.2)') 
+            : (resolvedTheme === 'light' ? '#000000' : '#ffffff');
           ctx.fillText(node.title, nx, ny + nr + 13);
         }
       });
@@ -758,7 +764,7 @@ export default function GraphView({
 
     animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [links, repulsionForce, linkDistance, transform, hoveredNode, filteredNodeIds, synapseParticlesEnabled, folderColorMap]);
+  }, [links, repulsionForce, linkDistance, transform, hoveredNode, filteredNodeIds, synapseParticlesEnabled, folderColorMap, resolvedTheme]);
 
   // Screen to world coordinates
   const screenToWorld = (screenX: number, screenY: number) => {
@@ -946,6 +952,22 @@ export default function GraphView({
               ))}
             </select>
           </div>
+          {/* Graph Mode Selector */}
+          <div className="relative">
+            <select
+              value={graphMode}
+              onChange={(e) => setGraphMode(e.target.value as any)}
+              className="appearance-none bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-3 py-1.5 pr-8 text-xs font-medium text-[var(--foreground)] hover:border-[var(--accents-5)] transition-colors cursor-pointer shadow-sm focus:outline-none"
+            >
+              <option value="isometric">🧊 Isométrico 3D</option>
+              <option value="circuit">🎛️ Circuit Board 2D</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[var(--accents-5)]">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+          </div>
 
           {/* Groups Toggle Button */}
           <button
@@ -996,32 +1018,6 @@ export default function GraphView({
           <span className="text-[var(--foreground)] font-medium">{links.length} conexões</span>
 
           <div className="w-[1px] h-3.5 bg-[var(--accents-2)] mx-0.5" />
-
-          {/* Toggle Synapse Particles */}
-          <button
-            type="button"
-            onClick={() => setSynapseParticlesEnabled((prev) => !prev)}
-            className={`px-2 py-1 rounded-[calc(var(--radius)-2px)] transition-colors flex items-center gap-1.5 cursor-pointer ${
-              synapseParticlesEnabled
-                ? 'bg-[var(--accents-2)] text-[var(--foreground)] font-medium'
-                : 'text-[var(--accents-4)] hover:text-[var(--foreground)]'
-            }`}
-            title="Efeito Sinapse: partículas de energia fluindo nas conexões"
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            <span className="hidden sm:inline">Sinapses</span>
-          </button>
 
           {/* Reset Zoom */}
           <button
@@ -1365,16 +1361,31 @@ export default function GraphView({
         </div>
       )}
 
-      {/* Interactive Physics Canvas */}
-      <canvas
-        ref={canvasRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
-        onClick={handleNodeClick}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
-      />
+      {/* Graph Rendering */}
+      <div className="absolute inset-0 z-0">
+        {graphMode === 'isometric' && (
+          <IsometricGraph 
+            notas={notas} 
+            links={links} 
+            groups={groups}
+            folderColorMap={folderColorMap}
+            hoveredNodeId={hoveredNode?.id || null}
+            onHoverNode={(nota) => setHoveredNode(nota ? { ...nota, rawNota: nota } as any : null)}
+            onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
+          />
+        )}
+        {graphMode === 'circuit' && (
+          <CircuitBoardGraph 
+            notas={notas} 
+            links={links} 
+            groups={groups}
+            folderColorMap={folderColorMap}
+            hoveredNodeId={hoveredNode?.id || null}
+            onHoverNode={(nota) => setHoveredNode(nota ? { ...nota, rawNota: nota } as any : null)}
+            onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
+          />
+        )}
+      </div>
 
       {/* Side Preview Card */}
       {hoveredNode && hoveredNode.rawNota && (
@@ -1501,31 +1512,6 @@ export default function GraphView({
         </div>
       )}
 
-      {/* Bottom Right Physics Sliders */}
-      <div className="absolute bottom-3 right-3 z-20 hidden md:flex items-center gap-3.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-3 py-1.5 shadow-sm text-xs text-[var(--accents-4)]">
-        <div className="flex items-center gap-2">
-          <span>Repulsão</span>
-          <input
-            type="range"
-            min="100"
-            max="600"
-            value={repulsionForce}
-            onChange={(e) => setRepulsionForce(Number(e.target.value))}
-            className="w-16 accent-[var(--foreground)] cursor-pointer"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span>Distância</span>
-          <input
-            type="range"
-            min="40"
-            max="180"
-            value={linkDistance}
-            onChange={(e) => setLinkDistance(Number(e.target.value))}
-            className="w-16 accent-[var(--foreground)] cursor-pointer"
-          />
-        </div>
-      </div>
     </div>
   );
 }

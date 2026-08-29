@@ -4,7 +4,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import DrawingEmbedModal from './DrawingEmbedModal';
 import DrawingModal from './DrawingModal';
+import MathEquationModal from './MathEquationModal';
 import LiveCursors from './LiveCursors';
+import katex from 'katex';
+import { parseYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 
 interface EditorProps {
   value: string;
@@ -185,19 +188,32 @@ function Editor({
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // Active resizing state (image & drawing height/width)
+  // Active resizing state (image, youtube & drawing height/width)
   const resizingRef = useRef<{
     wrapper: HTMLElement;
     startX: number;
     startY: number;
     startWidth: number;
     startHeight: number;
-    type: 'image_width' | 'drawing_height';
+    type: 'image_width' | 'drawing_height' | 'youtube_width';
   } | null>(null);
 
   // Drawing embed modal state & Drawing direct edit modal state
   const [isDrawingModalOpen, setIsDrawingModalOpen] = useState(false);
   const [activeDrawingEdit, setActiveDrawingEdit] = useState<any | null>(null);
+
+  // Math equation modal state
+  const [mathModal, setMathModal] = useState<{
+    visible: boolean;
+    targetNode: HTMLElement | null;
+    latex: string;
+    savedRange: Range | null;
+  }>({
+    visible: false,
+    targetNode: null,
+    latex: '',
+    savedRange: null,
+  });
 
   // Slash menu state
   const [slashMenu, setSlashMenu] = useState<{
@@ -318,6 +334,10 @@ function Editor({
         const deltaX = e.clientX - startX;
         const newWidth = Math.max(120, Math.min(800, startWidth + deltaX));
         wrapper.style.width = `${newWidth}px`;
+      } else if (type === 'youtube_width') {
+        const deltaX = e.clientX - startX;
+        const newWidth = Math.max(260, Math.min(1000, startWidth + deltaX));
+        wrapper.style.width = `${newWidth}px`;
       } else if (type === 'drawing_height') {
         const deltaY = e.clientY - startY;
         const newHeight = Math.max(160, Math.min(900, startHeight + deltaY));
@@ -331,6 +351,11 @@ function Editor({
 
     const handleMouseUp = () => {
       if (resizingRef.current) {
+        const { wrapper, type } = resizingRef.current;
+        if (type === 'youtube_width') {
+          const iframe = wrapper.querySelector('iframe');
+          if (iframe) iframe.style.pointerEvents = 'auto';
+        }
         resizingRef.current = null;
         if (editorRef.current) {
           onChange(editorRef.current.innerHTML);
@@ -715,21 +740,21 @@ function Editor({
     wrapper.style.height = '320px';
 
     wrapper.innerHTML = `
-      <div class="synap-drawing-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#181818;border-bottom:1px solid #282828;">
+      <div class="synap-drawing-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--accents-1);border-bottom:1px solid var(--accents-2);">
         <div style="display:flex;align-items:center;gap:6px;">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accents-5);">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
-          <span style="font-size:12px;font-weight:600;color:#ededed;">${drawingNota.titulo}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--foreground);">${drawingNota.titulo}</span>
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
-          <button type="button" class="synap-drawing-btn-edit" title="Editar desenho" style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:#282828;color:#fff;border-radius:4px;border:1px solid #3a3a3a;font-size:11px;font-weight:500;cursor:pointer;">
+          <button type="button" class="synap-drawing-btn-edit" title="Editar desenho" style="display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--accents-2);color:var(--foreground);border-radius:4px;border:1px solid var(--accents-3);font-size:11px;font-weight:500;cursor:pointer;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
             </svg>
             <span>Editar</span>
           </button>
-          <button type="button" class="synap-drawing-btn-delete" title="Remover bloco" style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:#282828;color:#a0a0a0;border-radius:4px;border:1px solid #3a3a3a;cursor:pointer;">
+          <button type="button" class="synap-drawing-btn-delete" title="Remover bloco" style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--accents-2);color:var(--accents-5);border-radius:4px;border:1px solid var(--accents-3);cursor:pointer;">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 6h18"/>
               <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -737,7 +762,7 @@ function Editor({
           </button>
         </div>
       </div>
-      <div class="synap-drawing-canvas-container" style="width:100%;height:calc(100% - 37px);background:#121212;position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Clique para abrir e editar o desenho">
+      <div class="synap-drawing-canvas-container" style="width:100%;height:calc(100% - 37px);background:var(--background);position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Clique para abrir e editar o desenho">
         <canvas class="synap-embedded-canvas" style="width:100%;height:100%;display:block;"></canvas>
       </div>
       <div class="synap-drawing-resize-handle" title="Arraste para ajustar a altura"></div>
@@ -765,6 +790,93 @@ function Editor({
     renderEmbeddedCanvas(wrapper, drawingNota.conteudo);
 
     onChange(editorRef.current.innerHTML);
+  };
+
+  // Insert or Update Math Equation Block
+  const handleConfirmMath = (latex: string) => {
+    let mathHtml = '';
+    try {
+      mathHtml = katex.renderToString(latex, { throwOnError: false, displayMode: true });
+    } catch (e) {
+      mathHtml = `<span style="color:var(--error);font-family:var(--font-mono);font-size:12px;">${latex}</span>`;
+    }
+
+    if (mathModal.targetNode) {
+      mathModal.targetNode.setAttribute('data-latex', latex);
+      const contentDiv = mathModal.targetNode.querySelector('.synap-math-content');
+      if (contentDiv) {
+        contentDiv.innerHTML = mathHtml;
+      } else {
+        mathModal.targetNode.innerHTML = `
+          <div class="synap-math-content" style="pointer-events:none;font-size:16px;overflow-x:auto;max-width:100%;text-align:center;">${mathHtml}</div>
+          <div class="synap-math-actions" style="position:absolute;top:6px;right:8px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:10px;font-family:var(--font-mono);color:var(--accents-5);">f(x)</span>
+            <button type="button" class="synap-math-btn-delete" title="Excluir equação" style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--accents-2);color:var(--accents-5);border-radius:4px;border:none;cursor:pointer;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6 6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        `;
+      }
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+    } else {
+      if (!editorRef.current) return;
+      const sel = window.getSelection();
+      let range = mathModal.savedRange;
+      if (!range && sel && sel.rangeCount > 0) {
+        range = sel.getRangeAt(0);
+      }
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'synap-math-block geist-card';
+      wrapper.contentEditable = 'false';
+      wrapper.setAttribute('data-latex', latex);
+      wrapper.style.margin = '16px 0';
+      wrapper.style.padding = '16px 24px';
+      wrapper.style.background = 'var(--accents-1)';
+      wrapper.style.border = '1px solid var(--accents-2)';
+      wrapper.style.borderRadius = 'var(--radius, 6px)';
+      wrapper.style.cursor = 'pointer';
+      wrapper.style.position = 'relative';
+      wrapper.style.display = 'flex';
+      wrapper.style.alignItems = 'center';
+      wrapper.style.justifyContent = 'center';
+      wrapper.style.userSelect = 'none';
+      wrapper.title = 'Clique para editar a equação matemática';
+
+      wrapper.innerHTML = `
+        <div class="synap-math-content" style="pointer-events:none;font-size:16px;overflow-x:auto;max-width:100%;text-align:center;">${mathHtml}</div>
+        <div class="synap-math-actions" style="position:absolute;top:6px;right:8px;display:flex;align-items:center;gap:6px;">
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--accents-5);">f(x)</span>
+          <button type="button" class="synap-math-btn-delete" title="Excluir equação" style="display:flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--accents-2);color:var(--accents-5);border-radius:4px;border:none;cursor:pointer;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      `;
+
+      const pAfter = document.createElement('p');
+      pAfter.innerHTML = '<br>';
+
+      if (range && editorRef.current.contains(range.commonAncestorContainer)) {
+        range.deleteContents();
+        range.insertNode(pAfter);
+        range.insertNode(wrapper);
+        range.setStart(pAfter, 0);
+        range.setEnd(pAfter, 0);
+      } else {
+        editorRef.current.appendChild(wrapper);
+        editorRef.current.appendChild(pAfter);
+      }
+
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+    }
   };
 
   // Upload file to backend
@@ -943,6 +1055,68 @@ function Editor({
     let formattedUrl = rawUrl;
     if (!/^https?:\/\//i.test(formattedUrl) && !/^mailto:/i.test(formattedUrl) && !/^tel:/i.test(formattedUrl)) {
       formattedUrl = `https://${formattedUrl}`;
+    }
+
+    // Check if the URL is a YouTube link
+    const youtubeId = parseYouTubeVideoId(formattedUrl);
+    if (youtubeId) {
+      const embedUrl = getYouTubeEmbedUrl(youtubeId);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'synap-youtube-wrapper geist-card';
+      wrapper.contentEditable = 'false';
+      wrapper.setAttribute('data-youtube-id', youtubeId);
+      wrapper.setAttribute('data-youtube-url', formattedUrl);
+      wrapper.style.position = 'relative';
+      wrapper.style.margin = '20px 0';
+      wrapper.style.borderRadius = 'var(--radius, 8px)';
+      wrapper.style.overflow = 'hidden';
+      wrapper.style.border = '1px solid var(--accents-2)';
+      wrapper.style.background = 'var(--accents-1)';
+      wrapper.style.aspectRatio = '16/9';
+      wrapper.style.maxWidth = '100%';
+      wrapper.style.width = '100%';
+
+      wrapper.innerHTML = `
+        <iframe
+          src="${embedUrl}"
+          title="YouTube video player"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          style="width:100%;height:100%;border:none;display:block;"
+        ></iframe>
+        <button
+          type="button"
+          class="synap-youtube-btn-delete"
+          title="Excluir vídeo"
+          style="position:absolute;top:8px;right:8px;display:flex;align-items:center;justify-content:center;width:24px;height:24px;background:rgba(0,0,0,0.65);color:#fff;border-radius:4px;border:none;cursor:pointer;opacity:0;transition:opacity 0.15s ease;backdrop-filter:blur(4px);z-index:10;"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6 6 18M6 6l12 12"/>
+          </svg>
+        </button>
+        <div class="synap-youtube-resize-handle" title="Arraste para redimensionar o vídeo" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:nwse-resize;z-index:20;background:linear-gradient(135deg, transparent 50%, var(--accents-4) 50%);border-bottom-right-radius:var(--radius, 8px);"></div>
+      `;
+
+      const pAfter = document.createElement('p');
+      pAfter.innerHTML = '<br>';
+
+      if (linkPopover.savedRange && editorRef.current.contains(linkPopover.savedRange.commonAncestorContainer)) {
+        linkPopover.savedRange.deleteContents();
+        linkPopover.savedRange.insertNode(pAfter);
+        linkPopover.savedRange.insertNode(wrapper);
+        linkPopover.savedRange.setStart(pAfter, 0);
+        linkPopover.savedRange.setEnd(pAfter, 0);
+      } else {
+        editorRef.current.appendChild(wrapper);
+        editorRef.current.appendChild(pAfter);
+      }
+
+      setLinkPopover(null);
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+      return;
     }
 
     const displayText = linkPopover.text.trim() ? linkPopover.text.trim() : rawUrl;
@@ -1150,6 +1324,24 @@ function Editor({
         removeSlashText();
         setSlashMenu((prev) => ({ ...prev, visible: false }));
         setIsDrawingModalOpen(true);
+      },
+    },
+    {
+      id: 'math',
+      title: 'Função / Equação Matemática',
+      subtitle: 'Inserir equação ou fórmula LaTeX (KaTeX)',
+      keywords: ['math', 'matematica', 'funcao', 'equacao', 'formula', 'latex', 'katex', 'integral', 'fracao', 'soma', 'fx'],
+      icon: (
+        <span className="font-mono font-bold text-[11px] px-1 py-0.5 rounded border border-[var(--accents-3)]">
+          f(x)
+        </span>
+      ),
+      action: () => {
+        const sel = window.getSelection();
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+        removeSlashText();
+        setSlashMenu((prev) => ({ ...prev, visible: false }));
+        setMathModal({ visible: true, targetNode: null, latex: '', savedRange: range });
       },
     },
     {
@@ -1674,6 +1866,27 @@ function Editor({
   const handleMouseDown = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
 
+    // YouTube resize handle click
+    if (target.classList.contains('synap-youtube-resize-handle')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const wrapper = target.closest('.synap-youtube-wrapper') as HTMLElement | null;
+      if (wrapper) {
+        const iframe = wrapper.querySelector('iframe');
+        if (iframe) iframe.style.pointerEvents = 'none';
+
+        resizingRef.current = {
+          wrapper,
+          startX: e.clientX,
+          startY: e.clientY,
+          startWidth: wrapper.offsetWidth,
+          startHeight: wrapper.offsetHeight,
+          type: 'youtube_width',
+        };
+      }
+      return;
+    }
+
     // Image resize handle click
     if (target.classList.contains('synap-resize-handle')) {
       e.preventDefault();
@@ -1776,6 +1989,46 @@ function Editor({
           onChange(editorRef.current.innerHTML);
         }
       }
+      return;
+    }
+
+    // YouTube Container Delete button click
+    const ytDeleteBtn = target.closest('.synap-youtube-btn-delete') as HTMLElement | null;
+    if (ytDeleteBtn && editorRef.current?.contains(ytDeleteBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const ytWrapper = ytDeleteBtn.closest('.synap-youtube-wrapper');
+      if (ytWrapper) {
+        ytWrapper.remove();
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML);
+        }
+      }
+      return;
+    }
+
+    // Math Block Delete button click
+    const mathDeleteBtn = target.closest('.synap-math-btn-delete') as HTMLElement | null;
+    if (mathDeleteBtn && editorRef.current?.contains(mathDeleteBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const mathBlock = mathDeleteBtn.closest('.synap-math-block');
+      if (mathBlock) {
+        mathBlock.remove();
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML);
+        }
+      }
+      return;
+    }
+
+    // Math Block Click (Open math editor modal)
+    const mathBlock = target.closest('.synap-math-block') as HTMLElement | null;
+    if (mathBlock && editorRef.current?.contains(mathBlock)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const currentLatex = mathBlock.getAttribute('data-latex') || '';
+      setMathModal({ visible: true, targetNode: mathBlock, latex: currentLatex, savedRange: null });
       return;
     }
 
@@ -2919,6 +3172,14 @@ function Editor({
           <span>Desenho</span>
         </button>
       </div>
+
+      {/* Math Equation Modal */}
+      <MathEquationModal
+        isOpen={mathModal.visible}
+        initialLatex={mathModal.latex}
+        onClose={() => setMathModal({ visible: false, targetNode: null, latex: '', savedRange: null })}
+        onConfirm={handleConfirmMath}
+      />
     </div>
   );
 }

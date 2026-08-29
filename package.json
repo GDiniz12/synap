@@ -11,6 +11,12 @@
     "build:desktop": "npm --prefix desktop run build",
     "dist:desktop": "npm --prefix desktop run dist",
     "dist:desktop:linux": "npm --prefix desktop run dist:linux",
-    "dist:desktop:win": "npm --prefix desktop run dist:win"
+    "dist:desktop:win": "npm --prefix desktop run dist:win",
+    "dev:mobile": "npm --prefix mobile run start",
+    "dev:mobile:tunnel": "npm --prefix mobile run tunnel",
+    "android:mobile": "npm --prefix mobile run android",
+    "ios:mobile": "npm --prefix mobile run ios",
+    "typecheck:mobile": "npm --prefix mobile run typecheck",
+    "build:mobile:apk": "npm --prefix mobile run build:apk"
   }
 }

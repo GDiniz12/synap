@@ -12,3 +12,5 @@ out
 uploads
 docs
 release
+.expo
+.expo-shared

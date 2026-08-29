@@ -14,6 +14,7 @@ import CardModal from '@/components/CardModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import ShareWorkspaceModal from '@/components/ShareWorkspaceModal';
+import FolderModal, { FolderModalData } from '@/components/FolderModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
 import SynapLogo from '@/components/SynapLogo';
@@ -115,6 +116,9 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Custom Delete Modal State
   const [deleteModal, setDeleteModal] = useState<{ visible: boolean, id: string, type: 'pasta' | 'nota', name: string } | null>(null);
+
+  // Folder Modal State (Create / Rename)
+  const [folderModal, setFolderModal] = useState<FolderModalData | null>(null);
 
   // Inline Action (Create / Rename)
   const [inlineAction, setInlineAction] = useState<{ 
@@ -538,7 +542,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         }
       }, 50);
     }
-  }, [inlineAction]);
+  }, [inlineAction?.id, inlineAction?.type]);
 
   const loadUser = async () => {
     try {
@@ -587,16 +591,53 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     }
   };
 
-  // Trigger Inline Creation
+  // Trigger Folder Modal Creation
   const handleTriggerCreatePasta = (parentId: string | null = null) => {
     if (parentId) {
-      // Expand the parent folder so the user can see the input
+      // Expand the parent folder so the user can see the created folder afterwards
       setExpandedFolders(prev => ({ ...prev, [parentId]: true }));
     }
-    setInlineAction({ type: 'create', itemType: 'pasta', id: parentId || 'root', value: '' });
+    const parentFolder = parentId ? pastas.find(p => p.id === parentId) : null;
+    setFolderModal({
+      mode: 'create',
+      parentId: parentId || null,
+      initialName: '',
+      parentFolderName: parentFolder ? parentFolder.nome : null,
+    });
+    if (contextMenu) setContextMenu(null);
   };
 
-  // Perform Creation or Rename when input blurs or Enter is pressed
+  // Confirm Folder Modal (Create / Rename)
+  const handleConfirmFolderModal = async (name: string, data: FolderModalData) => {
+    const trimmedValue = name.trim();
+    if (!trimmedValue) return;
+
+    try {
+      if (data.mode === 'create') {
+        const parentId = data.parentId || null;
+        await api('/pastas', {
+          method: 'POST',
+          body: JSON.stringify({ nome: trimmedValue, workspaceId: id, parentId }),
+        });
+        await loadPastas();
+        showToast('Pasta criada com sucesso!', 'success');
+      } else if (data.mode === 'rename' && data.folderId) {
+        await api(`/pastas/${data.folderId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ nome: trimmedValue }),
+        });
+        await loadPastas();
+        showToast('Pasta renomeada com sucesso!', 'success');
+      }
+    } catch (err: any) {
+      console.error('Erro ao processar pasta:', err);
+      const actionDesc = data.mode === 'create' ? 'criar a pasta' : 'renomear a pasta';
+      showToast(`Não foi possível ${actionDesc}. Tente novamente.`, 'error');
+      throw err;
+    }
+  };
+
+  // Perform Note Inline Rename when input blurs or Enter is pressed
   const handleInlineCommit = async () => {
     if (!inlineAction) return;
     const { type, itemType, id: actionId, value } = inlineAction;
@@ -606,38 +647,22 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     if (!trimmedValue) return;
 
     try {
-      if (type === 'create') {
-        const parentId = actionId === 'root' ? null : actionId;
-        await api('/pastas', {
-          method: 'POST',
-          body: JSON.stringify({ nome: trimmedValue, workspaceId: id, parentId }),
+      if (type === 'rename' && itemType === 'nota') {
+        const updated = await api(`/notas/${actionId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ titulo: trimmedValue }),
         });
-        loadPastas();
-      } else if (type === 'rename') {
-        if (itemType === 'pasta') {
-          await api(`/pastas/${actionId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ nome: trimmedValue }),
-          });
-          loadPastas();
-        } else if (itemType === 'nota') {
-          const updated = await api(`/notas/${actionId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ titulo: trimmedValue }),
-          });
-          setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
-          if (selectedNotaRef.current?.id === updated.id) {
-            selectedNotaRef.current = updated;
-            editTitleRef.current = updated.titulo;
-            setSelectedNota(updated);
-            setEditTitle(updated.titulo);
-          }
+        setNotas(prev => prev.map(n => n.id === updated.id ? updated : n));
+        if (selectedNotaRef.current?.id === updated.id) {
+          selectedNotaRef.current = updated;
+          editTitleRef.current = updated.titulo;
+          setSelectedNota(updated);
+          setEditTitle(updated.titulo);
         }
       }
     } catch (err: any) {
       console.error('Erro na ação inline:', err);
-      const actionDesc = type === 'create' ? 'criar a pasta' : (itemType === 'pasta' ? 'renomear a pasta' : 'renomear a nota');
-      showToast(`Não foi possível ${actionDesc}. Tente novamente.`, 'error');
+      showToast('Não foi possível renomear a nota. Tente novamente.', 'error');
     }
   };
 
@@ -826,7 +851,17 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   const handleContextRename = () => {
     if (!contextMenu) return;
-    // Set inline action up
+    if (contextMenu.type === 'pasta') {
+      const targetPasta = pastas.find(p => p.id === contextMenu.id);
+      setFolderModal({
+        mode: 'rename',
+        folderId: contextMenu.id,
+        initialName: contextMenu.currentName || targetPasta?.nome || '',
+      });
+      setContextMenu(null);
+      return;
+    }
+    // Set inline action up for note
     setInlineAction({
       type: 'rename',
       itemType: contextMenu.type,
@@ -1082,8 +1117,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     const childPastas = pastas.filter(p => p.parentId === pasta.id);
     const childNotas = notas.filter(n => n.pastaId === pasta.id);
     const isExpanded = expandedFolders[pasta.id];
-    const isRenaming = inlineAction?.type === 'rename' && inlineAction.itemType === 'pasta' && inlineAction.id === pasta.id;
-    const isCreatingInside = inlineAction?.type === 'create' && inlineAction.itemType === 'pasta' && inlineAction.id === pasta.id;
 
     return (
       <div key={pasta.id} style={{ paddingLeft: level > 0 ? '16px' : '0' }}>
@@ -1102,18 +1135,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               <path d="m9 18 6-6-6-6"/>
             </svg>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-            {isRenaming ? renderInlineInput() : pasta.nome}
+            {pasta.nome}
           </span>
         </div>
         
         {/* Children (Only shown if expanded) */}
         {isExpanded && (
           <div style={{ marginLeft: '10px', borderLeft: '1px solid var(--accents-2)', paddingLeft: '4px' }}>
-            {isCreatingInside && (
-              <div style={{ padding: '4px' }}>
-                {renderInlineInput()}
-              </div>
-            )}
             {childPastas.map(p => renderPasta(p, level + 1))}
             {childNotas.map(nota => renderNota(nota))}
           </div>
@@ -1128,7 +1156,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   const rootPastas = pastas.filter(p => !p.parentId);
   const notasSemPasta = notas.filter(n => !n.pastaId);
-  const isCreatingRoot = inlineAction?.type === 'create' && inlineAction.id === 'root';
   const renderFileTree = () => (
     <div 
       style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}
@@ -1137,16 +1164,11 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     >
       {/* Unified Tree (Folders first, then files) */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {isCreatingRoot && (
-          <div style={{ padding: '4px' }}>
-            {renderInlineInput()}
-          </div>
-        )}
         {rootPastas.map(pasta => renderPasta(pasta, 0))}
         {notasSemPasta.map(nota => renderNota(nota))}
       </div>
 
-      {!isCreatingRoot && rootPastas.length === 0 && notasSemPasta.length === 0 && (
+      {rootPastas.length === 0 && notasSemPasta.length === 0 && (
          <div style={{ padding: '24px 8px', fontSize: '13px', color: 'var(--accents-4)', textAlign: 'center' }}>
            Workspace vazio. Crie uma nota ou pasta acima.
          </div>
@@ -2166,35 +2188,73 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                 </div>
               </>
             ) : (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accents-5)', padding: '24px', textAlign: 'center' }}>
-                <SynapLogo size={56} className="mb-4 opacity-80" />
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--foreground)', margin: '0 0 6px 0' }}>
-                  {workspace?.nome || 'Workspace'}
-                </h3>
-                <p style={{ fontSize: '13px', color: 'var(--accents-4)', margin: '0 0 20px 0', maxWidth: '360px' }}>
-                  {t('empty_workspace_select')}
-                </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--accents-5)', padding: '24px', textAlign: 'center', userSelect: 'none' }}>
+                <div style={{ opacity: 0.85, marginBottom: '24px', transition: 'opacity 0.2s ease' }} className="hover:opacity-100">
+                  <SynapLogo size={56} />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
                   <button
                     type="button"
                     onClick={() => handleCreateNota(null)}
-                    className="geist-button h-8 text-xs px-3.5"
+                    className="geist-button-secondary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      height: '32px',
+                      padding: '0 14px',
+                      fontSize: '12.5px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
                   >
-                    {t('new_note')}
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <span>Nova Nota</span>
                   </button>
+
                   <button
                     type="button"
                     onClick={() => handleCreateDesenho(null)}
-                    className="geist-button-secondary h-8 text-xs px-3.5"
+                    className="geist-button-secondary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      height: '32px',
+                      padding: '0 14px',
+                      fontSize: '12.5px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
                   >
-                    {t('new_drawing')}
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    </svg>
+                    <span>Novo Desenho</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => setIsGraphViewOpen(true)}
-                    className="geist-button-secondary h-8 text-xs px-3.5"
+                    onClick={() => handleTriggerCreatePasta(null)}
+                    className="geist-button-secondary"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      height: '32px',
+                      padding: '0 14px',
+                      fontSize: '12.5px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
                   >
-                    Grafo
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                    </svg>
+                    <span>Nova Pasta</span>
                   </button>
                 </div>
               </div>
@@ -2254,6 +2314,14 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             onClose={() => setIsLogoutConfirmOpen(false)}
           />
         )}
+
+        {/* Folder Modal (Create / Rename) */}
+        <FolderModal
+          isOpen={Boolean(folderModal)}
+          data={folderModal}
+          onClose={() => setFolderModal(null)}
+          onConfirm={handleConfirmFolderModal}
+        />
       </div>
 
       {/* MOBILE BOTTOM NAVIGATION */}

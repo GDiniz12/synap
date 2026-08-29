@@ -25,7 +25,7 @@ export default function SynapLogo({
         width={size * 2}
         height={size * 2}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        className="dark:invert-0 invert transition-opacity"
+        className="synap-logo-img transition-[filter,opacity] duration-200"
         priority={priority}
       />
     </div>

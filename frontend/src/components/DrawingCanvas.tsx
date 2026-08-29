@@ -3,7 +3,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
+import MathEquationModal from './MathEquationModal';
+import DrawingYouTubeModal from './DrawingYouTubeModal';
 import LiveCursors from './LiveCursors';
+import { useTheme } from './ThemeProvider';
 
 export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'arrow' | 'line' | 'text' | 'image' | 'eraser';
 
@@ -14,7 +17,7 @@ export interface Point {
 
 export interface DrawingElement {
   id: string;
-  type: 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'image' | 'note_card' | 'flashcard';
+  type: 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'image' | 'note_card' | 'flashcard' | 'math' | 'youtube';
   x: number;
   y: number;
   width?: number;
@@ -22,12 +25,25 @@ export interface DrawingElement {
   imageUrl?: string;
   points?: Point[];
   text?: string;
+  fontSize?: number;
+  latex?: string;
+  youtubeUrl?: string;
+  youtubeId?: string;
   strokeColor: string;
   fillColor: string;
   strokeWidth: number;
   // Embedded item data
   itemNota?: any;
   cardData?: any;
+}
+
+export type HandleType = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end';
+
+export interface Bounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
 }
 
 interface DrawingCanvasProps {
@@ -110,15 +126,30 @@ export default function DrawingCanvas({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { resolvedTheme } = useTheme();
 
   // Tools & Styling States (Default to 'select')
   const [tool, setTool] = useState<ToolType>('select');
-  const [strokeColor, setStrokeColor] = useState<string>('#ffffff');
+  const [strokeColor, setStrokeColor] = useState<string>(() => resolvedTheme === 'light' ? '#000000' : '#ffffff');
   const [fillColor, setFillColor] = useState<string>('transparent');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
 
   // Picker Modal State
   const [pickerModal, setPickerModal] = useState<'nota' | 'card' | null>(null);
+
+  // Math Modal State
+  const [mathModal, setMathModal] = useState<{
+    visible: boolean;
+    editingElementId: string | null;
+    initialLatex: string;
+  }>({
+    visible: false,
+    editingElementId: null,
+    initialLatex: '',
+  });
+
+  // YouTube Modal State
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
 
   // Elements and History
 
@@ -153,7 +184,9 @@ export default function DrawingCanvas({
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Mouse action refs
-  const mouseModeRef = useRef<'drawing' | 'dragging_elements' | 'marquee_selecting' | 'panning' | 'idle'>('idle');
+  const mouseModeRef = useRef<'drawing' | 'dragging_elements' | 'resizing_handle' | 'marquee_selecting' | 'panning' | 'idle'>('idle');
+  const activeHandleRef = useRef<HandleType | null>(null);
+  const resizeInitialBoundsRef = useRef<Bounds | null>(null);
   const currentElementRef = useRef<DrawingElement | null>(null);
   const startPointRef = useRef<Point>({ x: 0, y: 0 });
   const dragInitialElementsRef = useRef<DrawingElement[]>([]);
@@ -234,6 +267,66 @@ export default function DrawingCanvas({
     commitElements([...elements, newEl]);
     setTool('select');
     setSelectedIds([newEl.id]);
+  };
+
+  const handleConfirmMath = (latex: string) => {
+    if (mathModal.editingElementId) {
+      const updatedList = elements.map((el) =>
+        el.id === mathModal.editingElementId ? { ...el, latex } : el
+      );
+      commitElements(updatedList);
+    } else {
+      const container = containerRef.current;
+      const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
+      const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
+      const width = 300;
+      const height = 140;
+
+      const newMathEl: DrawingElement = {
+        id: 'math_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        type: 'math',
+        x: viewCenterX - width / 2,
+        y: viewCenterY - height / 2,
+        width,
+        height,
+        latex,
+        strokeColor: '#38bdf8',
+        fillColor: 'transparent',
+        strokeWidth: 2,
+      };
+
+      commitElements([...elements, newMathEl]);
+      setTool('select');
+      setSelectedIds([newMathEl.id]);
+    }
+  };
+
+  // Insert YouTube Video into Canvas
+  const handleConfirmYouTube = (youtubeId: string, url: string) => {
+    const container = containerRef.current;
+    const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
+    const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
+
+    const width = 420;
+    const height = 260;
+
+    const newEl: DrawingElement = {
+      id: Math.random().toString(),
+      type: 'youtube',
+      x: viewCenterX - width / 2,
+      y: viewCenterY - height / 2,
+      width,
+      height,
+      youtubeId,
+      youtubeUrl: url,
+      strokeColor: '#38bdf8',
+      fillColor: 'transparent',
+      strokeWidth: 1,
+    };
+
+    commitElements([...elements, newEl]);
+    setSelectedIds([newEl.id]);
+    setTool('select');
   };
 
   // Insert Image into Canvas
@@ -356,7 +449,7 @@ export default function DrawingCanvas({
   );
 
   // Helper: Get robust bounding box of any element
-  const getElementBounds = (el: DrawingElement) => {
+  const getElementBounds = (el: DrawingElement): Bounds => {
     let minX = el.x;
     let minY = el.y;
     let maxX = el.x + (el.width || 0);
@@ -368,18 +461,21 @@ export default function DrawingCanvas({
       minY = Math.min(...el.points.map((p) => p.y));
       maxY = Math.max(...el.points.map((p) => p.y));
     } else if (el.type === 'text') {
+      const fontSize = el.fontSize || 18;
       const lines = (el.text || '').split('\n');
       const maxLineLen = Math.max(...lines.map((l) => l.length), 1);
       minX = el.x;
-      maxX = el.x + Math.max(60, maxLineLen * 11);
-      minY = el.y - 18;
-      maxY = el.y + (lines.length - 1) * 24 + 6;
+      maxX = el.x + Math.max(40, maxLineLen * (fontSize * 0.6));
+      minY = el.y - fontSize;
+      maxY = el.y + (lines.length - 1) * (fontSize * 1.35) + 4;
     } else if (
       el.type === 'rectangle' ||
       el.type === 'ellipse' ||
       el.type === 'image' ||
       el.type === 'note_card' ||
-      el.type === 'flashcard'
+      el.type === 'flashcard' ||
+      el.type === 'math' ||
+      el.type === 'youtube'
     ) {
       minX = Math.min(el.x, el.x + (el.width || 0));
       maxX = Math.max(el.x, el.x + (el.width || 0));
@@ -388,6 +484,115 @@ export default function DrawingCanvas({
     }
 
     return { minX, minY, maxX, maxY };
+  };
+
+  // Helper: Get merged selection bounding box for multiple selected elements
+  const getSelectionBounds = useCallback(
+    (ids: string[], allElements: DrawingElement[]): Bounds | null => {
+      const selected = allElements.filter((el) => ids.includes(el.id));
+      if (selected.length === 0) return null;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      selected.forEach((el) => {
+        const b = getElementBounds(el);
+        if (b.minX < minX) minX = b.minX;
+        if (b.minY < minY) minY = b.minY;
+        if (b.maxX > maxX) maxX = b.maxX;
+        if (b.maxY > maxY) maxY = b.maxY;
+      });
+      if (minX === Infinity) return null;
+      return { minX, minY, maxX, maxY };
+    },
+    []
+  );
+
+  // Helper: Detect if a point hits any handle of the selected elements
+  const getHandleAtPoint = useCallback(
+    (
+      point: Point,
+      selectedElements: DrawingElement[],
+      zoomLevel: number
+    ): { handle: HandleType; elementId?: string } | null => {
+      if (selectedElements.length === 0) return null;
+      const hitRadius = 12 / zoomLevel;
+
+      // 1. Single Line or Arrow endpoint handles
+      if (
+        selectedElements.length === 1 &&
+        (selectedElements[0].type === 'line' || selectedElements[0].type === 'arrow') &&
+        selectedElements[0].points &&
+        selectedElements[0].points.length === 2
+      ) {
+        const p1 = selectedElements[0].points[0];
+        const p2 = selectedElements[0].points[1];
+        if (Math.hypot(point.x - p1.x, point.y - p1.y) <= hitRadius) {
+          return { handle: 'start', elementId: selectedElements[0].id };
+        }
+        if (Math.hypot(point.x - p2.x, point.y - p2.y) <= hitRadius) {
+          return { handle: 'end', elementId: selectedElements[0].id };
+        }
+      }
+
+      // 2. 8 Bounding Box Handles
+      const bounds = getSelectionBounds(
+        selectedElements.map((e) => e.id),
+        selectedElements
+      );
+      if (!bounds) return null;
+
+      const padding = 6 / zoomLevel;
+      const bMinX = bounds.minX - padding;
+      const bMinY = bounds.minY - padding;
+      const bMaxX = bounds.maxX + padding;
+      const bMaxY = bounds.maxY + padding;
+      const midX = (bMinX + bMaxX) / 2;
+      const midY = (bMinY + bMaxY) / 2;
+
+      const handlePositions: { handle: HandleType; x: number; y: number }[] = [
+        { handle: 'nw', x: bMinX, y: bMinY },
+        { handle: 'n', x: midX, y: bMinY },
+        { handle: 'ne', x: bMaxX, y: bMinY },
+        { handle: 'e', x: bMaxX, y: midY },
+        { handle: 'se', x: bMaxX, y: bMaxY },
+        { handle: 's', x: midX, y: bMaxY },
+        { handle: 'sw', x: bMinX, y: bMaxY },
+        { handle: 'w', x: bMinX, y: midY },
+      ];
+
+      for (const h of handlePositions) {
+        if (Math.hypot(point.x - h.x, point.y - h.y) <= hitRadius) {
+          return { handle: h.handle };
+        }
+      }
+
+      return null;
+    },
+    [getSelectionBounds]
+  );
+
+  // Helper: Cursor style for handles
+  const getCursorForHandle = (handle: HandleType): string => {
+    switch (handle) {
+      case 'nw':
+      case 'se':
+        return 'nwse-resize';
+      case 'ne':
+      case 'sw':
+        return 'nesw-resize';
+      case 'n':
+      case 's':
+        return 'ns-resize';
+      case 'e':
+      case 'w':
+        return 'ew-resize';
+      case 'start':
+      case 'end':
+        return 'crosshair';
+      default:
+        return 'default';
+    }
   };
 
   // Check if point hits element (for single selection / hover)
@@ -400,7 +605,9 @@ export default function DrawingCanvas({
       el.type === 'rectangle' ||
       el.type === 'image' ||
       el.type === 'note_card' ||
-      el.type === 'flashcard'
+      el.type === 'flashcard' ||
+      el.type === 'math' ||
+      el.type === 'youtube'
     ) {
       return (
         point.x >= minX - threshold &&
@@ -455,7 +662,7 @@ export default function DrawingCanvas({
 
   // Draw individual element
   const drawElement = useCallback(
-    (ctx: CanvasRenderingContext2D, el: DrawingElement, isSelected: boolean) => {
+    (ctx: CanvasRenderingContext2D, el: DrawingElement) => {
       // Don't render static text on canvas while currently editing it in input
       if (editingText && editingText.id === el.id) return;
 
@@ -517,10 +724,11 @@ export default function DrawingCanvas({
         ctx.lineTo(p2.x - headlen * Math.cos(angle + Math.PI / 6), p2.y - headlen * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
       } else if (el.type === 'text' && el.text) {
-        ctx.font = '18px "Short Stack", "Virgil", cursive, sans-serif';
+        const fontSize = el.fontSize || 18;
+        ctx.font = `${fontSize}px "Short Stack", "Virgil", cursive, sans-serif`;
         ctx.fillStyle = el.strokeColor;
         const lines = el.text.split('\n');
-        const lineHeight = 24;
+        const lineHeight = fontSize * 1.35;
         lines.forEach((line, idx) => {
           ctx.fillText(line, el.x, el.y + idx * lineHeight);
         });
@@ -545,17 +753,6 @@ export default function DrawingCanvas({
         }
       }
 
-      // Selection bounding box with subtle accent glow
-      if (isSelected) {
-        const { minX, minY, maxX, maxY } = getElementBounds(el);
-        const padding = 6;
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 4]);
-        ctx.strokeRect(minX - padding, minY - padding, maxX - minX + padding * 2, maxY - minY + padding * 2);
-        ctx.setLineDash([]);
-      }
-
       ctx.restore();
     },
     [editingText]
@@ -576,8 +773,8 @@ export default function DrawingCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
-    // Dark Background
-    ctx.fillStyle = '#121212';
+    // Canvas Background
+    ctx.fillStyle = resolvedTheme === 'light' ? '#ffffff' : '#121212';
     ctx.fillRect(0, 0, width, height);
 
     // Dot Grid (Excalidraw style)
@@ -585,7 +782,7 @@ export default function DrawingCanvas({
     const offsetX = pan.x % gridSize;
     const offsetY = pan.y % gridSize;
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)';
     for (let x = offsetX; x < width; x += gridSize) {
       for (let y = offsetY; y < height; y += gridSize) {
         ctx.fillRect(x, y, 1.5, 1.5);
@@ -597,14 +794,94 @@ export default function DrawingCanvas({
     ctx.scale(zoom, zoom);
 
     // Draw Elements
-    const selectedSet = new Set(selectedIds);
     elements.forEach((el) => {
-      drawElement(ctx, el, selectedSet.has(el.id));
+      drawElement(ctx, el);
     });
 
     // Draw Active Drawing Element (In-progress)
     if (currentElementRef.current) {
-      drawElement(ctx, currentElementRef.current, false);
+      drawElement(ctx, currentElementRef.current);
+    }
+
+    // Draw Selection Bounding Box & 8 Control Handles for selected elements
+    if (selectedIds.length > 0) {
+      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
+
+      // Single line or arrow with 2 points
+      if (
+        selectedElements.length === 1 &&
+        (selectedElements[0].type === 'line' || selectedElements[0].type === 'arrow') &&
+        selectedElements[0].points &&
+        selectedElements[0].points.length === 2
+      ) {
+        const p1 = selectedElements[0].points[0];
+        const p2 = selectedElements[0].points[1];
+
+        ctx.save();
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+
+        // Start handle
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        // End handle
+        ctx.beginPath();
+        ctx.arc(p2.x, p2.y, 4.5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        const bounds = getSelectionBounds(selectedIds, elements);
+        if (bounds) {
+          const { minX, minY, maxX, maxY } = bounds;
+          const padding = 6;
+          const bMinX = minX - padding;
+          const bMinY = minY - padding;
+          const bMaxX = maxX + padding;
+          const bMaxY = maxY + padding;
+          const bWidth = bMaxX - bMinX;
+          const bHeight = bMaxY - bMinY;
+
+          ctx.save();
+          // Bounding box outline
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(bMinX, bMinY, bWidth, bHeight);
+          ctx.setLineDash([]);
+
+          // 8 Control Handles
+          const handleSize = 8;
+          const midX = (bMinX + bMaxX) / 2;
+          const midY = (bMinY + bMaxY) / 2;
+
+          const handles = [
+            { x: bMinX, y: bMinY }, // nw
+            { x: midX, y: bMinY }, // n
+            { x: bMaxX, y: bMinY }, // ne
+            { x: bMaxX, y: midY }, // e
+            { x: bMaxX, y: bMaxY }, // se
+            { x: midX, y: bMaxY }, // s
+            { x: bMinX, y: bMaxY }, // sw
+            { x: bMinX, y: midY }, // w
+          ];
+
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.5;
+
+          handles.forEach((h) => {
+            ctx.fillRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
+            ctx.strokeRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
+          });
+
+          ctx.restore();
+        }
+      }
     }
 
     // Draw Windows-Style Marquee Drag-Selection Box
@@ -625,7 +902,7 @@ export default function DrawingCanvas({
     }
 
     ctx.restore();
-  }, [drawElement, elements, pan, selectedIds, selectionBox, zoom]);
+  }, [drawElement, elements, getSelectionBounds, pan, selectedIds, selectionBox, zoom]);
 
   // Adjust canvas size
   useEffect(() => {
@@ -727,8 +1004,19 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 2. SELECT TOOL (1 / V) -> Select and drag ONLY (no editing on single click)
+    // 2. SELECT TOOL (1 / V) -> Select, Drag & Resize
     if (tool === 'select') {
+      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
+      const handleHit = getHandleAtPoint(worldPoint, selectedElements, zoom);
+
+      if (handleHit) {
+        mouseModeRef.current = 'resizing_handle';
+        activeHandleRef.current = handleHit.handle;
+        resizeInitialBoundsRef.current = getSelectionBounds(selectedIds, elements);
+        dragInitialElementsRef.current = JSON.parse(JSON.stringify(elements));
+        return;
+      }
+
       const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
 
       if (hit) {
@@ -840,7 +1128,159 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 1. Move/Drag Selected Elements (Select Tool)
+    // Dynamic Hover Cursor on Handles
+    if (mouseModeRef.current === 'idle' && tool === 'select') {
+      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
+      const handleHit = getHandleAtPoint(worldPoint, selectedElements, zoom);
+      if (handleHit) {
+        if (canvasRef.current) {
+          canvasRef.current.style.cursor = getCursorForHandle(handleHit.handle);
+        }
+      } else {
+        const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
+        if (canvasRef.current) {
+          canvasRef.current.style.cursor = hit ? 'move' : 'default';
+        }
+      }
+    }
+
+    // 1. Interactive Resizing via Control Handles
+    if (mouseModeRef.current === 'resizing_handle' && activeHandleRef.current && resizeInitialBoundsRef.current) {
+      const handle = activeHandleRef.current;
+      const initBounds = resizeInitialBoundsRef.current;
+      const initW = Math.max(1, initBounds.maxX - initBounds.minX);
+      const initH = Math.max(1, initBounds.maxY - initBounds.minY);
+      const dx = worldPoint.x - startPointRef.current.x;
+      const dy = worldPoint.y - startPointRef.current.y;
+
+      // Special case: Single line/arrow start/end endpoints
+      if (selectedIds.length === 1 && (handle === 'start' || handle === 'end')) {
+        const single = dragInitialElementsRef.current.find((el) => el.id === selectedIds[0]);
+        if (single && (single.type === 'line' || single.type === 'arrow') && single.points?.length === 2) {
+          const pIndex = handle === 'start' ? 0 : 1;
+          setElements((prev) =>
+            prev.map((el) => {
+              if (el.id !== single.id || !el.points) return el;
+              const newPoints = [...el.points];
+              newPoints[pIndex] = { x: worldPoint.x, y: worldPoint.y };
+              return { ...el, points: newPoints };
+            })
+          );
+          return;
+        }
+      }
+
+      // Compute new candidate bounding box
+      let newMinX = initBounds.minX;
+      let newMinY = initBounds.minY;
+      let newMaxX = initBounds.maxX;
+      let newMaxY = initBounds.maxY;
+
+      if (handle.includes('w')) newMinX += dx;
+      if (handle.includes('e')) newMaxX += dx;
+      if (handle.includes('n')) newMinY += dy;
+      if (handle.includes('s')) newMaxY += dy;
+
+      let newW = newMaxX - newMinX;
+      let newH = newMaxY - newMinY;
+
+      // Enforce minimum dimensions
+      if (newW < 10) {
+        if (handle.includes('w')) newMinX = newMaxX - 10;
+        else newMaxX = newMinX + 10;
+        newW = 10;
+      }
+      if (newH < 10) {
+        if (handle.includes('n')) newMinY = newMaxY - 10;
+        else newMaxY = newMinY + 10;
+        newH = 10;
+      }
+
+      // Preserve aspect ratio if Shift is pressed or single image/math
+      const isShift = e.shiftKey;
+      const singleEl = selectedIds.length === 1 ? dragInitialElementsRef.current.find((el) => el.id === selectedIds[0]) : null;
+      const shouldLockRatio = isShift || singleEl?.type === 'image';
+
+      if (shouldLockRatio && ['nw', 'ne', 'se', 'sw'].includes(handle)) {
+        const ratio = initW / initH;
+        const currentRatio = newW / newH;
+        if (currentRatio > ratio) {
+          newW = newH * ratio;
+        } else {
+          newH = newW / ratio;
+        }
+
+        if (handle === 'se') {
+          newMaxX = newMinX + newW;
+          newMaxY = newMinY + newH;
+        } else if (handle === 'sw') {
+          newMinX = newMaxX - newW;
+          newMaxY = newMinY + newH;
+        } else if (handle === 'ne') {
+          newMaxX = newMinX + newW;
+          newMinY = newMaxY - newH;
+        } else if (handle === 'nw') {
+          newMinX = newMaxX - newW;
+          newMinY = newMaxY - newH;
+        }
+      }
+
+      const scaleX = (newMaxX - newMinX) / initW;
+      const scaleY = (newMaxY - newMinY) / initH;
+      const selectedSet = new Set(selectedIds);
+
+      setElements((prev) =>
+        prev.map((el) => {
+          if (!selectedSet.has(el.id)) return el;
+          const initial = dragInitialElementsRef.current.find((item) => item.id === el.id);
+          if (!initial) return el;
+
+          const relX = (initial.x - initBounds.minX) / initW;
+          const relY = (initial.y - initBounds.minY) / initH;
+          const targetX = newMinX + relX * (newMaxX - newMinX);
+          const targetY = newMinY + relY * (newMaxY - newMinY);
+
+          if (initial.points && initial.points.length > 0) {
+            const scaledPoints = initial.points.map((p) => ({
+              x: newMinX + ((p.x - initBounds.minX) / initW) * (newMaxX - newMinX),
+              y: newMinY + ((p.y - initBounds.minY) / initH) * (newMaxY - newMinY),
+            }));
+            return {
+              ...el,
+              x: targetX,
+              y: targetY,
+              points: scaledPoints,
+            };
+          }
+
+          if (initial.type === 'text') {
+            const initFontSize = initial.fontSize || 18;
+            const uniformScale = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+            const newFontSize = Math.max(10, Math.round(initFontSize * uniformScale));
+            return {
+              ...el,
+              x: targetX,
+              y: targetY,
+              fontSize: newFontSize,
+            };
+          }
+
+          const targetW = Math.max(10, (initial.width || 50) * Math.abs(scaleX));
+          const targetH = Math.max(10, (initial.height || 50) * Math.abs(scaleY));
+
+          return {
+            ...el,
+            x: targetX,
+            y: targetY,
+            width: targetW,
+            height: targetH,
+          };
+        })
+      );
+      return;
+    }
+
+    // 2. Move/Drag Selected Elements (Select Tool)
     if (mouseModeRef.current === 'dragging_elements' && selectedIds.length > 0) {
       const dx = worldPoint.x - startPointRef.current.x;
       const dy = worldPoint.y - startPointRef.current.y;
@@ -870,7 +1310,7 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 2. Marquee Selection Box Drag
+    // 3. Marquee Selection Box Drag
     if (mouseModeRef.current === 'marquee_selecting') {
       setSelectionBox((prev) => (prev ? { ...prev, currentX: worldPoint.x, currentY: worldPoint.y } : null));
 
@@ -886,7 +1326,7 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 3. Active Eraser drag
+    // 4. Active Eraser drag
     if (tool === 'eraser' && e.buttons === 1) {
       const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
       if (hit) {
@@ -896,7 +1336,7 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 4. Drawing Shape or Pencil in progress
+    // 5. Drawing Shape or Pencil in progress
     if (mouseModeRef.current === 'drawing' && currentElementRef.current) {
       const curr = currentElementRef.current;
       if (curr.type === 'pencil' && curr.points) {
@@ -913,6 +1353,16 @@ export default function DrawingCanvas({
 
   const handleMouseUp = () => {
     isPanningRef.current = false;
+
+    // End resizing elements via handle
+    if (mouseModeRef.current === 'resizing_handle') {
+      mouseModeRef.current = 'idle';
+      activeHandleRef.current = null;
+      resizeInitialBoundsRef.current = null;
+      dragInitialElementsRef.current = [];
+      commitElements(elements);
+      return;
+    }
 
     // End dragging elements
     if (mouseModeRef.current === 'dragging_elements') {
@@ -1146,7 +1596,7 @@ export default function DrawingCanvas({
           handleInsertImage(files[0]);
         }
       }}
-      className="relative w-full h-full flex flex-col bg-[#121212] overflow-hidden select-none font-sans"
+      className="relative w-full h-full flex flex-col bg-[var(--background)] overflow-hidden select-none font-sans"
     >
       {/* Hidden Image File Input */}
       <input
@@ -1165,7 +1615,7 @@ export default function DrawingCanvas({
 
       {/* Presence UI */}
       {workspaceId && notaId && isCollaborative && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-3 bg-[#1e1e1e]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#333] shadow-lg pointer-events-auto">
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-3 bg-[var(--background)]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[var(--accents-2)] shadow-lg pointer-events-auto">
           {status !== 'connected' && (
             <div className="text-[11px] text-[var(--accents-5)]">
               {status === 'connecting' ? 'Conectando...' : 'Desconectado'}
@@ -1175,7 +1625,7 @@ export default function DrawingCanvas({
             {users.map((u: any, i: number) => (
               <div 
                 key={i} 
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] text-white font-bold border-2 border-[#1e1e1e] shadow-sm"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] text-white font-bold border-2 border-[var(--background)] shadow-sm"
                 style={{ backgroundColor: u.color || '#ccc' }}
                 title={u.name || 'Anon'}
               >
@@ -1187,7 +1637,7 @@ export default function DrawingCanvas({
       )}
 
       {/* Top Floating Toolbar (Tools Menu with Number Badges) */}
-      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
+      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[var(--background)]/95 backdrop-blur-md border border-[var(--accents-2)] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
         {/* Hand Navigation Tool (0) */}
         <button
           type="button"
@@ -1196,7 +1646,7 @@ export default function DrawingCanvas({
             setSelectedIds([]);
           }}
           className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'hand' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+            tool === 'hand' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)]'
           }`}
           title="Mão / Navegar (0 ou H)"
         >
@@ -1427,6 +1877,29 @@ export default function DrawingCanvas({
           </svg>
         </button>
 
+        {/* Insert Math Equation Button */}
+        <button
+          type="button"
+          onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer font-mono font-bold text-[11px]"
+          title="Inserir Equação Matemática (LaTeX / KaTeX)"
+        >
+          f(x)
+        </button>
+
+        {/* Insert YouTube Video Button */}
+        <button
+          type="button"
+          onClick={() => setIsYouTubeModalOpen(true)}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
+          title="Inserir Vídeo do YouTube"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/>
+            <polygon points="10 15 15 12 10 9 10 15"/>
+          </svg>
+        </button>
+
         <div className="w-[1px] h-4 bg-[#333333] mx-1" />
 
         {/* Undo / Redo */}
@@ -1458,10 +1931,10 @@ export default function DrawingCanvas({
       </div>
 
       {/* Left Floating Style Settings Palette */}
-      <div className="absolute top-20 left-4 z-20 flex flex-col gap-3 bg-[#1e1e1e]/95 backdrop-blur-md border border-[#2d2d2d] rounded-xl p-3 shadow-2xl text-xs text-[#a0a0a0]">
+      <div className="absolute top-20 left-4 z-20 flex flex-col gap-3 bg-[var(--background)]/95 backdrop-blur-md border border-[var(--accents-2)] rounded-xl p-3 shadow-2xl text-xs text-[var(--foreground)]">
         {/* Stroke Color */}
         <div className="flex flex-col gap-1.5">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[#666666]">Cor do Traço</span>
+          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Cor do Traço</span>
           <div className="grid grid-cols-3 gap-1.5">
             {STROKE_COLORS.map((c) => (
               <button
@@ -1469,7 +1942,7 @@ export default function DrawingCanvas({
                 type="button"
                 onClick={() => setStrokeColor(c)}
                 className={`w-5 h-5 rounded-full border transition-transform ${
-                  strokeColor === c ? 'scale-125 border-white shadow-md' : 'border-transparent hover:scale-110'
+                  strokeColor === c ? 'scale-125 border-[var(--foreground)] shadow-md' : 'border-transparent hover:scale-110'
                 }`}
                 style={{ backgroundColor: c }}
               />
@@ -1478,8 +1951,8 @@ export default function DrawingCanvas({
         </div>
 
         {/* Fill Color */}
-        <div className="flex flex-col gap-1.5 pt-2 border-t border-[#2d2d2d]">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[#666666]">Preenchimento</span>
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--accents-2)]">
+          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Preenchimento</span>
           <div className="grid grid-cols-4 gap-1.5">
             {FILL_COLORS.map((fc, idx) => (
               <button
@@ -1487,20 +1960,20 @@ export default function DrawingCanvas({
                 type="button"
                 onClick={() => setFillColor(fc)}
                 className={`w-5 h-5 rounded-md border flex items-center justify-center transition-transform ${
-                  fillColor === fc ? 'scale-125 border-[#38bdf8]' : 'border-[#3a3a3a] hover:scale-110'
+                  fillColor === fc ? 'scale-125 border-[#38bdf8]' : 'border-[var(--accents-3)] hover:scale-110'
                 }`}
-                style={{ backgroundColor: fc === 'transparent' ? '#181818' : fc }}
+                style={{ backgroundColor: fc === 'transparent' ? 'var(--accents-1)' : fc }}
               >
-                {fc === 'transparent' && <span className="text-[9px] text-[#666666]">✕</span>}
+                {fc === 'transparent' && <span className="text-[9px] text-[var(--accents-5)]">✕</span>}
               </button>
             ))}
           </div>
         </div>
 
         {/* Stroke Width Slider (Force Bar / Range) */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-[#2d2d2d]">
+        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--accents-2)]">
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-[10px] uppercase tracking-wider text-[#666666]">Espessura</span>
+            <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Espessura</span>
             <span className="text-[11px] font-mono text-[#38bdf8] font-bold">{strokeWidth}px</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1511,27 +1984,38 @@ export default function DrawingCanvas({
               step="1"
               value={strokeWidth}
               onChange={(e) => setStrokeWidth(Number(e.target.value))}
-              className="w-full h-1.5 bg-[#2a2a2a] rounded-lg appearance-none cursor-pointer accent-[#38bdf8] hover:bg-[#333333] transition-colors"
+              className="w-full h-1.5 bg-[var(--accents-2)] rounded-lg appearance-none cursor-pointer accent-[#38bdf8] hover:bg-[var(--accents-3)] transition-colors"
             />
           </div>
           {/* Dynamic stroke preview bar */}
-          <div className="h-4 flex items-center justify-center bg-[#151515] rounded border border-[#2a2a2a] px-2 overflow-hidden">
+          <div className="h-4 flex items-center justify-center bg-[var(--accents-1)] rounded border border-[var(--accents-2)] px-2 overflow-hidden">
             <div
               className="rounded-full transition-all"
               style={{
                 width: '100%',
                 height: `${Math.min(14, strokeWidth)}px`,
-                backgroundColor: strokeColor === '#ffffff' ? '#e2e8f0' : strokeColor,
+                backgroundColor: strokeColor === '#ffffff' && resolvedTheme === 'light' ? '#000000' : strokeColor,
               }}
             />
           </div>
         </div>
 
+        {/* Insert Math Button in Side Palette */}
+        <button
+          type="button"
+          onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
+          className="mt-1 py-1.5 px-2 rounded-lg geist-button-secondary flex items-center justify-center gap-1.5 text-xs transition-colors"
+          title="Inserir Equação Matemática (LaTeX / KaTeX)"
+        >
+          <span className="font-mono font-bold text-[11px] text-[#38bdf8]">f(x)</span>
+          <span>Equação</span>
+        </button>
+
         {/* Export Button */}
         <button
           type="button"
           onClick={handleExportPNG}
-          className="mt-1 py-1.5 px-2 rounded-lg bg-[#282828] hover:bg-[#333333] text-white flex items-center justify-center gap-1.5 text-xs transition-colors"
+          className="py-1.5 px-2 rounded-lg geist-button-secondary flex items-center justify-center gap-1.5 text-xs transition-colors"
           title="Exportar como imagem PNG"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1617,9 +2101,9 @@ export default function DrawingCanvas({
         </div>
       )}
 
-      {/* Interactive Floating Note & Card Containers inside Canvas */}
+      {/* Interactive Floating Note, Card, Math & YouTube Containers inside Canvas */}
       {elements
-        .filter((el) => el.type === 'note_card' || el.type === 'flashcard')
+        .filter((el) => el.type === 'note_card' || el.type === 'flashcard' || el.type === 'math' || el.type === 'youtube')
         .map((el) => (
           <DrawingItemContainer
             key={el.id}
@@ -1639,6 +2123,13 @@ export default function DrawingCanvas({
             }}
             onOpenNota={onOpenNota}
             onOpenCard={onOpenCard}
+            onEditMath={(mathEl) =>
+              setMathModal({
+                visible: true,
+                editingElementId: mathEl.id,
+                initialLatex: mathEl.latex || '',
+              })
+            }
           />
         ))}
 
@@ -1652,6 +2143,21 @@ export default function DrawingCanvas({
           onClose={() => setPickerModal(null)}
         />
       )}
+
+      {/* Math Equation Modal */}
+      <MathEquationModal
+        isOpen={mathModal.visible}
+        initialLatex={mathModal.initialLatex}
+        onClose={() => setMathModal({ visible: false, editingElementId: null, initialLatex: '' })}
+        onConfirm={handleConfirmMath}
+      />
+
+      {/* YouTube Video Modal */}
+      <DrawingYouTubeModal
+        isOpen={isYouTubeModalOpen}
+        onClose={() => setIsYouTubeModalOpen(false)}
+        onConfirm={handleConfirmYouTube}
+      />
 
       {/* Bottom Zoom and Pan Info */}
       <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-[#1e1e1e]/90 backdrop-blur-md border border-[#2d2d2d] rounded-lg px-2.5 py-1 text-xs text-[#888888]">

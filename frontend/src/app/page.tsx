@@ -21,11 +21,13 @@ interface DownloadOption {
 
 const GITHUB_REPO = 'https://github.com/GDiniz12/synap';
 const GITHUB_RELEASES = `${GITHUB_REPO}/releases/latest`;
-const APP_VERSION = 'v1.0.0';
+const DEFAULT_VERSION = 'v1.0.0';
 
 export default function LandingPage() {
   const router = useRouter();
   const [detectedOS, setDetectedOS] = useState<OSType>('unknown');
+  const [appVersion, setAppVersion] = useState<string>(DEFAULT_VERSION);
+  const [isDesktopClient, setIsDesktopClient] = useState<boolean>(false);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'graph' | 'editor' | 'canvas' | 'flashcards'>('graph');
 
@@ -33,18 +35,25 @@ export default function LandingPage() {
   const [flashcardFlipped, setFlashcardFlipped] = useState(false);
 
   useEffect(() => {
-    // Check local authentication
-    try {
+    if (typeof window !== 'undefined') {
+      const isDesktopApp = !!window.synapDesktop?.isDesktop;
       const token = localStorage.getItem('token');
+
+      // If running inside Electron desktop app, immediately bypass landing page
+      if (isDesktopApp) {
+        setIsDesktopClient(true);
+        if (token) {
+          router.replace('/dashboard');
+        } else {
+          router.replace('/login');
+        }
+        return;
+      }
+
       if (token) {
         setIsAuthenticated(true);
       }
-    } catch {
-      // Ignore SSR / localStorage issues
-    }
 
-    // Detect user OS
-    if (typeof window !== 'undefined') {
       const userAgent = window.navigator.userAgent.toLowerCase();
       if (userAgent.includes('win')) {
         setDetectedOS('windows');
@@ -53,57 +62,71 @@ export default function LandingPage() {
       } else if (userAgent.includes('mac') || userAgent.includes('darwin')) {
         setDetectedOS('mac');
       }
+
+      // Fetch dynamic latest version tag from GitHub
+      fetch('https://api.github.com/repos/GDiniz12/synap/releases/latest')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.tag_name) {
+            setAppVersion(data.tag_name);
+          }
+        })
+        .catch(() => {});
     }
-  }, []);
+  }, [router]);
 
   const downloadOptions: DownloadOption[] = [
     {
       os: 'windows',
       name: 'Windows',
       badge: 'Installer (NSIS)',
-      filename: `Synap-Setup-${APP_VERSION.replace('v', '')}.exe`,
+      filename: `Synap-Setup-${appVersion.replace('v', '')}.exe`,
       format: '.exe (64-bit)',
       size: '~85 MB',
       recommendedFor: 'Windows 10, 11 (x64)',
-      url: `${GITHUB_RELEASES}/download/${APP_VERSION}/Synap-Setup-${APP_VERSION.replace('v', '')}.exe`,
+      url: '/api/download?os=windows',
       instructions: 'Execute o instalador e siga o assistente na tela para concluir.',
     },
     {
       os: 'linux',
       name: 'Linux AppImage',
       badge: 'Universal Portable',
-      filename: `Synap-${APP_VERSION.replace('v', '')}.AppImage`,
+      filename: `Synap-${appVersion.replace('v', '')}.AppImage`,
       format: '.AppImage (x64)',
       size: '~90 MB',
       recommendedFor: 'Qualquer distribuição Linux moderna',
-      url: `${GITHUB_RELEASES}/download/${APP_VERSION}/Synap-${APP_VERSION.replace('v', '')}.AppImage`,
+      url: '/api/download?os=linux-appimage',
       instructions: 'Torne o arquivo executável: chmod +x Synap-*.AppImage && ./Synap-*.AppImage',
     },
     {
       os: 'linux',
       name: 'Linux Debian / Ubuntu',
       badge: 'Pacote DEB',
-      filename: `synap_${APP_VERSION.replace('v', '')}_amd64.deb`,
+      filename: `synap_${appVersion.replace('v', '')}_amd64.deb`,
       format: '.deb (amd64)',
       size: '~78 MB',
       recommendedFor: 'Debian, Ubuntu, Linux Mint, Pop!_OS',
-      url: `${GITHUB_RELEASES}/download/${APP_VERSION}/synap_${APP_VERSION.replace('v', '')}_amd64.deb`,
+      url: '/api/download?os=linux-deb',
       instructions: 'Instale via terminal: sudo dpkg -i synap_*.deb ou clique duas vezes.',
     },
     {
       os: 'mac',
       name: 'macOS',
       badge: 'Universal DMG',
-      filename: `Synap-${APP_VERSION.replace('v', '')}.dmg`,
+      filename: `Synap-${appVersion.replace('v', '')}.dmg`,
       format: '.dmg (Universal)',
       size: '~92 MB',
       recommendedFor: 'macOS 12+ (Apple Silicon & Intel)',
-      url: `${GITHUB_RELEASES}/download/${APP_VERSION}/Synap-${APP_VERSION.replace('v', '')}.dmg`,
+      url: '/api/download?os=mac',
       instructions: 'Abra a imagem .dmg e arraste o Synap para a pasta Aplicativos.',
     },
   ];
 
   const primaryDownload = downloadOptions.find((d) => d.os === detectedOS) || downloadOptions[0];
+
+  if (isDesktopClient) {
+    return <div className="min-h-screen w-full bg-[var(--background)]" />;
+  }
 
   return (
     <div className="min-h-full w-full bg-[var(--background)] text-[var(--foreground)] overflow-y-auto selection:bg-[var(--foreground)] selection:text-[var(--background)]">
@@ -117,7 +140,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-2 text-decoration-none group">
             <SynapLogo size={28} priority />
             <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--accents-2)] text-[var(--accents-6)] border border-[var(--accents-3)]">
-              {APP_VERSION}
+              {appVersion}
             </span>
           </Link>
 
@@ -198,7 +221,7 @@ export default function LandingPage() {
         {/* Release Pill Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[var(--accents-2)] bg-[var(--accents-1)]/80 text-[11px] text-[var(--accents-6)] mb-6 shadow-sm">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono">{APP_VERSION}</span>
+          <span className="font-mono">{appVersion}</span>
           <span className="text-[var(--accents-4)]">•</span>
           <span>Desktop & Web App Disponíveis</span>
         </div>
