@@ -296,6 +296,7 @@ export default function GraphView({
   const [selectedFolderFilter, setSelectedFolderFilter] = useState<string>('all');
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [graphMode, setGraphMode] = useState<'isometric' | 'circuit' | 'transit'>('isometric');
+  const [showLabels, setShowLabels] = useState(true);
 
   // Simulation physics parameters
   const [repulsionForce, setRepulsionForce] = useState(300);
@@ -952,22 +953,50 @@ export default function GraphView({
               ))}
             </select>
           </div>
-          {/* Graph Mode Selector */}
-          <div className="relative">
-            <select
-              value={graphMode}
-              onChange={(e) => setGraphMode(e.target.value as any)}
-              className="appearance-none bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-3 py-1.5 pr-8 text-xs font-medium text-[var(--foreground)] hover:border-[var(--accents-5)] transition-colors cursor-pointer shadow-sm focus:outline-none"
+          {/* Graph Mode Selector (Geist Segmented Control) */}
+          <div className="flex items-center bg-[var(--accents-1)] border border-[var(--accents-2)] rounded-[var(--radius)] p-0.5 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setGraphMode('isometric')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-[calc(var(--radius)-2px)] transition-colors cursor-pointer ${
+                graphMode === 'isometric'
+                  ? 'bg-[var(--background)] text-[var(--foreground)] shadow-sm border border-[var(--accents-2)]'
+                  : 'text-[var(--accents-5)] hover:text-[var(--foreground)] border border-transparent'
+              }`}
             >
-              <option value="isometric">🧊 Isométrico 3D</option>
-              <option value="circuit">🎛️ Circuit Board 2D</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[var(--accents-5)]">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
+              Isométrico
+            </button>
+            <button
+              type="button"
+              onClick={() => setGraphMode('circuit')}
+              className={`px-2.5 py-1 text-xs font-medium rounded-[calc(var(--radius)-2px)] transition-colors cursor-pointer ${
+                graphMode === 'circuit'
+                  ? 'bg-[var(--background)] text-[var(--foreground)] shadow-sm border border-[var(--accents-2)]'
+                  : 'text-[var(--accents-5)] hover:text-[var(--foreground)] border border-transparent'
+              }`}
+            >
+              Circuit Board
+            </button>
           </div>
+
+          {/* Labels Toggle Button */}
+          {graphMode === 'isometric' && (
+            <button
+              type="button"
+              onClick={() => setShowLabels((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius)] border text-xs font-medium transition-colors shadow-sm cursor-pointer ${
+                showLabels
+                  ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]'
+                  : 'bg-[var(--background)] text-[var(--accents-6)] hover:text-[var(--foreground)] border-[var(--accents-2)] hover:bg-[var(--accents-1)]'
+              }`}
+              title="Mostrar/Ocultar Nomes das Notas"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+              </svg>
+              <span>Nomes</span>
+            </button>
+          )}
 
           {/* Groups Toggle Button */}
           <button
@@ -1370,7 +1399,15 @@ export default function GraphView({
             groups={groups}
             folderColorMap={folderColorMap}
             hoveredNodeId={hoveredNode?.id || null}
-            onHoverNode={(nota) => setHoveredNode(nota ? { ...nota, rawNota: nota } as any : null)}
+            showLabels={showLabels}
+            onHoverNode={(nota) => {
+              if (!nota) {
+                setHoveredNode(null);
+              } else {
+                const fullNode = nodesRef.current.find(n => n.id === nota.id);
+                setHoveredNode(fullNode || null);
+              }
+            }}
             onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
           />
         )}
@@ -1381,7 +1418,14 @@ export default function GraphView({
             groups={groups}
             folderColorMap={folderColorMap}
             hoveredNodeId={hoveredNode?.id || null}
-            onHoverNode={(nota) => setHoveredNode(nota ? { ...nota, rawNota: nota } as any : null)}
+            onHoverNode={(nota) => {
+              if (!nota) {
+                setHoveredNode(null);
+              } else {
+                const fullNode = nodesRef.current.find(n => n.id === nota.id);
+                setHoveredNode(fullNode || null);
+              }
+            }}
             onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
           />
         )}

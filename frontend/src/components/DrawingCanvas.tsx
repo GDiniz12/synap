@@ -1142,6 +1142,10 @@ export default function DrawingCanvas({
           canvasRef.current.style.cursor = hit ? 'move' : 'default';
         }
       }
+    } else {
+      if (canvasRef.current && canvasRef.current.style.cursor) {
+        canvasRef.current.style.cursor = '';
+      }
     }
 
     // 1. Interactive Resizing via Control Handles
@@ -1385,8 +1389,13 @@ export default function DrawingCanvas({
       const newEl = currentElementRef.current;
       currentElementRef.current = null;
       commitElements([...elements, newEl]);
-      setTool('select');
-      setSelectedIds([newEl.id]);
+      
+      if (newEl.type !== 'pencil') {
+        setTool('select');
+        setSelectedIds([newEl.id]);
+      } else {
+        setSelectedIds([]);
+      }
       return;
     }
 

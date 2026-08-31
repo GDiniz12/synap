@@ -44,22 +44,23 @@ export default function SettingsModal({
   const [accountMsg, setAccountMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [savingAccount, setSavingAccount] = useState(false);
 
-  // General State (Stored in localStorage)
-  const [language, setLanguage] = useState('pt-BR');
-  const [startupBehavior, setStartupBehavior] = useState('last_note');
+  // General State
+  const prefs = currentUser?.preferences || {};
+  const [language, setLanguage] = useState(prefs.language || 'pt-BR');
+  const [startupBehavior, setStartupBehavior] = useState(prefs.startupBehavior || 'last_note');
 
   // Theme State from Context
   const { theme, setTheme } = useTheme();
 
   // Appearance State
-  const [fontSize, setFontSize] = useState('15px');
-  const [fontFamily, setFontFamily] = useState('Geist Sans');
+  const [fontSize, setFontSize] = useState(prefs.editorFontSize || '15px');
+  const [fontFamily, setFontFamily] = useState(prefs.editorFontFamily || 'Geist Sans');
 
   // Editor State
-  const [editorWidth, setEditorWidth] = useState('800px');
-  const [slashMenuEnabled, setSlashMenuEnabled] = useState(true);
-  const [wikilinksEnabled, setWikilinksEnabled] = useState(true);
-  const [codeTheme, setCodeTheme] = useState('vscode-dark');
+  const [editorWidth, setEditorWidth] = useState(prefs.editorWidth || '800px');
+  const [slashMenuEnabled, setSlashMenuEnabled] = useState(prefs.slashMenuEnabled !== false);
+  const [wikilinksEnabled, setWikilinksEnabled] = useState(prefs.wikilinksEnabled !== false);
+  const [codeTheme, setCodeTheme] = useState(prefs.codeTheme || 'vscode-dark');
 
   // Shortcut search filter
   const [shortcutSearch, setShortcutSearch] = useState('');
@@ -73,29 +74,6 @@ export default function SettingsModal({
   const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<any | null>(null);
   const [dangerMsg, setDangerMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  // Load local settings on mount
-  useEffect(() => {
-    try {
-      const savedLang = localStorage.getItem('synap_language') || 'pt-BR';
-      const savedStartup = localStorage.getItem('synap_startup_behavior') || 'last_note';
-      const savedFontSize = localStorage.getItem('synap_font_size') || '15px';
-      const savedFontFamily = localStorage.getItem('synap_font_family') || 'Geist Sans';
-      const savedEditorWidth = localStorage.getItem('synap_editor_width') || '800px';
-      const savedSlash = localStorage.getItem('synap_slash_menu') !== 'false';
-      const savedWiki = localStorage.getItem('synap_wikilinks') !== 'false';
-      const savedCodeTheme = localStorage.getItem('synap_code_theme') || 'vscode-dark';
-
-      setLanguage(savedLang);
-      setStartupBehavior(savedStartup);
-      setFontSize(savedFontSize);
-      setFontFamily(savedFontFamily);
-      setEditorWidth(savedEditorWidth);
-      setSlashMenuEnabled(savedSlash);
-      setWikilinksEnabled(savedWiki);
-      setCodeTheme(savedCodeTheme);
-    } catch {}
-  }, []);
 
   // Fetch workspaces when Danger Zone tab is opened
   useEffect(() => {
@@ -111,10 +89,26 @@ export default function SettingsModal({
     }
   }, [activeTab]);
 
-  const handleSaveGeneral = (key: string, value: any) => {
+  const handleSaveGeneral = async (key: string, value: any) => {
     try {
-      localStorage.setItem(`synap_${key}`, value);
-    } catch {}
+      // For Theme and Language, also mirror to localStorage to prevent flashing
+      if (key === 'language') localStorage.setItem('synap_language', value);
+
+      const newPrefs = {
+        ...(currentUser?.preferences || {}),
+        [key]: value,
+      };
+      
+      const updatedUser = { ...currentUser, preferences: newPrefs };
+      onUpdateUser(updatedUser);
+      
+      await api('/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({ preferences: newPrefs }),
+      });
+    } catch (err) {
+      console.error('Erro ao salvar preferência:', err);
+    }
   };
 
   const handleUpdateAccount = async (e: React.FormEvent) => {
@@ -567,7 +561,7 @@ export default function SettingsModal({
                       checked={startupBehavior === 'last_note'}
                       onChange={(e) => {
                         setStartupBehavior(e.target.value);
-                        handleSaveGeneral('startup_behavior', e.target.value);
+                        handleSaveGeneral('startupBehavior', e.target.value);
                       }}
                     />
                     {t('reopen_last_note')}
@@ -580,7 +574,7 @@ export default function SettingsModal({
                       checked={startupBehavior === 'empty'}
                       onChange={(e) => {
                         setStartupBehavior(e.target.value);
-                        handleSaveGeneral('startup_behavior', e.target.value);
+                        handleSaveGeneral('startupBehavior', e.target.value);
                       }}
                     />
                     {t('open_empty_screen')}
@@ -611,6 +605,7 @@ export default function SettingsModal({
                       type="button"
                       onClick={() => {
                         setTheme(tItem.id as any);
+                        handleSaveGeneral('theme', tItem.id);
                       }}
                       className={theme === tItem.id ? 'geist-button' : 'geist-button-secondary'}
                       style={{
@@ -663,7 +658,7 @@ export default function SettingsModal({
                   value={fontSize}
                   onChange={(e) => {
                     setFontSize(e.target.value);
-                    handleSaveGeneral('font_size', e.target.value);
+                    handleSaveGeneral('editorFontSize', e.target.value);
                   }}
                   className="geist-input"
                   style={{ width: '200px' }}
@@ -683,7 +678,7 @@ export default function SettingsModal({
                   value={fontFamily}
                   onChange={(e) => {
                     setFontFamily(e.target.value);
-                    handleSaveGeneral('font_family', e.target.value);
+                    handleSaveGeneral('editorFontFamily', e.target.value);
                   }}
                   className="geist-input"
                   style={{ width: '240px' }}
@@ -711,7 +706,7 @@ export default function SettingsModal({
                   value={editorWidth}
                   onChange={(e) => {
                     setEditorWidth(e.target.value);
-                    handleSaveGeneral('editor_width', e.target.value);
+                    handleSaveGeneral('editorWidth', e.target.value);
                   }}
                   className="geist-input"
                   style={{ width: '220px' }}
@@ -734,7 +729,7 @@ export default function SettingsModal({
                       checked={slashMenuEnabled}
                       onChange={(e) => {
                         setSlashMenuEnabled(e.target.checked);
-                        handleSaveGeneral('slash_menu', e.target.checked);
+                        handleSaveGeneral('slashMenuEnabled', e.target.checked);
                       }}
                     />
                     Habilitar menu suspenso de comandos ao digitar "/"
@@ -745,7 +740,7 @@ export default function SettingsModal({
                       checked={wikilinksEnabled}
                       onChange={(e) => {
                         setWikilinksEnabled(e.target.checked);
-                        handleSaveGeneral('wikilinks', e.target.checked);
+                        handleSaveGeneral('wikilinksEnabled', e.target.checked);
                       }}
                     />
                     Habilitar links de notas bidirecionais ao digitar "[["

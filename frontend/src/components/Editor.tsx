@@ -23,6 +23,8 @@ interface EditorProps {
   onCursorLineChange?: (line: number) => void;
   fontFamily?: string;
   fontSize?: string;
+  slashMenuEnabled?: boolean;
+  wikilinksEnabled?: boolean;
 }
 
 interface CommandItem {
@@ -83,7 +85,9 @@ function Editor({
   onUpdateNota,
   onCursorLineChange,
   fontFamily,
-  fontSize
+  fontSize,
+  slashMenuEnabled = true,
+  wikilinksEnabled = true
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -1510,7 +1514,7 @@ function Editor({
   });
 
   const checkSlashTrigger = useCallback(() => {
-    if (linkPopover?.visible || imageModal?.visible || wikiMenu.visible || cardMenu.visible) return;
+    if (!slashMenuEnabled || linkPopover?.visible || imageModal?.visible || wikiMenu.visible || cardMenu.visible) return;
 
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) {
@@ -1559,7 +1563,7 @@ function Editor({
 
   // Check [[ Wikilink trigger
   const checkWikiTrigger = useCallback(() => {
-    if (linkPopover?.visible || imageModal?.visible || slashMenu.visible || cardMenu.visible) return;
+    if (!wikilinksEnabled || linkPopover?.visible || imageModal?.visible || slashMenu.visible || cardMenu.visible) return;
 
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) {

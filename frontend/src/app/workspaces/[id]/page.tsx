@@ -19,6 +19,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
 import SynapLogo from '@/components/SynapLogo';
 import { translations, Language } from '@/lib/i18n';
+import { useTheme } from '@/components/ThemeProvider';
 
 export const TOP_FONTS = [
   { id: 'geist', name: 'Geist Sans', family: "var(--font-sans), 'Geist Sans', sans-serif", category: 'Sans-Serif' },
@@ -43,6 +44,7 @@ export const FONT_SIZES = [
 
 export default function WorkspaceLayout({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const { theme, setTheme } = useTheme();
   
   const [workspace, setWorkspace] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -54,7 +56,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   // Editor Typography & Actions Menu State
   const [editorFontFamily, setEditorFontFamily] = useState<string>("var(--font-sans), 'Geist Sans', sans-serif");
-  const [editorFontSize, setEditorFontSize] = useState<string>('15px');
+  const [editorFontSize, setEditorFontSize] = useState<string>("15px");
+  const [editorWidth, setEditorWidth] = useState<string>("800px");
+  const [slashMenuEnabled, setSlashMenuEnabled] = useState<boolean>(true);
+  const [wikilinksEnabled, setWikilinksEnabled] = useState<boolean>(true);
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'font' | 'size'>('none');
   const actionsMenuRef = useRef<HTMLDivElement>(null);
@@ -237,8 +242,31 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       if (currentUser.preferences.editorFontSize) {
         setEditorFontSize(currentUser.preferences.editorFontSize);
       }
+      if (currentUser.preferences.editorWidth) {
+        setEditorWidth(currentUser.preferences.editorWidth);
+      }
+      if (currentUser.preferences.slashMenuEnabled !== undefined) {
+        setSlashMenuEnabled(currentUser.preferences.slashMenuEnabled);
+      }
+      if (currentUser.preferences.wikilinksEnabled !== undefined) {
+        setWikilinksEnabled(currentUser.preferences.wikilinksEnabled);
+      }
+      
+      // Sync theme if different
+      if (currentUser.preferences.theme && currentUser.preferences.theme !== theme) {
+        setTheme(currentUser.preferences.theme);
+      }
+      
+      // Sync language if different
+      if (currentUser.preferences.language) {
+        const currentLang = localStorage.getItem('synap_language');
+        if (currentLang !== currentUser.preferences.language) {
+          localStorage.setItem('synap_language', currentUser.preferences.language);
+          window.dispatchEvent(new Event('synap_language_changed'));
+        }
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, theme, setTheme]);
 
   // Update & persist user preferences
   const handleUpdatePreference = async (key: 'editorFontFamily' | 'editorFontSize', value: string) => {
@@ -313,7 +341,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         line-height: 1.75;
         color: #111113;
         background: #ffffff;
-        max-width: 800px;
+        max-width: ${editorWidth === '100%' ? '100%' : editorWidth};
         margin: 0 auto;
         padding: 32px 24px;
       }
@@ -397,7 +425,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         setNotas(notasData);
 
         // Check startup behavior from settings
-        const startup = localStorage.getItem('synap_startup_behavior') || 'last_note';
+        const startup = userData?.preferences?.startupBehavior || 'last_note';
         if (startup === 'last_note' && Array.isArray(notasData) && notasData.length > 0) {
           const lastVisitedId = localStorage.getItem(`synap_last_note_${id}`);
           const targetNota = notasData.find((n: any) => n.id === lastVisitedId) || notasData[0];
@@ -577,7 +605,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       setNotas(data);
 
       // Check startup behavior from settings
-      const startup = localStorage.getItem('synap_startup_behavior') || 'last_note';
+      const startup = currentUser?.preferences?.startupBehavior || 'last_note';
       if (startup === 'last_note' && Array.isArray(data) && data.length > 0) {
         const lastVisitedId = localStorage.getItem(`synap_last_note_${id}`);
         const targetNota = data.find((n) => n.id === lastVisitedId) || data[0];
@@ -1806,7 +1834,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                   <div 
                     style={{ 
                       padding: isMobile ? '20px 16px 80px' : '48px 64px 80px', 
-                      maxWidth: '800px', 
+                      maxWidth: editorWidth, 
                       width: '100%', 
                       margin: '0 auto', 
                       display: 'flex', 
@@ -1845,6 +1873,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                         onCursorLineChange={setCurrentLine}
                         fontFamily={editorFontFamily}
                         fontSize={editorFontSize}
+                        slashMenuEnabled={slashMenuEnabled}
+                        wikilinksEnabled={wikilinksEnabled}
                         placeholder={t('editor_placeholder')}
                         notas={notas}
                         onOpenNota={(n) => openNota(n)}

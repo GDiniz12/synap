@@ -12,9 +12,12 @@ interface IsometricGraphProps {
   groups?: GraphGroup[];
   folderColorMap?: Record<string, string>;
   hoveredNodeId?: string | null;
+  showLabels?: boolean;
   onHoverNode?: (nota: any | null) => void;
   onOpenNota: (nota: any) => void;
 }
+
+import { useTheme } from '../ThemeProvider';
 
 export default function IsometricGraph({
   notas = [],
@@ -22,9 +25,12 @@ export default function IsometricGraph({
   groups = [],
   folderColorMap = {},
   hoveredNodeId = null,
+  showLabels = true,
   onHoverNode = () => {},
   onOpenNota = () => {},
 }: Partial<IsometricGraphProps>) {
+  const { resolvedTheme } = useTheme();
+
   const { nodes, finalLinks, positions } = useMemo(() => {
     // Compute connections count
     const connections: Record<string, number> = {};
@@ -94,16 +100,20 @@ export default function IsometricGraph({
     return <div className="w-full h-full flex items-center justify-center text-[var(--accents-5)]">Nenhuma nota no grafo.</div>;
   }
 
+  const isLight = resolvedTheme === 'light';
+  const gridColor1 = isLight ? '#eaeaea' : '#222222';
+  const gridColor2 = isLight ? '#fafafa' : '#111111';
+
   return (
-    <div className="w-full h-full bg-black">
+    <div className="w-full h-full bg-[var(--background)]">
       <Canvas>
         <OrthographicCamera makeDefault position={[150, 150, 150]} zoom={6} near={-1000} far={2000} />
         <OrbitControls makeDefault enableDamping dampingFactor={0.1} target={[0, 0, 0]} />
         
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={isLight ? 0.8 : 0.5} />
         <directionalLight position={[20, 50, 20]} intensity={1.5} />
         
-        <gridHelper args={[1000, 100, '#222', '#111']} position={[0, -0.5, 0]} />
+        <gridHelper args={[1000, 100, gridColor1, gridColor2]} position={[0, -0.5, 0]} />
 
         {/* Nodes (Isometric Buildings) */}
         {nodes.map((node: any) => {
@@ -124,24 +134,26 @@ export default function IsometricGraph({
             >
               <boxGeometry args={[pos.thickness, pos.height, pos.thickness]} />
               <meshStandardMaterial 
-                color={isHovered ? '#ffffff' : baseColor} 
-                emissive={isHovered ? '#ffffff' : baseColor}
-                emissiveIntensity={isHovered ? 0.4 : 0.1}
+                color={isHovered ? (isLight ? '#000000' : '#ffffff') : baseColor} 
+                emissive={isHovered ? (isLight ? '#000000' : '#ffffff') : baseColor}
+                emissiveIntensity={isHovered ? (isLight ? 0.2 : 0.4) : 0.1}
               />
               
               {/* Permanent Label */}
-              <Html position={[0, pos.height / 2 + 2, 0]} center zIndexRange={[100, 0]}>
-                <div 
-                  className={`px-1.5 py-0.5 whitespace-nowrap font-mono text-[10px] pointer-events-none transition-colors ${
-                    isHovered 
-                      ? 'bg-white text-black border border-white z-50 shadow-lg' 
-                      : 'bg-black/60 text-white/80 border border-white/20'
-                  }`}
-                  style={{ borderRadius: '2px' }}
-                >
-                  {pos.title}
-                </div>
-              </Html>
+              {(showLabels || isHovered) && (
+                <Html position={[0, pos.height / 2 + 2, 0]} center zIndexRange={[100, 0]}>
+                  <div 
+                    className={`px-1.5 py-0.5 whitespace-nowrap font-mono text-[10px] pointer-events-none transition-colors ${
+                      isHovered 
+                        ? 'bg-[var(--foreground)] text-[var(--background)] border border-[var(--foreground)] z-50 shadow-lg' 
+                        : 'bg-[var(--background)] opacity-80 text-[var(--foreground)] border border-[var(--accents-2)]'
+                    }`}
+                    style={{ borderRadius: 'var(--radius)' }}
+                  >
+                    {pos.title}
+                  </div>
+                </Html>
+              )}
             </mesh>
           );
         })}
@@ -157,6 +169,10 @@ export default function IsometricGraph({
           const isHighlighted = hoveredNodeId ? (isSourceHovered || isTargetHovered) : false;
           const isDimmed = hoveredNodeId && !isHighlighted;
           
+          const highlightColor = isLight ? '#000000' : '#ffffff';
+          const normalColor = isLight ? '#a3a3a3' : '#888888';
+          const dimmedColor = isLight ? '#e5e5e5' : '#333333';
+          
           return (
             <Line
               key={i}
@@ -164,7 +180,7 @@ export default function IsometricGraph({
                 [sourcePos.x, sourcePos.height, sourcePos.z],
                 [targetPos.x, targetPos.height, targetPos.z]
               ]}
-              color={isHighlighted ? '#ffffff' : isDimmed ? '#333333' : '#888888'}
+              color={isHighlighted ? highlightColor : isDimmed ? dimmedColor : normalColor}
               lineWidth={isHighlighted ? 2.5 : 1.5}
               transparent
               opacity={isHighlighted ? 1 : isDimmed ? 0.2 : 0.6}
