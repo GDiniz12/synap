@@ -5,6 +5,11 @@
     "output": "release",
     "buildResources": "resources"
   },
+  "publish": {
+    "provider": "github",
+    "owner": "GDiniz12",
+    "repo": "synap"
+  },
   "files": [
     "dist/**/*",
     "package.json",
@@ -14,6 +19,11 @@
     "target": ["AppImage", "deb"],
     "category": "Office",
     "maintainer": "Synap <contact@synap.app>",
+    "icon": "resources/icon.png"
+  },
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": ["dmg", "zip"],
     "icon": "resources/icon.png"
   },
   "win": {

@@ -2,6 +2,10 @@
   "name": "synap-desktop",
   "version": "1.0.0",
   "description": "Synap Desktop Application",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GDiniz12/synap.git"
+  },
   "main": "dist/main/index.js",
   "scripts": {
     "watch:ts": "tsc -w --preserveWatchOutput",

@@ -14,14 +14,22 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: Linux (AppImage & deb)
+            flags: --linux
           - os: windows-latest
             target: Windows (NSIS Setup .exe)
+            flags: --win
           - os: macos-latest
             target: macOS (DMG)
+            flags: --mac
+
+    defaults:
+      run:
+        working-directory: desktop
 
     steps:
       - name: Checkout repository
@@ -35,18 +43,12 @@ jobs:
           cache-dependency-path: 'desktop/package-lock.json'
 
       - name: Install Desktop Dependencies
-        run: |
-          cd desktop
-          npm ci
+        run: npm ci
 
       - name: Build TypeScript
-        run: |
-          cd desktop
-          npm run build:ts
+        run: npm run build:ts
 
       - name: Build Electron App & Artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd desktop
-          npx electron-builder --publish always
+        run: npx electron-builder ${{ matrix.flags }} --publish always
