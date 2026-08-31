@@ -19,22 +19,31 @@ export async function GET(req: NextRequest) {
   const targetOS = (searchParams.get('os') || 'windows').toLowerCase();
 
   try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=10`, {
       headers: {
         'User-Agent': 'Synap-Download-Router',
         Accept: 'application/vnd.github.v3+json',
       },
-      next: { revalidate: 300 }, // Cache GitHub API response for 5 minutes
+      next: { revalidate: 60 }, // Cache response for 60 seconds
     });
 
     if (!res.ok) {
-      // Fallback redirect to releases page if not found or rate-limited
       return NextResponse.redirect(FALLBACK_RELEASES_URL, { status: 302 });
     }
 
-    const release: GitHubRelease = await res.json();
-    const assets = release.assets || [];
+    const releases: GitHubRelease[] = await res.json();
+    if (!Array.isArray(releases) || releases.length === 0) {
+      return NextResponse.redirect(FALLBACK_RELEASES_URL, { status: 302 });
+    }
 
+    // Find the latest release that actually contains uploaded assets
+    const releaseWithAssets = releases.find((r) => Array.isArray(r.assets) && r.assets.length > 0);
+
+    if (!releaseWithAssets) {
+      return NextResponse.redirect(FALLBACK_RELEASES_URL, { status: 302 });
+    }
+
+    const assets = releaseWithAssets.assets;
     let matchedAsset: GitHubAsset | undefined;
 
     if (targetOS === 'windows' || targetOS === 'win') {
@@ -53,36 +62,6 @@ export async function GET(req: NextRequest) {
 
     if (matchedAsset && matchedAsset.browser_download_url) {
       return NextResponse.redirect(matchedAsset.browser_download_url, { status: 302 });
-    }
-
-    // Direct download fallback with generic filename pattern
-    if (release.tag_name) {
-      const tag = release.tag_name;
-      const cleanVer = tag.replace(/^v/, '');
-      if (targetOS === 'windows' || targetOS === 'win') {
-        return NextResponse.redirect(
-          `https://github.com/${GITHUB_REPO}/releases/download/${tag}/Synap-Setup-${cleanVer}.exe`,
-          { status: 302 }
-        );
-      }
-      if (targetOS === 'linux' || targetOS === 'linux-appimage') {
-        return NextResponse.redirect(
-          `https://github.com/${GITHUB_REPO}/releases/download/${tag}/Synap-${cleanVer}.AppImage`,
-          { status: 302 }
-        );
-      }
-      if (targetOS === 'linux-deb') {
-        return NextResponse.redirect(
-          `https://github.com/${GITHUB_REPO}/releases/download/${tag}/synap_${cleanVer}_amd64.deb`,
-          { status: 302 }
-        );
-      }
-      if (targetOS === 'mac') {
-        return NextResponse.redirect(
-          `https://github.com/${GITHUB_REPO}/releases/download/${tag}/Synap-${cleanVer}.dmg`,
-          { status: 302 }
-        );
-      }
     }
 
     return NextResponse.redirect(FALLBACK_RELEASES_URL, { status: 302 });

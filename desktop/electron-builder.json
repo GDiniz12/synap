@@ -8,7 +8,8 @@
   "publish": {
     "provider": "github",
     "owner": "GDiniz12",
-    "repo": "synap"
+    "repo": "synap",
+    "releaseType": "release"
   },
   "files": [
     "dist/**/*",
