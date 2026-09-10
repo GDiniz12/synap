@@ -20,11 +20,11 @@ export class FlashcardController {
 
   async createDeck(req: Request, res: Response): Promise<any> {
     try {
-      const { workspaceId, nome, descricao } = req.body;
+      const { workspaceId, nome, descricao, parentId } = req.body;
       if (!workspaceId || !nome) {
         return res.status(400).json({ error: 'workspaceId e nome são obrigatórios' });
       }
-      const deck = await flashcardService.createDeck(workspaceId, nome, descricao);
+      const deck = await flashcardService.createDeck(workspaceId, nome, descricao, parentId);
       return res.status(201).json(deck);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -34,8 +34,8 @@ export class FlashcardController {
   async updateDeck(req: Request, res: Response): Promise<any> {
     try {
       const id = req.params.id as string;
-      const { nome, descricao } = req.body;
-      const deck = await flashcardService.updateDeck(id, nome, descricao);
+      const { nome, descricao, parentId } = req.body;
+      const deck = await flashcardService.updateDeck(id, nome, descricao, parentId);
       return res.json(deck);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -69,7 +69,8 @@ export class FlashcardController {
   async getFlashcards(req: Request, res: Response): Promise<any> {
     try {
       const deckId = req.params.deckId as string;
-      const cards = await flashcardService.getFlashcards(deckId);
+      const recursive = req.query.recursive === 'true';
+      const cards = await flashcardService.getFlashcards(deckId, recursive);
       return res.json(cards);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -135,8 +136,8 @@ export class FlashcardController {
   async updateFlashcard(req: Request, res: Response): Promise<any> {
     try {
       const id = req.params.id as string;
-      const { frente, verso } = req.body;
-      const card = await flashcardService.updateFlashcard(id, { frente, verso });
+      const { frente, verso, deckId } = req.body;
+      const card = await flashcardService.updateFlashcard(id, { frente, verso, deckId });
       return res.json(card);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

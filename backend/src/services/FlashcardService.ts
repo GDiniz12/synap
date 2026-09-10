@@ -54,6 +54,28 @@ export function calculateSM2(
 }
 
 export class FlashcardService {
+  // Helper to get all descendant deck IDs including the root deck ID
+  private async getAllDescendantDeckIds(rootDeckId: string): Promise<string[]> {
+    const allDecks = await prisma.deck.findMany({
+      select: { id: true, parentId: true },
+    });
+
+    const deckIds = new Set<string>([rootDeckId]);
+    let added = true;
+
+    while (added) {
+      added = false;
+      for (const deck of allDecks) {
+        if (deck.parentId && deckIds.has(deck.parentId) && !deckIds.has(deck.id)) {
+          deckIds.add(deck.id);
+          added = true;
+        }
+      }
+    }
+
+    return Array.from(deckIds);
+  }
+
   // --- DECKS ---
   async getDecks(workspaceId: string) {
     const decks = await prisma.deck.findMany({
@@ -67,51 +89,100 @@ export class FlashcardService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     });
 
     const now = new Date();
 
-    return decks.map((deck) => {
-      const total = deck.flashcards.length;
-      const novos = deck.flashcards.filter((c) => c.reps === 0).length;
-      const aRevisar = deck.flashcards.filter(
+    // Map direct deck stats
+    const deckMap = new Map<string, {
+      deck: typeof decks[0];
+      directTotal: number;
+      directNovos: number;
+      directARevisar: number;
+      childIds: string[];
+    }>();
+
+    for (const d of decks) {
+      const directTotal = d.flashcards.length;
+      const directNovos = d.flashcards.filter((c) => c.reps === 0).length;
+      const directARevisar = d.flashcards.filter(
         (c) => c.reps > 0 && new Date(c.proximaRevisao) <= now
       ).length;
 
+      deckMap.set(d.id, {
+        deck: d,
+        directTotal,
+        directNovos,
+        directARevisar,
+        childIds: [],
+      });
+    }
+
+    // Connect children to parents
+    for (const d of decks) {
+      if (d.parentId && deckMap.has(d.parentId)) {
+        deckMap.get(d.parentId)!.childIds.push(d.id);
+      }
+    }
+
+    // Helper to compute recursive stats
+    const computeRecursiveStats = (deckId: string): { total: number; novos: number; aRevisar: number } => {
+      const entry = deckMap.get(deckId);
+      if (!entry) return { total: 0, novos: 0, aRevisar: 0 };
+
+      let total = entry.directTotal;
+      let novos = entry.directNovos;
+      let aRevisar = entry.directARevisar;
+
+      for (const childId of entry.childIds) {
+        const childStats = computeRecursiveStats(childId);
+        total += childStats.total;
+        novos += childStats.novos;
+        aRevisar += childStats.aRevisar;
+      }
+
+      return { total, novos, aRevisar };
+    };
+
+    return decks.map((deck) => {
+      const stats = computeRecursiveStats(deck.id);
       return {
         id: deck.id,
         nome: deck.nome,
         descricao: deck.descricao,
         workspaceId: deck.workspaceId,
+        parentId: deck.parentId,
         createdAt: deck.createdAt,
         updatedAt: deck.updatedAt,
         stats: {
-          total,
-          novos,
-          aRevisar,
-          aprendendo: total - novos - aRevisar,
+          total: stats.total,
+          novos: stats.novos,
+          aRevisar: stats.aRevisar,
+          aprendendo: stats.total - stats.novos - stats.aRevisar,
         },
       };
     });
   }
 
-  async createDeck(workspaceId: string, nome: string, descricao?: string) {
+  async createDeck(workspaceId: string, nome: string, descricao?: string, parentId?: string) {
     return prisma.deck.create({
       data: {
         workspaceId,
         nome,
         descricao,
+        parentId: parentId || null,
       },
     });
   }
 
-  async updateDeck(id: string, nome?: string, descricao?: string) {
+  async updateDeck(id: string, nome?: string, descricao?: string, parentId?: string | null) {
     return prisma.deck.update({
       where: { id },
       data: {
         ...(nome && { nome }),
         ...(descricao !== undefined && { descricao }),
+        ...(parentId !== undefined && { parentId }),
       },
     });
   }
@@ -135,6 +206,13 @@ export class FlashcardService {
           select: {
             id: true,
             nome: true,
+            parentId: true,
+          },
+        },
+        nota: {
+          select: {
+            id: true,
+            titulo: true,
           },
         },
       },
@@ -142,10 +220,21 @@ export class FlashcardService {
     });
   }
 
-  async getFlashcards(deckId: string) {
+  async getFlashcards(deckId: string, recursive: boolean = false) {
+    let deckIds = [deckId];
+    if (recursive) {
+      deckIds = await this.getAllDescendantDeckIds(deckId);
+    }
+
     return prisma.flashcard.findMany({
-      where: { deckId },
+      where: { deckId: { in: deckIds } },
       include: {
+        deck: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
         nota: {
           select: {
             id: true,
@@ -158,16 +247,24 @@ export class FlashcardService {
   }
 
   async getDueCards(deckId: string) {
+    const deckIds = await this.getAllDescendantDeckIds(deckId);
     const now = new Date();
+
     return prisma.flashcard.findMany({
       where: {
-        deckId,
+        deckId: { in: deckIds },
         OR: [
           { reps: 0 },
           { proximaRevisao: { lte: now } },
         ],
       },
       include: {
+        deck: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
         nota: {
           select: {
             id: true,
@@ -202,6 +299,14 @@ export class FlashcardService {
         easeFactor: 2.5,
         proximaRevisao: new Date(),
       },
+      include: {
+        deck: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
+      },
     });
   }
 
@@ -222,6 +327,20 @@ export class FlashcardService {
         interval: 0,
         easeFactor: 2.5,
         proximaRevisao: new Date(),
+      },
+      include: {
+        deck: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
+        nota: {
+          select: {
+            id: true,
+            titulo: true,
+          },
+        },
       },
     });
   }
@@ -246,10 +365,22 @@ export class FlashcardService {
     });
   }
 
-  async updateFlashcard(id: string, data: { frente?: string; verso?: string }) {
+  async updateFlashcard(id: string, data: { frente?: string; verso?: string; deckId?: string }) {
     return prisma.flashcard.update({
       where: { id },
-      data,
+      data: {
+        ...(data.frente !== undefined && { frente: data.frente }),
+        ...(data.verso !== undefined && { verso: data.verso }),
+        ...(data.deckId !== undefined && { deckId: data.deckId }),
+      },
+      include: {
+        deck: {
+          select: {
+            id: true,
+            nome: true,
+          },
+        },
+      },
     });
   }
 
