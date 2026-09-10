@@ -10,6 +10,7 @@ import Terminal from '@/components/Terminal';
 import GraphView from '@/components/GraphView';
 import DrawingCanvas from '@/components/DrawingCanvas';
 import FlashcardsView from '@/components/FlashcardsView';
+import AiChatView from '@/components/AiChatView';
 import CardModal from '@/components/CardModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
@@ -63,6 +64,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [isActionsMenuOpen, setIsActionsMenuOpen] = useState<boolean>(false);
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'font' | 'size'>('none');
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+  const [sidebarSearch, setSidebarSearch] = useState<string>('');
+  const sidebarSearchInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = useCallback((message: string, type: 'error' | 'success' | 'info' = 'error') => {
     const toastId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -95,6 +98,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
   const [isFlashcardsOpen, setIsFlashcardsOpen] = useState(false);
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+  const [aiChatMode, setAiChatMode] = useState<'drawer' | 'fullscreen'>('drawer');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isMobileFilesSheetOpen, setIsMobileFilesSheetOpen] = useState(false);
@@ -232,6 +237,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       connections: connectedNoteIds.size,
     };
   }, [selectedNota, currentContent, editTitle, notas]);
+
+  const filteredNotasBySearch = useMemo(() => {
+    if (!sidebarSearch.trim()) return null;
+    const query = sidebarSearch.toLowerCase().trim();
+    return notas.filter((n) => (n.titulo || '').toLowerCase().includes(query));
+  }, [notas, sidebarSearch]);
 
   // Load preferences from currentUser
   useEffect(() => {
@@ -525,6 +536,13 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           return;
         }
 
+        // Ctrl + J: Toggle Synap AI Assistant
+        if (key === 'j') {
+          e.preventDefault();
+          setIsAiChatOpen((prev) => !prev);
+          return;
+        }
+
         // Ctrl + 1..9: Switch Tab by index
         if (/^[1-9]$/.test(key)) {
           e.preventDefault();
@@ -536,6 +554,18 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               openNota(targetNota);
             }
           }
+          return;
+        }
+
+        if (e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          setIsSidebarOpen(true);
+          setTimeout(() => {
+            if (sidebarSearchInputRef.current) {
+              sidebarSearchInputRef.current.focus();
+              sidebarSearchInputRef.current.select();
+            }
+          }, 50);
           return;
         }
 
@@ -1184,20 +1214,37 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
   const rootPastas = pastas.filter(p => !p.parentId);
   const notasSemPasta = notas.filter(n => !n.pastaId);
+
   const renderFileTree = () => (
     <div 
-      style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }}
+      style={{ flex: 1, overflowY: 'auto', padding: '6px 8px' }}
+      className="no-scrollbar"
       onDragOver={handleDragOver}
       onDrop={(e) => handleDropToPasta(e, null)} // Drop to root
     >
-      {/* Unified Tree (Folders first, then files) */}
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {rootPastas.map(pasta => renderPasta(pasta, 0))}
-        {notasSemPasta.map(nota => renderNota(nota))}
-      </div>
+      {filteredNotasBySearch ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <div style={{ padding: '6px 8px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--accents-5)' }}>
+            Resultados da busca ({filteredNotasBySearch.length})
+          </div>
+          {filteredNotasBySearch.length === 0 ? (
+            <div style={{ padding: '16px 8px', fontSize: '12px', color: 'var(--accents-4)', textAlign: 'center' }}>
+              Nenhum documento encontrado.
+            </div>
+          ) : (
+            filteredNotasBySearch.map((nota) => renderNota(nota))
+          )}
+        </div>
+      ) : (
+        /* Unified Tree (Folders first, then files) */
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {rootPastas.map(pasta => renderPasta(pasta, 0))}
+          {notasSemPasta.map(nota => renderNota(nota))}
+        </div>
+      )}
 
-      {rootPastas.length === 0 && notasSemPasta.length === 0 && (
-         <div style={{ padding: '24px 8px', fontSize: '13px', color: 'var(--accents-4)', textAlign: 'center' }}>
+      {!filteredNotasBySearch && rootPastas.length === 0 && notasSemPasta.length === 0 && (
+         <div style={{ padding: '24px 8px', fontSize: '12px', color: 'var(--accents-4)', textAlign: 'center' }}>
            Workspace vazio. Crie uma nota ou pasta acima.
          </div>
       )}
@@ -1205,7 +1252,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   );
 
   return (
-    <div style={{ display: 'flex', height: '100%', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--background)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--background)' }}>
       
       {/* GLOBAL CONTEXT MENU */}
       {contextMenu && (
@@ -1322,419 +1369,786 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* MOBILE BACKDROP OVERLAY FOR SIDEBAR */}
-      {isMobile && isSidebarOpen && (
-        <div
-          onClick={() => setIsSidebarOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(3px)',
-            zIndex: 90,
-          }}
-        />
-      )}
+      {/* ─────────────────────────────────────────────────────────
+          RENDER MASTER TOP HEADER (Full Width, 44px)
+          ───────────────────────────────────────────────────────── */}
+      <header
+        style={{
+          height: '44px',
+          minHeight: '44px',
+          background: 'var(--background)',
+          borderBottom: '1px solid var(--accents-2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          zIndex: 40,
+          flexShrink: 0,
+          userSelect: 'none',
+        }}
+      >
+        {/* Left: Brand + Breadcrumb + Status Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+          <Link
+            href="/dashboard"
+            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
+            className="hover:opacity-80 transition-opacity shrink-0"
+            title="Voltar ao Dashboard"
+          >
+            <SynapLogo size={20} priority />
+          </Link>
 
-      {/* DESKTOP SIDEBAR */}
-      {!isMobile && (
-        <div 
-          style={{ 
-            position: 'relative',
-            top: 0,
-            bottom: 0,
-            left: 0,
-            zIndex: 'auto',
-            width: isSidebarOpen ? '280px' : '0px', 
-            minWidth: isSidebarOpen ? '280px' : '0px', 
-            background: 'var(--accents-1)', 
-            borderRight: isSidebarOpen ? '1px solid var(--accents-2)' : 'none', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            overflow: 'hidden',
-            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-        <div style={{ width: '280px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 16px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <Link 
-                href="/dashboard" 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  textDecoration: 'none',
-                  borderRadius: '6px',
-                  transition: 'opacity 0.15s ease' 
-                }} 
-                className="hover:opacity-80"
-                title="Voltar para o Dashboard"
-              >
-                <SynapLogo size={24} priority />
-              </Link>
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="geist-button-secondary"
-                style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}
-                title="Recolher barra lateral (Ctrl + \)"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2"/>
-                  <path d="M9 3v18"/>
-                  <path d="m16 15-3-3 3-3"/>
-                </svg>
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div className="flex items-center gap-2">
-                <h2 style={{ margin: '0', fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
-                  {workspace.nome}
-                </h2>
-                {workspace.isCollaborative && (
-                  <button 
-                    onClick={() => setIsShareModalOpen(true)}
-                    className="geist-button-secondary text-xs h-6 px-2 flex items-center gap-1 bg-[#1e1e1e]"
-                    title="Compartilhar Workspace"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5c-2.2 0-4 1.8-4 4v2" />
-                      <circle cx="8.5" cy="7" r="4" />
-                      <line x1="20" y1="8" x2="20" y2="14" />
-                      <line x1="23" y1="11" x2="17" y2="11" />
-                    </svg>
-                    <span>Convidar</span>
-                  </button>
-                )}
-              </div>
-            </div>
+          <div style={{ width: '1px', height: '14px', background: 'var(--accents-2)', flexShrink: 0 }} />
+
+          {/* Breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accents-5)', flexShrink: 0 }} className="hidden sm:inline">
+              WORKSPACE
+            </span>
+            <span style={{ color: 'var(--accents-4)', fontSize: '12px', flexShrink: 0 }} className="hidden sm:inline">/</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {workspace.nome}
+            </span>
           </div>
 
-          {/* Toolbar below the line */}
-          <div style={{ display: 'flex', gap: '8px', padding: '12px 16px', background: 'var(--accents-1)' }}>
-            <button onClick={() => handleTriggerCreatePasta(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova pasta">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
-            </button>
-            <button onClick={() => handleCreateNota(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova nota">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            </button>
-            <button onClick={() => handleCreateDesenho(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Desenho">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-              </svg>
-            </button>
-            <button 
-              onClick={() => {
-                setIsFlashcardsOpen(prev => !prev);
-                if (!isFlashcardsOpen) {
-                  setIsGraphViewOpen(false);
-                }
-              }} 
-              className={`geist-button-secondary transition-colors ${isFlashcardsOpen ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]' : ''}`}
-              style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} 
-              title="Flashcards"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="3" rx="2"/>
-                <path d="m9 12 2 2 4-4"/>
-              </svg>
-            </button>
-            <button 
-              onClick={() => {
-                setIsGraphViewOpen(prev => !prev);
-                if (!isGraphViewOpen) {
-                  setIsFlashcardsOpen(false);
-                }
-              }} 
-              className={`geist-button-secondary transition-colors ${isGraphViewOpen ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]' : ''}`}
-              style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} 
-              title="Grafo"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3"/>
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </button>
+          {/* Live Status Pill (Render Style) */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              border: '1px solid var(--accents-2)',
+              background: 'var(--accents-1)',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--accents-5)',
+              flexShrink: 0,
+            }}
+            className="hidden md:inline-flex"
+          >
+            <span
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: saveStatus === 'saving' ? 'var(--warning)' : '#10b981',
+                boxShadow: saveStatus === 'saving' ? '0 0 6px var(--warning)' : '0 0 6px #10b981',
+              }}
+            />
+            <span>{saveStatus === 'saving' ? 'Salvando...' : 'Sincronizado'}</span>
           </div>
-
-          {/* Unified Tree via Helper */}
-          {renderFileTree()}
-
-          {/* User Profile Area */}
-          {currentUser && (
-            <div style={{ borderTop: '1px solid var(--accents-2)', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--background)', marginTop: 'auto' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                <div style={{ width: 28, height: 28, background: 'var(--foreground)', color: 'var(--background)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentUser.name || 'User'}
-                  </span>
-                  <span style={{ fontSize: '11px', color: 'var(--accents-5)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {currentUser.email}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                <button 
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="geist-button-secondary" 
-                  style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', flexShrink: 0 }} 
-                  title="Configurações"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                </button>
-                <button 
-                  onClick={() => setIsLogoutConfirmOpen(true)}
-                  className="geist-button-secondary" 
-                  style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px', flexShrink: 0 }} 
-                  title={t('logout')}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-      )}
 
-      {/* MAIN CONTENT / EDITOR */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
-        
-        {/* TOP TAB BAR (JANELAS DE NOTAS) */}
-        <div 
-          style={{ 
-            height: '40px', 
-            minHeight: '40px',
-            borderBottom: '1px solid var(--accents-2)', 
-            background: 'var(--accents-1)', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            padding: '0 12px 0 8px',
-            userSelect: 'none',
-            zIndex: 10
-          }}
-        >
-          {/* Left: Reopen Sidebar + Tabs list */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', flex: 1, height: '100%', paddingRight: '8px' }} className="no-scrollbar">
-            {/* Reopen Sidebar Button if collapsed */}
-            {!isSidebarOpen && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px', flexShrink: 0 }}>
-                <button
-                  onClick={() => setIsSidebarOpen(true)}
-                  className="geist-button-secondary"
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    padding: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  title="Abrir barra lateral (Ctrl + \)"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect width="18" height="18" x="3" y="3" rx="2"/>
-                    <path d="M9 3v18"/>
-                    <path d="m14 9 3 3-3 3"/>
-                  </svg>
-                </button>
-                <Link href="/dashboard" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} className="hover:opacity-80 transition-opacity" title="Voltar ao Dashboard">
-                  <SynapLogo size={18} />
-                </Link>
-              </div>
-            )}
+        {/* Center: Render Integrated View Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: '2px' }}>
+          {/* 1. Documentos / Editor */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsFlashcardsOpen(false);
+              setIsGraphViewOpen(false);
+              if (isAiChatOpen && aiChatMode === 'fullscreen') setAiChatMode('drawer');
+            }}
+            style={{
+              height: '44px',
+              padding: '0 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 600 : 500,
+              color: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--foreground)' : 'var(--accents-5)',
+              borderBottom: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? '2px solid var(--foreground)' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            className="hover:text-[var(--foreground)]"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span className="hidden sm:inline">Documentos</span>
+          </button>
 
-            {/* List of open note tabs */}
-            {openTabIds.map((tabId, index) => {
-              const tabNota = notas.find((n) => n.id === tabId);
-              const isActive = selectedNota?.id === tabId;
-              const isDrawing = (isActive ? selectedNota?.tipo : tabNota?.tipo) === 'desenho';
-              const title = (isActive ? editTitle : tabNota?.titulo) || tabNota?.titulo || (isDrawing ? 'Novo Desenho' : 'Sem Título');
+          {/* 2. Grafo */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsGraphViewOpen(true);
+              setIsFlashcardsOpen(false);
+            }}
+            style={{
+              height: '44px',
+              padding: '0 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: isGraphViewOpen ? 600 : 500,
+              color: isGraphViewOpen ? 'var(--foreground)' : 'var(--accents-5)',
+              borderBottom: isGraphViewOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            className="hover:text-[var(--foreground)]"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            <span className="hidden sm:inline">Grafo</span>
+          </button>
 
-              return (
-                <div
-                  key={tabId}
-                  onClick={() => {
-                    if (tabNota) openNota(tabNota);
-                  }}
-                  onAuxClick={(e) => {
-                    if (e.button === 1) {
-                      e.preventDefault();
-                      handleCloseTab(tabId);
-                    }
-                  }}
-                  title={`${title} (Ctrl+${index + 1})`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '0 10px',
-                    height: '30px',
-                    fontSize: '13px',
-                    fontWeight: isActive ? 500 : 400,
-                    color: isActive ? 'var(--foreground)' : 'var(--accents-5)',
-                    background: isActive ? 'var(--background)' : 'transparent',
-                    border: isActive ? '1px solid var(--accents-2)' : '1px solid transparent',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    maxWidth: '180px',
-                    boxShadow: isActive ? '0 1px 4px rgba(0, 0, 0, 0.25)' : 'none',
-                    transition: 'all var(--duration-smooth) var(--ease-smooth)',
-                  }}
-                  className={`group active:scale-[0.98] ${!isActive ? 'hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]' : ''}`}
-                >
-                  {isDrawing ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
-                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                    </svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                  )}
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {title}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => handleCloseTab(tabId, e)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      color: 'inherit',
-                      padding: 0,
-                      flexShrink: 0
-                    }}
-                    className="hover:bg-[var(--accents-3)] hover:text-[var(--foreground)] opacity-60 hover:opacity-100 transition-opacity"
-                    title="Fechar aba"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-              );
-            })}
+          {/* 3. Flashcards */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsFlashcardsOpen(true);
+              setIsGraphViewOpen(false);
+            }}
+            style={{
+              height: '44px',
+              padding: '0 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: isFlashcardsOpen ? 600 : 500,
+              color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)',
+              borderBottom: isFlashcardsOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            className="hover:text-[var(--foreground)]"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+            <span className="hidden sm:inline">Flashcards</span>
+          </button>
 
-            {/* Quick New Note tab button */}
+          {/* 4. Synap AI */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsAiChatOpen((prev) => !prev);
+            }}
+            style={{
+              height: '44px',
+              padding: '0 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: isAiChatOpen ? 600 : 500,
+              color: isAiChatOpen ? 'var(--foreground)' : 'var(--accents-5)',
+              borderBottom: isAiChatOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              background: 'transparent',
+              borderTop: 'none',
+              borderLeft: 'none',
+              borderRight: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            className="hover:text-[var(--foreground)]"
+            title="Synap AI Assistant (Ctrl + J)"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+            <span className="hidden sm:inline">Synap AI</span>
+          </button>
+        </div>
+
+        {/* Right: Quick Tools */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Terminal */}
+          <button
+            type="button"
+            onClick={() => setIsTerminalOpen((prev) => !prev)}
+            className="geist-button-secondary"
+            style={{
+              height: '28px',
+              padding: '0 8px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              background: isTerminalOpen ? 'var(--accents-2)' : undefined,
+            }}
+            title="Terminal (Ctrl + `)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="4 17 10 11 4 5" />
+              <line x1="12" y1="19" x2="20" y2="19" />
+            </svg>
+            <span className="hidden md:inline">Terminal</span>
+          </button>
+
+          {/* Share / Invite */}
+          {workspace.isCollaborative && (
             <button
-              onClick={() => handleCreateNota(null)}
-              className="hover:bg-[var(--accents-2)]"
+              type="button"
+              onClick={() => setIsShareModalOpen(true)}
+              className="geist-button-secondary"
+              style={{
+                height: '28px',
+                padding: '0 8px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+              title="Compartilhar Workspace"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5c-2.2 0-4 1.8-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <line x1="20" y1="8" x2="20" y2="14" />
+                <line x1="23" y1="11" x2="17" y2="11" />
+              </svg>
+              <span className="hidden md:inline">Convidar</span>
+            </button>
+          )}
+
+          {/* Settings */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="geist-button-secondary"
+            style={{
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+            title="Configurações"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+
+          {/* User Profile Avatar */}
+          {currentUser && (
+            <button
+              type="button"
+              onClick={() => setIsLogoutConfirmOpen(true)}
               style={{
                 width: '26px',
                 height: '26px',
+                borderRadius: '50%',
+                background: 'var(--foreground)',
+                color: 'var(--background)',
+                border: 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '6px',
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--accents-5)',
+                fontSize: '11px',
+                fontWeight: 700,
                 cursor: 'pointer',
-                flexShrink: 0
               }}
-              title="Nova nota"
+              title={`Sair de ${currentUser.email}`}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
+              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
             </button>
-          </div>
-
-          {/* Right: Actions (Terminal Toggle, Graph Toggle) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-            {/* Graph View Toggle Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsGraphViewOpen(prev => !prev);
-                if (!isGraphViewOpen) {
-                  setIsFlashcardsOpen(false);
-                }
-              }}
-              className={`hover:bg-[var(--accents-2)] transition-colors ${isGraphViewOpen ? 'text-[var(--foreground)] bg-[var(--accents-2)] font-semibold' : 'text-[var(--accents-5)]'}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                height: '28px',
-                padding: '0 8px',
-                borderRadius: '6px',
-                border: '1px solid var(--accents-2)',
-                background: isGraphViewOpen ? 'var(--accents-2)' : 'transparent',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 500
-              }}
-              title="Visualização em Grafo (Synap Graph View)"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3"/>
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-              <span>Grafo</span>
-            </button>
-
-            {/* VS Code Style Terminal Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsTerminalOpen(prev => !prev)}
-              className={`hover:bg-[var(--accents-2)] transition-colors ${isTerminalOpen ? 'text-[var(--foreground)] bg-[var(--accents-2)]' : 'text-[var(--accents-5)]'}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                height: '28px',
-                padding: '0 8px',
-                borderRadius: '6px',
-                border: '1px solid var(--accents-2)',
-                background: isTerminalOpen ? 'var(--accents-2)' : 'transparent',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 500
-              }}
-              title="Abrir/Fechar Terminal (Ctrl + `)"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="4 17 10 11 4 5"/>
-                <line x1="12" y1="19" x2="20" y2="19"/>
-              </svg>
-              <span>Terminal</span>
-            </button>
-          </div>
+          )}
         </div>
+      </header>
+
+      {/* ─────────────────────────────────────────────────────────
+          WORKSPACE MAIN BODY (SIDEBAR + MAIN CONTENT AREA)
+          ───────────────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
         
-        {/* CSS for spinner */}
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes spin { 100% { transform: rotate(360deg); } }
-        `}} />
+        {/* MOBILE BACKDROP OVERLAY FOR SIDEBAR */}
+        {isMobile && isSidebarOpen && (
+          <div
+            onClick={() => setIsSidebarOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(3px)',
+              zIndex: 90,
+            }}
+          />
+        )}
+
+        {/* DESKTOP / MOBILE SIDEBAR (RENDER TECHNICAL EXPLORER) */}
+        {(!isMobile || isSidebarOpen) && (
+          <aside
+            style={{
+              position: isMobile ? 'fixed' : 'relative',
+              top: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: isMobile ? 100 : 'auto',
+              width: isSidebarOpen ? '270px' : '0px',
+              minWidth: isSidebarOpen ? '270px' : '0px',
+              background: 'var(--accents-1)',
+              borderRight: isSidebarOpen ? '1px solid var(--accents-2)' : 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              transition: 'all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <div style={{ width: '270px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              
+              {/* Sidebar Header Bar */}
+              <div style={{ padding: '12px 14px 8px', borderBottom: '1px solid var(--accents-2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accents-5)' }}>
+                      DOCUMENTOS
+                    </span>
+                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: '4px', background: 'var(--accents-2)', color: 'var(--accents-5)' }}>
+                      {notas.length}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="geist-button-secondary"
+                    style={{ padding: 0, width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
+                    title="Recolher barra lateral (Ctrl + \)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect width="18" height="18" x="3" y="3" rx="2" />
+                      <path d="M9 3v18" />
+                      <path d="m15 15-3-3 3-3" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Technical Search Bar */}
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <input
+                    ref={sidebarSearchInputRef}
+                    type="text"
+                    value={sidebarSearch}
+                    onChange={(e) => setSidebarSearch(e.target.value)}
+                    placeholder="Buscar... (⌘K)"
+                    style={{
+                      width: '100%',
+                      height: '28px',
+                      padding: '0 28px 0 26px',
+                      background: 'var(--background)',
+                      border: '1px solid var(--accents-2)',
+                      borderRadius: '5px',
+                      fontSize: '12px',
+                      color: 'var(--foreground)',
+                      outline: 'none',
+                    }}
+                  />
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    style={{ position: 'absolute', left: '8px', top: '8px', color: 'var(--accents-4)' }}
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  {sidebarSearch ? (
+                    <button
+                      type="button"
+                      onClick={() => setSidebarSearch('')}
+                      style={{ position: 'absolute', right: '6px', top: '6px', background: 'none', border: 'none', color: 'var(--accents-5)', cursor: 'pointer', padding: 0, fontSize: '11px' }}
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <kbd style={{ position: 'absolute', right: '6px', top: '6px', fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '1px 3px', background: 'var(--accents-2)', borderRadius: '3px', color: 'var(--accents-5)' }}>
+                      ⌘K
+                    </kbd>
+                  )}
+                </div>
+
+                {/* Technical Action Toolbar (3-button strip) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateNota(null)}
+                    className="geist-button-secondary"
+                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                    title="Nova Nota"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span>Nota</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTriggerCreatePasta(null)}
+                    className="geist-button-secondary"
+                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                    title="Nova Pasta"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+                      <line x1="12" y1="10" x2="12" y2="16" />
+                      <line x1="9" y1="13" x2="15" y2="13" />
+                    </svg>
+                    <span>Pasta</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleCreateDesenho(null)}
+                    className="geist-button-secondary"
+                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                    title="Novo Canvas de Desenho"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    </svg>
+                    <span>Canvas</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Unified Document Tree */}
+              {renderFileTree()}
+
+              {/* Sidebar Technical Footer */}
+              <div
+                style={{
+                  borderTop: '1px solid var(--accents-2)',
+                  padding: '8px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'var(--background)',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--accents-5)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+                  <span>Online</span>
+                </div>
+                <span style={{ color: 'var(--accents-4)' }}>Ctrl+\ recolher</span>
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* ─────────────────────────────────────────────────────────
+            MAIN WORKSPACE CONTENT CONTAINER (EDITOR / VIEWS)
+            ───────────────────────────────────────────────────────── */}
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
+          
+          {/* OPEN NOTE TABS SUB-BAR (ONLY IN NOTE/CANVAS VIEW) */}
+          {!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen') && (
+            <div 
+              style={{ 
+                height: '36px', 
+                minHeight: '36px',
+                borderBottom: '1px solid var(--accents-2)', 
+                background: 'var(--accents-1)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                padding: '0 12px 0 8px',
+                userSelect: 'none',
+                zIndex: 10
+              }}
+            >
+              {/* Left: Reopen Sidebar + Tabs list */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', flex: 1, height: '100%', paddingRight: '8px' }} className="no-scrollbar">
+                {/* Reopen Sidebar Button if collapsed */}
+                {!isSidebarOpen && (
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="geist-button-secondary"
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      marginRight: '6px',
+                      flexShrink: 0
+                    }}
+                    title="Abrir barra lateral (Ctrl + \)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect width="18" height="18" x="3" y="3" rx="2"/>
+                      <path d="M9 3v18"/>
+                      <path d="m14 9 3 3-3 3"/>
+                    </svg>
+                  </button>
+                )}
+
+                {/* List of open note tabs */}
+                {openTabIds.map((tabId, index) => {
+                  const tabNota = notas.find((n) => n.id === tabId);
+                  const isActive = selectedNota?.id === tabId;
+                  const isDrawing = (isActive ? selectedNota?.tipo : tabNota?.tipo) === 'desenho';
+                  const title = (isActive ? editTitle : tabNota?.titulo) || tabNota?.titulo || (isDrawing ? 'Novo Desenho' : 'Sem Título');
+
+                  return (
+                    <div
+                      key={tabId}
+                      onClick={() => {
+                        if (tabNota) openNota(tabNota);
+                      }}
+                      onAuxClick={(e) => {
+                        if (e.button === 1) {
+                          e.preventDefault();
+                          handleCloseTab(tabId);
+                        }
+                      }}
+                      title={`${title} (Ctrl+${index + 1})`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '0 10px',
+                        height: '26px',
+                        fontSize: '12px',
+                        fontWeight: isActive ? 500 : 400,
+                        color: isActive ? 'var(--foreground)' : 'var(--accents-5)',
+                        background: isActive ? 'var(--background)' : 'transparent',
+                        border: isActive ? '1px solid var(--accents-2)' : '1px solid transparent',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                        maxWidth: '180px',
+                        transition: 'all var(--duration-smooth) var(--ease-smooth)',
+                      }}
+                      className={`group active:scale-[0.98] ${!isActive ? 'hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]' : ''}`}
+                    >
+                      {isDrawing ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                      )}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {title}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCloseTab(tabId, e)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '14px',
+                          height: '14px',
+                          borderRadius: '3px',
+                          border: 'none',
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          color: 'inherit',
+                          padding: 0,
+                          flexShrink: 0
+                        }}
+                        className="hover:bg-[var(--accents-3)] hover:text-[var(--foreground)] opacity-60 hover:opacity-100 transition-opacity"
+                        title="Fechar aba"
+                      >
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <line x1="18" y1="6" x2="6" y2="18"/>
+                          <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Quick New Note tab button */}
+                <button
+                  onClick={() => handleCreateNota(null)}
+                  className="hover:bg-[var(--accents-2)]"
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'var(--accents-5)',
+                    cursor: 'pointer',
+                    flexShrink: 0
+                  }}
+                  title="Nova nota"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Right: Actions menu */}
+              {selectedNota && (
+                <div className="relative flex items-center" ref={actionsMenuRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsActionsMenuOpen((prev) => !prev);
+                      setActiveSubmenu('none');
+                    }}
+                    className="geist-button-secondary"
+                    style={{
+                      height: '24px',
+                      padding: '0 8px',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                    title="Opções de tipografia e visualização"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="1"/>
+                      <circle cx="19" cy="12" r="1"/>
+                      <circle cx="5" cy="12" r="1"/>
+                    </svg>
+                    <span className="hidden sm:inline">Opções</span>
+                  </button>
+
+                  {/* Actions Dropdown */}
+                  {isActionsMenuOpen && (
+                    <div
+                      className="absolute right-0 top-7 z-50 w-56 p-1 bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-xl text-[12px] text-[var(--foreground)]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-[var(--accents-5)] border-b border-[var(--accents-2)] mb-1">
+                        Formatação
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubmenu(activeSubmenu === 'font' ? 'none' : 'font')}
+                        className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
+                      >
+                        <span>Fonte</span>
+                        <span className="text-[11px] text-[var(--accents-5)] font-mono">{TOP_FONTS.find(f => f.family === editorFontFamily)?.name || 'Geist'}</span>
+                      </button>
+
+                      {activeSubmenu === 'font' && (
+                        <div className="mt-1 p-1 bg-[var(--accents-1)] rounded border border-[var(--accents-2)] max-h-48 overflow-y-auto">
+                          {TOP_FONTS.map(f => (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => {
+                                setEditorFontFamily(f.family);
+                                setActiveSubmenu('none');
+                              }}
+                              className={`w-full text-left px-2 py-1 rounded text-[11px] ${editorFontFamily === f.family ? 'bg-[var(--foreground)] text-[var(--background)] font-medium' : 'hover:bg-[var(--accents-2)] text-[var(--foreground)]'}`}
+                            >
+                              {f.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubmenu(activeSubmenu === 'size' ? 'none' : 'size')}
+                        className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
+                      >
+                        <span>Tamanho</span>
+                        <span className="text-[11px] text-[var(--accents-5)] font-mono">{editorFontSize}</span>
+                      </button>
+
+                      {activeSubmenu === 'size' && (
+                        <div className="mt-1 p-1 bg-[var(--accents-1)] rounded border border-[var(--accents-2)]">
+                          {FONT_SIZES.map(s => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              onClick={() => {
+                                setEditorFontSize(s.value);
+                                setActiveSubmenu('none');
+                              }}
+                              className={`w-full text-left px-2 py-1 rounded text-[11px] ${editorFontSize === s.value ? 'bg-[var(--foreground)] text-[var(--background)] font-medium' : 'hover:bg-[var(--accents-2)] text-[var(--foreground)]'}`}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="my-1 border-t border-[var(--accents-2)]" />
+
+                      <button
+                        type="button"
+                        onClick={() => handleExportNota(selectedNota.id)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                          <polyline points="7 10 12 15 17 10"/>
+                          <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span>Exportar Markdown</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* CSS for spinner */}
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes spin { 100% { transform: rotate(360deg); } }
+          `}} />
 
         {/* Main Content: Flashcards View OR Graph View OR Drawing Canvas OR Note Editor */}
         {isFlashcardsOpen ? (
@@ -1763,7 +2177,24 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               onUpdateWorkspace={(updated) => setWorkspace(updated)}
             />
           </div>
-        ) : selectedNota?.tipo === 'desenho' ? (
+        ) : isAiChatOpen && aiChatMode === 'fullscreen' ? (
+          <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+            <AiChatView
+              workspaceId={id}
+              activeNote={selectedNota}
+              onOpenNota={(nota) => {
+                openNota(nota);
+                setAiChatMode('drawer');
+              }}
+              onRefreshWorkspace={refreshData}
+              onClose={() => setIsAiChatOpen(false)}
+              isDrawer={false}
+              onToggleDrawerMode={() => setAiChatMode('drawer')}
+            />
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+            {selectedNota?.tipo === 'desenho' ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             {/* Minimal Title Header for Canvas */}
             <div style={{ padding: '8px 16px', background: 'var(--accents-1)', borderBottom: '1px solid var(--accents-2)', display: 'flex', alignItems: 'center' }}>
@@ -2292,6 +2723,25 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
+        {/* Synap AI Side-Panel Drawer */}
+        {isAiChatOpen && aiChatMode === 'drawer' && (
+          <div className="w-[380px] sm:w-[420px] lg:w-[460px] h-full shrink-0 flex flex-col z-10 transition-all">
+            <AiChatView
+              workspaceId={id}
+              activeNote={selectedNota}
+              onOpenNota={(nota) => openNota(nota)}
+              onRefreshWorkspace={refreshData}
+              onClose={() => setIsAiChatOpen(false)}
+              isDrawer={true}
+              onToggleDrawerMode={() => setAiChatMode('fullscreen')}
+            />
+          </div>
+        )}
+      </div>
+    )}
+        </main>
+      </div>
+
         {/* Retractable Bottom Terminal Drawer (VS Code style) */}
         {isTerminalOpen && (
           <Terminal
@@ -2352,7 +2802,6 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           onClose={() => setFolderModal(null)}
           onConfirm={handleConfirmFolderModal}
         />
-      </div>
 
       {/* MOBILE BOTTOM NAVIGATION */}
       {isMobile && (
@@ -2406,11 +2855,27 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             onClick={() => {
               setIsFlashcardsOpen(true);
               setIsGraphViewOpen(false);
+              setIsAiChatOpen(false);
             }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Cards</span>
+          </button>
+
+          <button 
+            onClick={() => {
+              setIsAiChatOpen(prev => !prev);
+              setAiChatMode('fullscreen');
+              setIsFlashcardsOpen(false);
+              setIsGraphViewOpen(false);
+            }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isAiChatOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            </svg>
+            <span style={{ fontSize: '10px', fontWeight: 500 }}>IA</span>
           </button>
         </div>
       )}

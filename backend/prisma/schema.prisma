@@ -29,6 +29,7 @@ model Workspace {
   pastas      Pasta[]
   notas       Nota[]
   decks       Deck[]
+  aiThreads   AiChatThread[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 }
@@ -66,6 +67,9 @@ model Deck {
   descricao   String?
   workspaceId String
   workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Deck?       @relation("NestedDecks", fields: [parentId], references: [id], onDelete: Cascade)
+  subdecks    Deck[]      @relation("NestedDecks")
   flashcards  Flashcard[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -104,3 +108,24 @@ model WorkspaceCollaborator {
 
   @@unique([workspaceId, userId])
 }
+
+model AiChatThread {
+  id          String          @id @default(uuid())
+  titulo      String          @default("Nova conversa")
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  mensagens   AiChatMessage[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model AiChatMessage {
+  id          String       @id @default(uuid())
+  threadId    String
+  thread      AiChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  role        String       // "user" | "assistant" | "system"
+  conteudo    String
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+}
+

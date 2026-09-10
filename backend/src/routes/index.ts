@@ -6,6 +6,7 @@ import pastaRoutes from './pastaRoutes';
 import notaRoutes from './notaRoutes';
 import uploadRoutes from './uploadRoutes';
 import flashcardRoutes from './flashcardRoutes';
+import aiRoutes from './aiRoutes';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.use('/pastas', authMiddleware, pastaRoutes);
 router.use('/notas', authMiddleware, notaRoutes);
 router.use('/upload', authMiddleware, uploadRoutes);
 router.use('/flashcards', authMiddleware, flashcardRoutes);
+router.use('/ai', authMiddleware, aiRoutes);
 
 export default router;
 

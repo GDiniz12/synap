@@ -191,7 +191,8 @@ export default function SettingsModal({
 
   const shortcutsList = [
     { key: 'Ctrl + D', desc: 'Abrir ou recolher a barra lateral (Sidebar)', category: 'Navegação' },
-    { key: 'Ctrl + J', desc: 'Abrir ou recolher o Terminal integrado', category: 'Navegação' },
+    { key: 'Ctrl + J', desc: 'Abrir ou fechar o assistente Synap AI (Gemini)', category: 'Inteligência Artificial' },
+    { key: 'Ctrl + `', desc: 'Abrir ou recolher o Terminal integrado', category: 'Navegação' },
     { key: 'Ctrl + N', desc: 'Criar uma nova nota de texto imediatamente', category: 'Criação' },
     { key: 'Ctrl + G', desc: 'Abrir ou fechar a visualização do Grafo de Conexões', category: 'Navegação' },
     { key: 'Ctrl + 1..9', desc: 'Navegar diretamente entre as abas abertas no topo', category: 'Navegação' },
