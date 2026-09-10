@@ -1150,7 +1150,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           padding: '6px 8px', 
           fontSize: '13px', 
           color: selectedNota?.id === nota.id ? 'var(--foreground)' : 'var(--accents-5)',
-          background: selectedNota?.id === nota.id ? 'var(--accents-2)' : 'transparent',
+          background: selectedNota?.id === nota.id ? 'var(--brand-dim)' : 'transparent',
+          boxShadow: selectedNota?.id === nota.id ? 'inset 2px 0 0 var(--brand)' : 'none',
           borderRadius: '5px',
           cursor: 'pointer',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -1460,7 +1461,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               fontSize: '12px',
               fontWeight: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 600 : 500,
               color: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? '2px solid var(--foreground)' : '2px solid transparent',
+              borderBottom: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? '2px solid var(--brand)' : '2px solid transparent',
               background: 'transparent',
               borderTop: 'none',
               borderLeft: 'none',
@@ -1493,7 +1494,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               fontSize: '12px',
               fontWeight: isGraphViewOpen ? 600 : 500,
               color: isGraphViewOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isGraphViewOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              borderBottom: isGraphViewOpen ? '2px solid var(--brand)' : '2px solid transparent',
               background: 'transparent',
               borderTop: 'none',
               borderLeft: 'none',
@@ -1529,7 +1530,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               fontSize: '12px',
               fontWeight: isFlashcardsOpen ? 600 : 500,
               color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isFlashcardsOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              borderBottom: isFlashcardsOpen ? '2px solid var(--brand)' : '2px solid transparent',
               background: 'transparent',
               borderTop: 'none',
               borderLeft: 'none',
@@ -1561,7 +1562,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               fontSize: '12px',
               fontWeight: isAiChatOpen ? 600 : 500,
               color: isAiChatOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isAiChatOpen ? '2px solid var(--foreground)' : '2px solid transparent',
+              borderBottom: isAiChatOpen ? '2px solid var(--brand)' : '2px solid transparent',
               background: 'transparent',
               borderTop: 'none',
               borderLeft: 'none',
@@ -1701,6 +1702,134 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               zIndex: 90,
             }}
           />
+        )}
+
+        {/* RENDER-STYLE ICON RAIL (desktop only) */}
+        {!isMobile && (
+          <div
+            style={{
+              width: '44px',
+              minWidth: '44px',
+              height: '100%',
+              borderRight: '1px solid var(--accents-2)',
+              background: 'var(--accents-1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              paddingTop: '6px',
+              paddingBottom: '8px',
+              gap: '2px',
+              flexShrink: 0,
+              zIndex: 30,
+            }}
+          >
+            <Link
+              href="/dashboard"
+              title="Dashboard"
+              style={{ textDecoration: 'none', color: 'var(--accents-5)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '6px' }}
+              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            </Link>
+
+            <div style={{ width: '24px', height: '1px', background: 'var(--accents-2)', margin: '4px 0' }} />
+
+            {/* Documentos */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsFlashcardsOpen(false);
+                setIsGraphViewOpen(false);
+                if (isAiChatOpen && aiChatMode === 'fullscreen') setAiChatMode('drawer');
+              }}
+              title="Documentos"
+              style={{
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                background: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--brand-dim)' : 'transparent',
+                color: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--brand)' : 'var(--accents-5)',
+                border: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </button>
+
+            {/* Grafo */}
+            <button
+              type="button"
+              onClick={() => { setIsGraphViewOpen(true); setIsFlashcardsOpen(false); }}
+              title="Grafo"
+              style={{
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                background: isGraphViewOpen ? 'var(--brand-dim)' : 'transparent',
+                color: isGraphViewOpen ? 'var(--brand)' : 'var(--accents-5)',
+                border: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
+
+            {/* Cards */}
+            <button
+              type="button"
+              onClick={() => { setIsFlashcardsOpen(true); setIsGraphViewOpen(false); }}
+              title="Flashcards"
+              style={{
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                background: isFlashcardsOpen ? 'var(--brand-dim)' : 'transparent',
+                color: isFlashcardsOpen ? 'var(--brand)' : 'var(--accents-5)',
+                border: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+            </button>
+
+            {/* Synap AI */}
+            <button
+              type="button"
+              onClick={() => { setIsAiChatOpen(prev => !prev); }}
+              title="Synap AI (Ctrl+J)"
+              style={{
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                background: isAiChatOpen ? 'var(--brand-dim)' : 'transparent',
+                color: isAiChatOpen ? 'var(--brand)' : 'var(--accents-5)',
+                border: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            </button>
+          </div>
         )}
 
         {/* DESKTOP / MOBILE SIDEBAR (RENDER TECHNICAL EXPLORER) */}

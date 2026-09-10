@@ -22,9 +22,12 @@
   --accents-7: #dcdce2;
   --accents-8: #f4f4f6;
 
-  --success: #0070f3;
+  --success: #10b981;
   --error: #e00;
   --warning: #f5a623;
+  --brand: #20B8CD;
+  --brand-strong: #26c7de;
+  --brand-dim: rgba(32, 184, 205, 0.12);
 
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -47,9 +50,12 @@
   --accents-7: #333333;
   --accents-8: #111111;
 
-  --success: #0070f3;
+  --success: #0d9488;
   --error: #e00;
   --warning: #f5a623;
+  --brand: #16808f;
+  --brand-strong: #0f6b78;
+  --brand-dim: rgba(22, 128, 143, 0.08);
 
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
