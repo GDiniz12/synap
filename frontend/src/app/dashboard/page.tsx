@@ -1,44 +1,36 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
-import Image from 'next/image';
+import WorkspaceRail from '@/components/WorkspaceRail';
+import CreateWorkspaceModal from '@/components/CreateWorkspaceModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import SynapLogo from '@/components/SynapLogo';
+import WorkspaceIcon from '@/components/WorkspaceIcon';
+import ToastContainer, { ToastMessage } from '@/components/Toast';
 
 export default function DashboardPage() {
   const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
-  const [isCollaborative, setIsCollaborative] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const router = useRouter();
 
-  const handleMouseEnterDropdown = () => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-      dropdownTimeoutRef.current = null;
-    }
-    setIsDropdownOpen(true);
+  const showToast = (message: string, type: 'error' | 'success' | 'info' = 'error') => {
+    const toastId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setToasts((prev) => [...prev, { id: toastId, message, type }]);
   };
 
-  const handleMouseLeaveDropdown = () => {
-    if (dropdownTimeoutRef.current) {
-      clearTimeout(dropdownTimeoutRef.current);
-    }
-    dropdownTimeoutRef.current = setTimeout(() => {
-      setIsDropdownOpen(false);
-    }, 250);
+  const dismissToast = (toastId: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== toastId));
   };
 
   const loadInitialData = async () => {
@@ -50,7 +42,8 @@ export default function DashboardPage() {
         api('/workspaces'),
       ]);
       setCurrentUser(userData);
-      setWorkspaces(workspacesData || []);
+      const wsList = workspacesData || [];
+      setWorkspaces(wsList);
     } catch (err: any) {
       console.error('Failed to load initial dashboard data', err);
       if (
@@ -62,7 +55,7 @@ export default function DashboardPage() {
         router.push('/login');
         return;
       }
-      setError('Não foi possível carregar as informações do dashboard. Verifique sua conexão.');
+      setError('Não foi possível carregar as informações do dashboard.');
     } finally {
       setIsLoading(false);
     }
@@ -77,50 +70,9 @@ export default function DashboardPage() {
     loadInitialData();
   }, [router]);
 
-  // Click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        if (dropdownTimeoutRef.current) {
-          clearTimeout(dropdownTimeoutRef.current);
-        }
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      if (dropdownTimeoutRef.current) {
-        clearTimeout(dropdownTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const loadWorkspaces = async () => {
-    try {
-      const data = await api('/workspaces');
-      setWorkspaces(data || []);
-    } catch (err: any) {
-      console.error('Erro ao carregar workspaces:', err);
-      setError('Não foi possível carregar os workspaces. Tente atualizar a página.');
-    }
-  };
-
-  const handleCreateWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWorkspaceName) return;
-
-    try {
-      await api('/workspaces', {
-        method: 'POST',
-        body: JSON.stringify({ nome: newWorkspaceName, isCollaborative }),
-      });
-      setNewWorkspaceName('');
-      loadWorkspaces();
-    } catch (err: any) {
-      console.error('Erro ao criar workspace:', err);
-      setError('Não foi possível criar o workspace. Tente novamente.');
-    }
+  const handleWorkspaceCreated = (newWs: any) => {
+    setWorkspaces((prev) => [...prev, newWs]);
+    router.push(`/workspaces/${newWs.id}`);
   };
 
   if (isLoading) {
@@ -128,209 +80,172 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: '100%', height: '100%', flex: 1, overflowY: 'auto', background: 'var(--accents-1)' }}>
-      {/* Vercel-like header */}
-      <header style={{ borderBottom: '1px solid var(--accents-2)', background: 'var(--background)' }}>
-        <div className="geist-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '64px' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Link href="/dashboard" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }} className="hover:opacity-80 transition-opacity">
-              <SynapLogo size={28} priority />
-            </Link>
+    <div className="flex flex-row h-screen w-screen overflow-hidden bg-[var(--background)]">
+      {/* 1. LEFT DISCORD WORKSPACE RAIL */}
+      <WorkspaceRail
+        workspaces={workspaces}
+        isHomeActive={true}
+        currentUser={currentUser}
+        isSidebarOpen={false}
+        onSelectWorkspace={(wsId) => router.push(`/workspaces/${wsId}`)}
+        onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        onOpenSettingsModal={() => setIsSettingsOpen(true)}
+        onGoHome={() => {}}
+      />
+
+      {/* 2. MAIN DASHBOARD CONTENT AREA */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--background)]">
+        {/* Top Minimal Discord Header */}
+        <header className="h-12 min-h-[48px] px-6 border-b border-[var(--accents-2)] bg-[var(--background)] flex items-center justify-between z-10 shrink-0 select-none">
+          <div className="flex items-center gap-3">
+            <SynapLogo size={26} priority />
+            <div className="w-[1px] h-4 bg-[var(--accents-2)]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[var(--accents-5)] font-mono">
+              PAINEL DE CONTROLE
+            </span>
           </div>
 
-          {/* User Profile Area with Hover / Click Dropdown Menu */}
-          {currentUser && (
-            <div
-              ref={dropdownRef}
-              style={{ position: 'relative' }}
-              onMouseEnter={handleMouseEnterDropdown}
-              onMouseLeave={handleMouseLeaveDropdown}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-                  setIsDropdownOpen((prev) => !prev);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  padding: '6px 12px',
-                  background: isDropdownOpen ? 'var(--accents-2)' : 'var(--accents-1)',
-                  border: '1px solid var(--accents-2)',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+          <div className="flex items-center gap-3">
+            {currentUser && (
+              <div
+                onClick={() => setIsSettingsOpen(true)}
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[var(--accents-1)] transition-colors cursor-pointer"
+                title="Configurações de Usuário"
               >
-                <div style={{ width: 26, height: 26, background: 'var(--foreground)', color: 'var(--background)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>
-                  {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
+                <div className="w-6 h-6 rounded-full bg-[var(--brand)] text-white font-bold text-xs flex items-center justify-center overflow-hidden border border-[var(--accents-2)]">
+                  {currentUser.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.username || currentUser.name || 'User'}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{currentUser.username?.[0]?.toUpperCase() || currentUser.name?.[0]?.toUpperCase() || currentUser.email?.[0]?.toUpperCase() || 'U'}</span>
+                  )}
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)' }}>
-                  {currentUser.name || 'User'}
+                <span className="text-xs font-semibold text-[var(--foreground)] hidden sm:inline">
+                  {currentUser.username ? `@${currentUser.username}` : (currentUser.name || currentUser.email)}
                 </span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }}>
-                  <path d="m6 9 6 6 6-6"/>
-                </svg>
-              </button>
+              </div>
+            )}
+          </div>
+        </header>
 
-              {/* Floating Dropdown Menu with continuous hover bridge */}
-              {isDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: 0,
-                    paddingTop: '6px',
-                    zIndex: 100,
-                  }}
-                  onMouseEnter={handleMouseEnterDropdown}
-                  onMouseLeave={handleMouseLeaveDropdown}
-                >
-                  <div
-                    style={{
-                      width: '220px',
-                      background: 'var(--background)',
-                      border: '1px solid var(--accents-2)',
-                      borderRadius: '8px',
-                      boxShadow: '0 12px 30px rgba(0, 0, 0, 0.25)',
-                      padding: '6px',
-                    }}
-                    className="animate-in fade-in zoom-in-95 duration-100"
-                  >
-                    <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--accents-2)', marginBottom: '4px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: 'var(--foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {currentUser.name || 'Usuário'}
-                      </p>
-                      <p style={{ margin: 0, fontSize: '11px', color: 'var(--accents-5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {currentUser.email}
-                      </p>
-                    </div>
+        {/* Scrollable Dashboard Body */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-10 max-w-6xl w-full mx-auto flex flex-col gap-8">
+          {/* Welcome Banner */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-[var(--accents-1)] via-[var(--accents-2)]/30 to-transparent border border-[var(--accents-2)]">
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
+                Olá, {currentUser?.name?.split(' ')[0] || 'Usuário'}
+              </h1>
+              <p className="text-xs md:text-sm text-[var(--accents-5)]">
+                Selecione um workspace na barra à esquerda ou crie um novo espaço de trabalho.
+              </p>
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-                        setIsDropdownOpen(false);
-                        setIsSettingsOpen(true);
-                      }}
-                      className="hover:bg-[var(--accents-2)]"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 10px',
-                        border: 'none',
-                        background: 'transparent',
-                        borderRadius: '6px',
-                        fontSize: '12.5px',
-                        fontWeight: 500,
-                        color: 'var(--foreground)',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                      </svg>
-                      <span>Configurações</span>
-                    </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="geist-button h-10 px-5 text-xs font-semibold flex items-center gap-2 self-start md:self-auto shadow-md"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Novo Workspace</span>
+            </button>
+          </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-                        setIsDropdownOpen(false);
-                        setIsLogoutConfirmOpen(true);
-                      }}
-                      className="hover:bg-[rgba(238,0,0,0.1)]"
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 10px',
-                        border: 'none',
-                        background: 'transparent',
-                        borderRadius: '6px',
-                        fontSize: '12.5px',
-                        fontWeight: 500,
-                        color: 'var(--error)',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" y1="12" x2="9" y2="12"/>
-                      </svg>
-                      <span>Sair da Conta</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+          {error && (
+            <div className="p-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg">
+              {error}
             </div>
           )}
-        </div>
-      </header>
 
-      <main className="geist-container" style={{ padding: '24px 16pt 48px' }}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <h1 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.04em', margin: 0 }}>Workspaces</h1>
-          
-          <form onSubmit={handleCreateWorkspace} className="flex flex-col gap-2 w-full md:w-auto">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Nome da workspace..." 
-                value={newWorkspaceName}
-                onChange={(e) => setNewWorkspaceName(e.target.value)}
-                className="geist-input flex-1 md:w-[240px]"
-              />
-              <button type="submit" className="geist-button shrink-0">Criar</button>
+          {/* Workspaces Section */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between border-b border-[var(--accents-2)] pb-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--accents-4)] font-mono">
+                SEUS WORKSPACES ({workspaces.length})
+              </h2>
             </div>
-            <label className="flex items-center gap-2 text-xs text-[var(--accents-5)]">
-              <input 
-                type="checkbox" 
-                checked={isCollaborative} 
-                onChange={(e) => setIsCollaborative(e.target.checked)}
-              />
-              Workspace Colaborativa (WebSockets)
-            </label>
-          </form>
-        </div>
 
-        {error && <p style={{ color: 'var(--error)', marginBottom: '24px' }}>{error}</p>}
-        
-        {workspaces.length === 0 ? (
-          <div className="geist-card" style={{ padding: '56px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <SynapLogo size={48} className="mb-4 opacity-80" />
-            <h3 style={{ fontSize: '18px', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--foreground)' }}>Nenhuma workspace encontrada</h3>
-            <p className="geist-text-secondary" style={{ fontSize: '13px', margin: '0 0 8px 0', maxWidth: '380px' }}>
-              Crie sua primeira workspace acima para começar a organizar suas notas, grafos e flashcards.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-            {workspaces.map((workspace) => (
-              <Link key={workspace.id} href={`/workspaces/${workspace.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="geist-card" style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', cursor: 'pointer' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 8px 0' }}>{workspace.nome}</h3>
-                  <div className="geist-text-secondary" style={{ fontSize: '14px', marginTop: 'auto' }}>
-                    Created {new Date(workspace.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+            {workspaces.length === 0 ? (
+              <div className="p-12 text-center rounded-xl border border-dashed border-[var(--accents-2)] bg-[var(--accents-1)]/30 flex flex-col items-center gap-3">
+                <SynapLogo size={40} className="opacity-40 mb-1" />
+                <h3 className="text-sm font-semibold text-[var(--foreground)]">Nenhum workspace encontrado</h3>
+                <p className="text-xs text-[var(--accents-5)] max-w-sm">
+                  Crie seu primeiro espaço de anotações, desenhos, grafos e flashcards.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="geist-button text-xs h-9 px-4 mt-2"
+                >
+                  Criar Primeiro Workspace
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {workspaces.map((ws) => (
+                  <Link
+                    key={ws.id}
+                    href={`/workspaces/${ws.id}`}
+                    className="group p-4 rounded-xl border border-[var(--accents-2)] bg-[var(--background)] hover:border-[var(--brand)] hover:shadow-lg transition-all duration-200 flex items-center justify-between text-decoration-none"
+                  >
+                    <div className="flex items-center gap-3.5 overflow-hidden">
+                      {/* Avatar */}
+                      <div className="w-12 h-12 rounded-[16px] bg-[var(--accents-2)] text-[var(--foreground)] group-hover:bg-[var(--brand)] group-hover:text-white transition-colors flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+                        <WorkspaceIcon
+                          icone={ws.icone}
+                          nome={ws.nome}
+                          size={24}
+                          className="w-full h-full"
+                          emojiClassName="text-xl"
+                          fallbackClassName="text-sm"
+                        />
+                      </div>
 
-      {/* Global Settings Modal */}
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-sm font-semibold text-[var(--foreground)] truncate">
+                          {ws.nome}
+                        </span>
+                        <span className="text-[11px] text-[var(--accents-5)] font-mono">
+                          {ws.isCollaborative ? 'Colaborativo' : 'Pessoal'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-[var(--accents-4)] group-hover:text-[var(--brand)] group-hover:translate-x-1 transition-all shrink-0"
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Create Workspace Modal */}
+      <CreateWorkspaceModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onWorkspaceCreated={handleWorkspaceCreated}
+        showToast={showToast}
+      />
+
+      {/* Settings Modal */}
       {isSettingsOpen && (
         <SettingsModal
           currentUser={currentUser}
@@ -352,6 +267,8 @@ export default function DashboardPage() {
           onClose={() => setIsLogoutConfirmOpen(false)}
         />
       )}
+
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

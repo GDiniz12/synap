@@ -1,0 +1,867 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { api } from '@/lib/api';
+import ImageCropperModal from './ImageCropperModal';
+import WorkspaceIcon from './WorkspaceIcon';
+import WorkspaceIconPickerPopover from './WorkspaceIconPickerPopover';
+
+interface WorkspaceSettingsModalProps {
+  isOpen: boolean;
+  workspace: any;
+  onClose: () => void;
+  onWorkspaceUpdated: (updatedWorkspace: any) => void;
+  onWorkspaceDeleted: (workspaceId: string) => void;
+  showToast?: (message: string, type?: 'error' | 'success' | 'info') => void;
+  isOwner?: boolean;
+}
+
+export default function WorkspaceSettingsModal({
+  isOpen,
+  workspace,
+  onClose,
+  onWorkspaceUpdated,
+  onWorkspaceDeleted,
+  showToast,
+  isOwner = true,
+}: WorkspaceSettingsModalProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'collaborators' | 'danger'>('overview');
+  const [nome, setNome] = useState('');
+  const [icone, setIcone] = useState('');
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
+  const [isCollaborative, setIsCollaborative] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [cropperImage, setCropperImage] = useState<string | null>(null);
+
+  // Collaborators & Invites
+  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [loadingLink, setLoadingLink] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+  const [confirmResetLink, setConfirmResetLink] = useState(false);
+  const [isResettingLink, setIsResettingLink] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Delete confirmation
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadCollaborators = async () => {
+    if (!workspace?.id) return;
+    try {
+      const data = await api(`/workspaces/${workspace.id}/collaborators`);
+      setCollaborators(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar colaboradores:', err);
+    }
+  };
+
+  const loadInviteLink = async () => {
+    if (!workspace?.id) return;
+    setLoadingLink(true);
+    try {
+      const data = await api(`/workspaces/${workspace.id}/invite-link`, {
+        method: 'POST',
+      });
+      if (data?.inviteCode) {
+        setInviteCode(data.inviteCode);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar link de convite:', err);
+    } finally {
+      setLoadingLink(false);
+    }
+  };
+
+  useEffect(() => {
+    if (workspace && isOpen) {
+      setNome(workspace.nome || '');
+      setIcone(workspace.icone || '');
+      setIconPreview(workspace.icone || null);
+      setIsCollaborative(!!workspace.isCollaborative);
+      setDeleteConfirmName('');
+      setConfirmResetLink(false);
+      setIsCopied(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      loadCollaborators();
+      loadInviteLink();
+      setIsPickerOpen(false);
+    }
+  }, [workspace, isOpen]);
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const users = await api(`/users/search?q=${encodeURIComponent(trimmed)}`);
+        setSearchResults(users || []);
+      } catch (err) {
+        console.error('Erro na busca de usuários:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, [searchQuery]);
+
+  if (!isOpen || !workspace) return null;
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      if (showToast) showToast('Por favor, selecione um arquivo de imagem válido.', 'error');
+      return;
+    }
+
+    const localUrl = URL.createObjectURL(file);
+    setCropperImage(localUrl);
+    setIsPickerOpen(false);
+    e.target.value = '';
+  };
+
+  const handleCroppedIconConfirm = async (croppedBlob: Blob, previewUrl: string) => {
+    setIconPreview(previewUrl);
+    setIsUploading(true);
+
+    try {
+      const croppedFile = new File([croppedBlob], 'workspace-icon.webp', { type: 'image/webp' });
+      const formData = new FormData();
+      formData.append('file', croppedFile);
+
+      const res = await api('/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res?.url) {
+        setIcone(res.url);
+      }
+    } catch (err: any) {
+      console.error('Falha ao enviar imagem:', err);
+      if (showToast) showToast('Erro no upload da imagem.', 'error');
+    } finally {
+      setIsUploading(false);
+      setCropperImage(null);
+    }
+  };
+
+  const handleSaveOverview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim() || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const updated = await api(`/workspaces/${workspace.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          nome: nome.trim(),
+          icone: icone.trim() || null,
+          isCollaborative,
+        }),
+      });
+
+      if (showToast) showToast('Workspace atualizado com sucesso!', 'success');
+      onWorkspaceUpdated(updated);
+      onClose();
+    } catch (err: any) {
+      console.error('Erro ao salvar workspace:', err);
+      if (showToast) showToast(err.message || 'Erro ao atualizar workspace', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!inviteCode) return;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const fullUrl = `${origin}/invite/${inviteCode}`;
+
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+      if (showToast) showToast('Link de convite copiado!', 'success');
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = fullUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2500);
+      if (showToast) showToast('Link de convite copiado!', 'success');
+    }
+  };
+
+  const handleResetLink = async () => {
+    if (!workspace?.id) return;
+    setIsResettingLink(true);
+    try {
+      const data = await api(`/workspaces/${workspace.id}/invite-link/reset`, {
+        method: 'POST',
+      });
+      if (data?.inviteCode) {
+        setInviteCode(data.inviteCode);
+        setConfirmResetLink(false);
+        if (showToast) showToast('Link de convite redefinido com sucesso!', 'success');
+      }
+    } catch (err: any) {
+      console.error('Erro ao redefinir link:', err);
+      if (showToast) showToast(err.message || 'Erro ao redefinir link.', 'error');
+    } finally {
+      setIsResettingLink(false);
+    }
+  };
+
+  const handleInviteUser = async (userToInvite: any) => {
+    if (!workspace?.id) return;
+    setInvitingUserId(userToInvite.id);
+    try {
+      await api(`/workspaces/${workspace.id}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: userToInvite.id }),
+      });
+      if (showToast) showToast(`@${userToInvite.username || userToInvite.name || userToInvite.email} adicionado!`, 'success');
+      setSearchQuery('');
+      setSearchResults([]);
+      loadCollaborators();
+    } catch (err: any) {
+      console.error('Erro ao convidar usuário:', err);
+      if (showToast) showToast(err.message || 'Erro ao convidar usuário', 'error');
+    } finally {
+      setInvitingUserId(null);
+    }
+  };
+
+  const handleRemoveCollaborator = async (collabUserId: string) => {
+    if (!workspace?.id) return;
+    setRemovingId(collabUserId);
+    try {
+      await api(`/workspaces/${workspace.id}/collaborators/${collabUserId}`, {
+        method: 'DELETE',
+      });
+      if (showToast) showToast('Colaborador removido com sucesso.', 'info');
+      loadCollaborators();
+    } catch (err: any) {
+      console.error('Erro ao remover colaborador:', err);
+      if (showToast) showToast(err.message || 'Erro ao remover colaborador.', 'error');
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const handleChangeRole = async (collabUserId: string, newRole: 'MEMBER' | 'VIEWER') => {
+    if (!workspace?.id) return;
+    try {
+      await api(`/workspaces/${workspace.id}/collaborators/${collabUserId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (showToast) showToast('Papel do colaborador atualizado com sucesso!', 'success');
+      loadCollaborators();
+    } catch (err: any) {
+      console.error('Erro ao alterar papel:', err);
+      if (showToast) showToast(err.message || 'Erro ao alterar papel.', 'error');
+    }
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim() || isInviting) return;
+
+    setIsInviting(true);
+    try {
+      await api(`/workspaces/${workspace.id}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ email: inviteEmail.trim() }),
+      });
+
+      if (showToast) showToast('Convite enviado com sucesso!', 'success');
+      setInviteEmail('');
+      loadCollaborators();
+    } catch (err: any) {
+      console.error('Erro ao convidar colaborador:', err);
+      if (showToast) showToast(err.message || 'Erro ao convidar usuário', 'error');
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleteConfirmName !== workspace.nome || isDeleting) return;
+
+    setIsDeleting(true);
+    try {
+      await api(`/workspaces/${workspace.id}`, {
+        method: 'DELETE',
+      });
+
+      if (showToast) showToast('Workspace excluído com sucesso.', 'info');
+      onWorkspaceDeleted(workspace.id);
+      onClose();
+    } catch (err: any) {
+      console.error('Erro ao excluir workspace:', err);
+      if (showToast) showToast(err.message || 'Erro ao excluir workspace', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-smooth-fade"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-[680px] h-[520px] bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-lg shadow-2xl flex overflow-hidden animate-smooth-pop relative select-none"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Left Discord Settings Nav */}
+        <aside className="w-[200px] min-w-[200px] bg-[var(--discord-sidebar)] border-r border-[var(--discord-border)] p-4 flex flex-col justify-between">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] px-2.5 py-1 font-mono">
+              {workspace.nome}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+                activeTab === 'overview'
+                  ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
+                  : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+              <span>Visão Geral</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('collaborators')}
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+                activeTab === 'collaborators'
+                  ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
+                  : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <span>Colaboradores</span>
+            </button>
+
+            {isOwner && (
+              <>
+                <div className="h-[1px] bg-[var(--discord-border)] my-2" />
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('danger')}
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+                    activeTab === 'danger'
+                      ? 'bg-red-500/10 text-red-500'
+                      : 'text-red-400/80 hover:text-red-400 hover:bg-red-500/10'
+                  }`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                  <span>Excluir Workspace</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full text-xs h-8 flex items-center justify-center gap-1.5 rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+          >
+            <span>Fechar (ESC)</span>
+          </button>
+        </aside>
+
+        {/* Right Settings Content Area */}
+        <main className="flex-1 p-6 overflow-y-auto">
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'overview' && (
+            <form onSubmit={handleSaveOverview} className="flex flex-col gap-5">
+              <div>
+                <h3 className="text-base font-bold text-[var(--foreground)]">Visão Geral do Workspace</h3>
+                <p className="text-xs text-[var(--accents-5)] mt-0.5">
+                  Atualize o ícone de exibição e os detalhes fundamentais.
+                </p>
+              </div>
+
+              {/* Icon / Avatar preview and change */}
+              <div className="flex items-center gap-4 p-4 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] relative">
+                <div
+                  onClick={() => setIsPickerOpen(!isPickerOpen)}
+                  className="w-16 h-16 rounded-full border-2 border-dashed border-[var(--discord-border)] hover:border-[var(--brand)] transition-all flex items-center justify-center cursor-pointer relative overflow-hidden group shrink-0 bg-[var(--discord-input)]"
+                  title="Alterar emoji ou foto"
+                >
+                  <WorkspaceIcon
+                    icone={iconPreview}
+                    nome={nome || workspace.nome || 'WS'}
+                    size={36}
+                    className="w-full h-full"
+                    emojiClassName="text-2xl"
+                  />
+
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity text-[10px] font-mono font-bold">
+                    TROCAR
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 flex-1">
+                  <span className="text-xs font-semibold text-[var(--foreground)]">Ícone do Workspace</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsPickerOpen(!isPickerOpen)}
+                      className="h-7 px-2.5 text-[11px] font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                        <line x1="9" y1="9" x2="9.01" y2="9" />
+                        <line x1="15" y1="9" x2="15.01" y2="9" />
+                      </svg>
+                      <span>{isPickerOpen ? 'Fechar Seletor' : 'Escolher Emoji ou Foto'}</span>
+                    </button>
+                    {icone && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIcone('');
+                          setIconPreview(null);
+                          setIsPickerOpen(false);
+                        }}
+                        className="text-[11px] text-[#f23f43] hover:text-red-300 transition-colors cursor-pointer px-2"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <span className="text-[11px] text-[var(--accents-5)]">
+                    Escolha um emoji no estilo Notion ou envie uma foto personalizada.
+                  </span>
+                </div>
+
+                {isPickerOpen && (
+                  <WorkspaceIconPickerPopover
+                    currentIcon={iconPreview}
+                    onSelectEmoji={(emoji) => {
+                      setIcone(emoji);
+                      setIconPreview(emoji);
+                      setIsPickerOpen(false);
+                    }}
+                    onSelectImageUrl={(url) => {
+                      setIcone(url);
+                      setIconPreview(url.trim() ? url.trim() : null);
+                      setIsPickerOpen(false);
+                    }}
+                    onTriggerFileUpload={() => {
+                      setIsPickerOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    onRemoveIcon={() => {
+                      setIcone('');
+                      setIconPreview(null);
+                      setIsPickerOpen(false);
+                    }}
+                    onClose={() => setIsPickerOpen(false)}
+                    anchorPosition="bottom"
+                  />
+                )}
+              </div>
+
+              {/* Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">
+                  NOME DO WORKSPACE
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="w-full h-9 px-3 text-sm bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                />
+              </div>
+
+              {/* Collaborative */}
+              <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-[6px] border border-[var(--discord-border)] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] transition-colors">
+                <input
+                  type="checkbox"
+                  checked={isCollaborative}
+                  onChange={(e) => setIsCollaborative(e.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--discord-border)] text-[var(--brand)] focus:ring-0 cursor-pointer"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-[var(--foreground)]">Ativar Modo Colaborativo</span>
+                  <span className="text-[11px] text-[var(--discord-text-muted)]">
+                    Permite convidar membros para colaborar em tempo real com Live Cursors
+                  </span>
+                </div>
+              </label>
+
+              <div className="pt-3 border-t border-[var(--discord-border)] flex justify-end">
+                <button
+                  type="submit"
+                  disabled={!nome.trim() || isSaving}
+                  className="bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-white text-xs h-9 px-5 font-semibold rounded-[4px] transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* TAB 2: COLLABORATORS */}
+          {activeTab === 'collaborators' && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h3 className="text-base font-bold text-[var(--foreground)]">Colaboradores do Workspace</h3>
+                <p className="text-xs text-[var(--discord-text-muted)] mt-0.5">
+                  Convide colegas para acessar e editar este workspace em tempo real.
+                </p>
+              </div>
+
+              {/* Invite Link */}
+              <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-[var(--discord-sidebar)] border border-[var(--discord-border)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                    LINK DE CONVITE
+                  </span>
+                  {inviteCode && !confirmResetLink && (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmResetLink(true)}
+                      className="text-[10px] text-[#949ba4] hover:text-[#f23f43] transition-colors cursor-pointer font-mono"
+                    >
+                      Redefinir link
+                    </button>
+                  )}
+                </div>
+
+                {confirmResetLink ? (
+                  <div className="p-2.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40] flex items-center justify-between gap-2">
+                    <span className="text-xs text-[#dbdee1]">
+                      O link atual deixará de funcionar. Confirmar?
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleResetLink}
+                        disabled={isResettingLink}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50"
+                      >
+                        {isResettingLink ? 'Redefinindo...' : 'Sim, redefinir'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmResetLink(false)}
+                        className="px-2.5 py-1 text-xs font-medium rounded-[4px] bg-[#313338] text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={loadingLink ? 'Carregando link...' : (inviteCode ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${inviteCode}` : '')}
+                      placeholder="Carregando link..."
+                      className="flex-1 h-9 px-3 text-xs font-mono bg-[#1e1f22] border border-[#383a40] text-[#dbdee1] rounded-[4px] outline-none select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      disabled={!inviteCode || loadingLink}
+                      className={`shrink-0 px-4 h-9 rounded-[4px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                        isCopied
+                          ? 'bg-[#23a55a] text-white'
+                          : 'bg-[#20b8cd] hover:bg-[#1ba2b4] text-white'
+                      }`}
+                    >
+                      {isCopied ? 'Copiado!' : 'Copiar Link'}
+                    </button>
+                  </div>
+                )}
+                <span className="text-[11px] text-[var(--discord-text-muted)]">
+                  Qualquer pessoa com este link pode ingressar diretamente no workspace.
+                </span>
+              </div>
+
+              {/* Search User & Invite */}
+              <div className="flex flex-col gap-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                  BUSCAR OU CONVIDAR POR E-MAIL
+                </span>
+                <form onSubmit={handleInvite} className="flex gap-2">
+                  <div className="flex-1 relative flex items-center">
+                    <input
+                      type="text"
+                      placeholder="Buscar por @username, nome ou digitar e-mail..."
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setInviteEmail(e.target.value);
+                      }}
+                      className="w-full h-9 pl-3 pr-8 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                    />
+                    {isSearching && (
+                      <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-[#949ba4] border-t-[#20b8cd] rounded-full animate-spin" />
+                    )}
+                  </div>
+                  {searchQuery.trim().includes('@') && (
+                    <button
+                      type="submit"
+                      disabled={!inviteEmail.trim() || isInviting}
+                      className="bg-[#20b8cd] hover:bg-[#1ba2b4] text-white text-xs h-9 px-4 whitespace-nowrap font-semibold rounded-[4px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {isInviting ? 'Convidando...' : 'Convidar E-mail'}
+                    </button>
+                  )}
+                </form>
+
+                {/* Dropdown Results */}
+                {searchQuery.trim().length >= 2 && (
+                  <div className="mt-1 p-2 rounded-lg bg-[#1e1f22] border border-[#383a40] shadow-xl flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                    {isSearching ? (
+                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                        Buscando usuários...
+                      </div>
+                    ) : searchResults.length === 0 ? (
+                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                        Nenhum usuário encontrado para "{searchQuery}".
+                      </div>
+                    ) : (
+                      searchResults.map((u) => {
+                        const isAlreadyMember = collaborators.some((c) => c.userId === u.id || c.user?.id === u.id);
+                        const isInvitingThis = invitingUserId === u.id;
+                        const displayName = u.name || (u.username ? `@${u.username}` : u.email);
+
+                        return (
+                          <div
+                            key={u.id}
+                            className="flex items-center justify-between p-2 rounded-md hover:bg-[#2b2d31] transition-colors gap-2"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <div className="w-6 h-6 rounded-full bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
+                                {u.avatarUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={u.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{(u.name?.[0] || u.username?.[0] || u.email[0]).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <div className="flex flex-col overflow-hidden text-left">
+                                <span className="text-xs font-medium text-white truncate">{u.name || u.username}</span>
+                                <span className="text-[10px] text-[#949ba4] font-mono truncate">
+                                  {u.username ? `@${u.username}` : u.email}
+                                </span>
+                              </div>
+                            </div>
+
+                            {isAlreadyMember ? (
+                              <span className="text-[10px] font-semibold text-[#23a55a] bg-[#23a55a]/10 border border-[#23a55a]/20 px-2 py-0.5 rounded-[4px]">
+                                Membro
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleInviteUser(u)}
+                                disabled={isInvitingThis}
+                                className="shrink-0 bg-[#20b8cd] hover:bg-[#1ba2b4] text-white px-3 py-1 rounded-[4px] font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {isInvitingThis ? 'Adicionando...' : 'Convidar'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Active Members */}
+              <div className="flex flex-col gap-2 mt-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                  MEMBROS ATIVOS ({collaborators.length})
+                </span>
+
+                {collaborators.length === 0 ? (
+                  <div className="text-xs text-[var(--discord-text-muted)] p-4 text-center border border-dashed border-[var(--discord-border)] rounded-[4px]">
+                    Nenhum colaborador adicionado ainda.
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto">
+                    {collaborators.map((c) => {
+                      const displayName = c.user?.username ? `@${c.user.username}` : (c.user?.name || c.user?.email || 'Sem Nome');
+                      const targetUserId = c.userId || c.user?.id;
+                      const isRemoving = removingId === targetUserId;
+
+                      return (
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between p-2.5 rounded-[4px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] text-xs"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-[var(--discord-input)] overflow-hidden flex items-center justify-center text-[10px] font-bold text-white border border-[var(--discord-border)]">
+                              {c.user?.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={c.user.avatarUrl}
+                                  alt={displayName}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <span>{c.user?.name?.[0] || c.user?.username?.[0] || c.user?.email?.[0] || 'U'}</span>
+                              )}
+                            </div>
+                            <span className="font-medium text-[var(--foreground)] truncate max-w-[200px]">
+                              {displayName}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={c.role || 'MEMBER'}
+                              onChange={(e) => handleChangeRole(targetUserId, e.target.value as 'MEMBER' | 'VIEWER')}
+                              className="bg-[#1e1f22] text-[10px] text-[#dbdee1] border border-[#383a40] rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-[#20b8cd] transition-colors"
+                              title="Alterar papel do colaborador"
+                            >
+                              <option value="MEMBER">Membro (Edição)</option>
+                              <option value="VIEWER">Visualizador (Leitura)</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCollaborator(targetUserId)}
+                              disabled={isRemoving}
+                              title="Remover colaborador"
+                              className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-[#f23f43] hover:bg-[#35373c] transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {isRemoving ? (
+                                <div className="w-3 h-3 border-2 border-[#949ba4] border-t-[#f23f43] rounded-full animate-spin" />
+                              ) : (
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: DANGER ZONE */}
+          {activeTab === 'danger' && isOwner && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h3 className="text-base font-bold text-red-500">Zona de Perigo</h3>
+                <p className="text-xs text-[var(--discord-text-muted)] mt-0.5">
+                  A exclusão de um workspace é irreversível. Todas as notas, pastas, flashcards e chats de IA contidos serão excluídos permanentemente.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-[6px] bg-red-500/5 border border-red-500/20 flex flex-col gap-3">
+                <span className="text-xs text-[var(--foreground)]">
+                  Para confirmar a exclusão, digite o nome exato do workspace: <strong className="font-mono text-red-400">"{workspace.nome}"</strong>
+                </span>
+
+                <input
+                  type="text"
+                  placeholder={workspace.nome}
+                  value={deleteConfirmName}
+                  onChange={(e) => setDeleteConfirmName(e.target.value)}
+                  className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#f23f43]/40 focus:border-[#f23f43] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleteConfirmName !== workspace.nome || isDeleting}
+                  className="h-9 px-4 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer border-none flex items-center justify-center gap-2 self-end mt-1"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  </svg>
+                  <span>{isDeleting ? 'Excluindo...' : 'Excluir Este Workspace'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Image Cropper Modal for Workspace Icon */}
+      {cropperImage && (
+        <ImageCropperModal
+          isOpen={!!cropperImage}
+          imageSrc={cropperImage}
+          cropShape="squircle"
+          title="Recortar Ícone do Workspace"
+          onConfirm={handleCroppedIconConfirm}
+          onClose={() => setCropperImage(null)}
+        />
+      )}
+    </div>
+  );
+}
