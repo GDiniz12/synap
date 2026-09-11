@@ -31,3 +31,28 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
     return res.status(401).json({ error: 'Token is invalid' });
   }
 }
+
+export async function optionalAuthMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return next();
+  }
+
+  const [, token] = authHeader.split(' ');
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    if (user) {
+      req.userId = decoded.userId;
+    }
+  } catch (error) {
+    // Silently continue for optional auth
+  }
+
+  return next();
+}
+
