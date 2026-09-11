@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, Plus, RefreshCw } from 'lucide-react-native';
 import { colors, typography, spacing } from '../../theme/tokens';
@@ -30,9 +30,11 @@ export const Header: React.FC<HeaderProps> = ({
             activeOpacity={0.7}
             onPress={onOpenWorkspaceSelector}
           >
-            <View style={styles.logoBadge}>
-              <Text style={styles.logoBadgeText}>S</Text>
-            </View>
+            <Image
+              source={require('../../../assets/icon.png')}
+              style={styles.logoBadge}
+              resizeMode="contain"
+            />
             <View style={styles.workspaceTextContainer}>
               <Text style={styles.workspaceName} numberOfLines={1}>
                 {activeWorkspace ? activeWorkspace.nome : 'Selecionar Workspace'}
@@ -87,15 +89,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 4,
-    backgroundColor: colors.foreground,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoBadgeText: {
-    color: colors.background,
-    fontSize: 12,
-    fontWeight: '800',
-    fontFamily: typography.fontFamily.sans,
   },
   workspaceTextContainer: {
     flexShrink: 1,

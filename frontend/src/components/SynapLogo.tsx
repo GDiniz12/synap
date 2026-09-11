@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import synapLogoImg from '../../public/synap-logo-unique.png';
 
 interface SynapLogoProps {
   size?: number;
@@ -20,13 +21,14 @@ export default function SynapLogo({
       className={`relative inline-flex items-center justify-center shrink-0 select-none ${className}`}
     >
       <Image
-        src="/synap-logo-unique.png"
+        src={synapLogoImg}
         alt="Synap Logo"
         width={size * 2}
         height={size * 2}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
         className="synap-logo-img transition-[filter,opacity] duration-200"
         priority={priority}
+        unoptimized
       />
     </div>
   );

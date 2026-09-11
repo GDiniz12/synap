@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Server, Lock, Mail, User as UserIcon, Globe } from 'lucide-react-native';
@@ -75,9 +76,12 @@ export const AuthScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>SYNAP</Text>
-          </View>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.brandTitle}>SYNAP</Text>
           <Text style={styles.subtitle}>Second Brain & Knowledge Management</Text>
         </View>
 
@@ -198,19 +202,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  logoContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: colors.foreground,
-    borderRadius: radius.xs,
-    marginBottom: spacing.sm,
+  logoImage: {
+    width: 64,
+    height: 64,
+    marginBottom: spacing.md,
   },
-  logoText: {
-    color: colors.background,
-    fontSize: typography.fontSize.xl,
-    fontWeight: '900',
-    letterSpacing: 4,
+  brandTitle: {
+    color: colors.foreground,
+    fontSize: typography.fontSize.xxl,
+    fontWeight: '800',
+    letterSpacing: 2,
     fontFamily: typography.fontFamily.sans,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     color: colors.foregroundSecondary,

@@ -17,7 +17,12 @@ export const metadata: Metadata = {
   title: "Synap",
   description: "A comprehensive study tool with notes and flashcards",
   icons: {
-    icon: "/synap-icon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/synap-icon.ico" },
+      { url: "/synap-logo-unique.png", type: "image/png" },
+    ],
+    apple: "/logo-synap-512.png",
   },
 };
 
@@ -56,7 +61,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} h-full w-full overflow-hidden flex flex-col`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} h-full w-full overflow-hidden flex flex-col`} suppressHydrationWarning>
         <ThemeProvider>
           <TitleBar />
           <main className="flex-1 min-h-0 w-full relative overflow-hidden flex flex-col">

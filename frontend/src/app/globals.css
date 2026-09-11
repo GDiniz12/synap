@@ -29,6 +29,20 @@
   --brand-strong: #26c7de;
   --brand-dim: rgba(32, 184, 205, 0.12);
 
+  /* Discord 3-Layer Depth System */
+  --discord-rail: #1e1f22;
+  --discord-sidebar: #2b2d31;
+  --discord-canvas: #313338;
+  --discord-user-bar: #232428;
+  --discord-header: #313338;
+  --discord-border: #1f2023;
+  --discord-input: #1e1f22;
+  --discord-hover: rgba(255, 255, 255, 0.05);
+  --discord-active: rgba(255, 255, 255, 0.08);
+  --discord-text-primary: #dbdee1;
+  --discord-text-muted: #949ba4;
+  --discord-text-channel: #949ba4;
+
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration-smooth: 220ms;
@@ -57,6 +71,20 @@
   --brand-strong: #0f6b78;
   --brand-dim: rgba(22, 128, 143, 0.08);
 
+  /* Discord 3-Layer Depth System (Light Mode) */
+  --discord-rail: #e3e5e8;
+  --discord-sidebar: #f2f3f5;
+  --discord-canvas: #ffffff;
+  --discord-user-bar: #ebedef;
+  --discord-header: #ffffff;
+  --discord-border: #e3e5e8;
+  --discord-input: #e3e5e8;
+  --discord-hover: rgba(0, 0, 0, 0.04);
+  --discord-active: rgba(0, 0, 0, 0.07);
+  --discord-text-primary: #060607;
+  --discord-text-muted: #4e5058;
+  --discord-text-channel: #5c5e66;
+
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration-smooth: 220ms;
@@ -64,13 +92,6 @@
   color-scheme: light;
 }
 
-/* Automatic logo inversion in light mode */
-html.light .synap-logo-img,
-html[data-theme="light"] .synap-logo-img,
-.light .synap-logo-img,
-[data-theme="light"] .synap-logo-img {
-  filter: invert(1);
-}
 
 body {
   background-color: var(--background);
@@ -102,10 +123,10 @@ body {
 }
 
 .geist-input {
-  background: transparent;
-  border: 1px solid var(--accents-2);
+  background: var(--discord-input);
+  border: 1px solid var(--discord-border);
   border-radius: var(--radius);
-  color: var(--foreground);
+  color: var(--discord-text-primary);
   padding: 0 12px;
   height: 40px;
   font-size: 14px;
@@ -114,8 +135,8 @@ body {
 }
 
 .geist-input:focus {
-  border-color: var(--accents-5);
-  box-shadow: 0 0 0 1px var(--accents-5);
+  border-color: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand);
 }
 
 .geist-button {
@@ -363,6 +384,50 @@ body {
   border: 1px solid var(--accents-2);
   user-select: none;
   pointer-events: none;
+}
+
+/* Rich Tables in Editor */
+.notion-editor table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.9em;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--discord-border);
+}
+
+.notion-editor th {
+  background: var(--discord-sidebar);
+  color: var(--foreground);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--discord-border);
+}
+
+.notion-editor td {
+  padding: 8px 12px;
+  border: 1px solid var(--discord-border);
+  color: var(--discord-text-primary);
+}
+
+.notion-editor tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.notion-editor blockquote {
+  border-left: 3px solid var(--brand);
+  padding-left: 1rem;
+  margin: 0.875rem 0;
+  color: var(--discord-text-muted);
+  font-style: italic;
+}
+
+.notion-editor hr {
+  border: none;
+  border-top: 1px solid var(--discord-border);
+  margin: 1.5rem 0;
 }
 
 /* Resizable Image Container */

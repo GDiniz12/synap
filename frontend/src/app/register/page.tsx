@@ -1,129 +1,288 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 import SynapLogo from '@/components/SynapLogo';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const formattedUsername = username.trim().toLowerCase();
+  const isUsernameValid = formattedUsername.length >= 3 && /^[a-z0-9_.]+$/.test(formattedUsername);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!name.trim()) {
+      setError('Informe seu nome de exibição.');
+      return;
+    }
+
+    if (!formattedUsername) {
+      setError('Informe um nome de usuário.');
+      return;
+    }
+
+    const usernameRegex = /^[a-z0-9_.]+$/;
+    if (formattedUsername.length < 3 || formattedUsername.length > 30 || !usernameRegex.test(formattedUsername)) {
+      setError('O nome de usuário deve ter entre 3 e 30 caracteres (letras minúsculas, números, pontos e underlines).');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
       await api('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ 
+          name: name.trim(), 
+          username: formattedUsername, 
+          email: email.trim(), 
+          password 
+        }),
       });
-      
-      router.push('/login');
+
+      const inviteCode = searchParams.get('inviteCode') || localStorage.getItem('pending_invite_code') || sessionStorage.getItem('pending_invite_code');
+
+      // Auto-login immediately after successful registration for instant access
+      try {
+        const loginData = await api('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+
+        if (loginData?.token) {
+          localStorage.setItem('token', loginData.token);
+
+          if (inviteCode) {
+            try {
+              const joinResult = await api(`/workspaces/join/${inviteCode}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${loginData.token}` }
+              });
+              localStorage.removeItem('pending_invite_code');
+              sessionStorage.removeItem('pending_invite_code');
+              if (joinResult?.id) {
+                router.push(`/workspaces/${joinResult.id}`);
+                return;
+              }
+            } catch (joinErr) {
+              console.error('Erro ao auto-ingressar:', joinErr);
+            }
+          }
+
+          router.push('/dashboard');
+          return;
+        }
+      } catch {
+        // Fallback to login page if auto-login fails
+      }
+
+      router.push(inviteCode ? `/login?registered=true&inviteCode=${inviteCode}` : '/login?registered=true');
     } catch (err: any) {
       console.error('Erro no cadastro:', err);
-      const isUserExists = err.message?.toLowerCase().includes('exists') || err.message?.toLowerCase().includes('already');
-      setError(isUserExists ? 'Este e-mail já está cadastrado. Tente fazer login.' : 'Não foi possível criar a conta. Tente novamente.');
+      setError(err.message || 'Não foi possível criar a conta. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100%', height: '100%', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--accents-1)', padding: '16px' }}>
-      <div className="geist-card" style={{ width: '100%', maxWidth: '400px', padding: '24px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Link href="/" style={{ textDecoration: 'none', marginBottom: '18px', display: 'inline-flex' }} className="hover:opacity-80 transition-opacity">
-            <SynapLogo size={44} priority />
+    <div className="h-full w-full bg-[#1e1f22] overflow-y-auto overflow-x-hidden selection:bg-[#20b8cd] selection:text-white relative font-sans flex flex-col items-center justify-start sm:justify-center p-4 py-8">
+      {/* Subtle Synap Brand Ambient Lighting */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#20b8cd]/10 blur-[140px] rounded-full pointer-events-none -z-10" />
+
+      {/* Main Registration Card */}
+      <div className="w-full max-w-[400px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl p-5 sm:p-6 flex flex-col animate-smooth-pop relative my-auto">
+        {/* Header with Logo */}
+        <div className="flex flex-col items-center text-center mb-4">
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center transition-transform hover:scale-105 mb-3"
+            title="Voltar ao início"
+          >
+            <SynapLogo size={52} priority />
           </Link>
-          <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', margin: 0 }}>Criar conta</h1>
-          <p className="geist-text-secondary" style={{ fontSize: '13px', marginTop: '6px' }}>
-            Comece a organizar seu conhecimento e notas interligadas
+          <h1 className="text-xl font-bold text-white tracking-tight">
+            Criar uma conta
+          </h1>
+          <p className="text-[11px] text-[#949ba4] mt-0.5">
+            Comece a organizar suas notas, conexões e flashcards
           </p>
         </div>
 
+        {/* Error Alert Box */}
         {error && (
-          <div style={{ color: 'var(--error)', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>
-            {error}
+          <div className="p-2.5 mb-3 rounded-[4px] bg-[#f23f43]/15 border border-[#f23f43]/30 text-[#f23f43] text-xs flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span className="leading-tight font-medium">{error}</span>
           </div>
         )}
-        
-        <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accents-6)' }}>Nome Completo</label>
-            <input 
-              type="text" 
-              placeholder="Seu Nome" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+
+        {/* Registration Form */}
+        <form onSubmit={handleRegister} className="flex flex-col gap-3">
+          {/* E-mail */}
+          <div>
+            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#949ba4] mb-1">
+              E-mail
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seuemail@exemplo.com"
               required
-              className="geist-input"
+              className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accents-6)' }}>Email Address</label>
-            <input 
-              type="email" 
-              placeholder="you@example.com" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-              className="geist-input"
+
+          {/* Nome de Exibição */}
+          <div>
+            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#949ba4] mb-1">
+              Nome de Exibição
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Como quer ser chamado?"
+              required
+              className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accents-6)' }}>Password</label>
-            <input 
-              type="password" 
-              placeholder="••••••••" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
-              className="geist-input"
-            />
+
+          {/* Nome de Usuário */}
+          <div>
+            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#949ba4] mb-1">
+              Nome de Usuário
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-[#949ba4] font-mono text-xs select-none pointer-events-none">
+                @
+              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                placeholder="usuario"
+                required
+                className="w-full h-9 pl-7 pr-9 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+              />
+              {isUsernameValid && (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="absolute right-3 text-[#23a55a]">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            <span className="text-[10px] text-[#949ba4] mt-0.5 block">
+              Apenas letras minúsculas, números, pontos ou underlines.
+            </span>
           </div>
+
+          {/* Senha */}
+          <div>
+            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[#949ba4] mb-1">
+              Senha
+            </label>
+            <div className="relative flex items-center">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
+                required
+                className="w-full h-9 pl-3 pr-9 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                title={showPassword ? 'Ocultar senha' : 'Ver senha'}
+              >
+                {showPassword ? (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            <span className="text-[10px] text-[#949ba4] mt-0.5 block">
+              Mínimo de 6 caracteres.
+            </span>
+          </div>
+
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="geist-button"
-            style={{ marginTop: '8px', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
+            className={`w-full h-9 mt-1 bg-[#20b8cd] hover:bg-[#1ba2b4] text-white font-semibold rounded-[4px] text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-[#20b8cd]/20 ${
+              isSubmitting ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
           >
             {isSubmitting ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <svg
-                  className="animate-spin"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
+              <>
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
-                <span>Criando conta...</span>
-              </span>
+                <span>Criando sua conta...</span>
+              </>
             ) : (
-              'Sign Up'
+              <span>Continuar</span>
             )}
           </button>
         </form>
-      </div>
 
-      <p className="geist-text-secondary" style={{ marginTop: '24px', fontSize: '14px' }}>
-        Already have an account?{' '}
-        <Link href="/login" style={{ color: 'var(--foreground)', textDecoration: 'none', fontWeight: 500 }}>
-          Log in
-        </Link>
-      </p>
+        {/* Link to Login */}
+        <div className="text-center text-xs text-[#949ba4] mt-3.5">
+          Já tem uma conta?{' '}
+          <Link 
+            href={searchParams.get('inviteCode') ? `/login?inviteCode=${searchParams.get('inviteCode')}` : "/login"} 
+            className="text-[#20b8cd] font-semibold hover:underline"
+          >
+            Entrar
+          </Link>
+        </div>
+
+        {/* Legal Disclaimer */}
+        <p className="text-[10px] text-[#949ba4]/70 text-center leading-tight mt-3 pt-3 border-t border-[#383a40]">
+          Ao se registrar, você concorda com os Termos de Serviço e a Política de Privacidade do Synap.
+        </p>
+      </div>
     </div>
   );
 }
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#1e1f22] flex items-center justify-center text-xs text-[#949ba4]">Carregando...</div>}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
