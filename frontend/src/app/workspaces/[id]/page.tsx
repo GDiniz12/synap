@@ -19,6 +19,13 @@ import FolderModal, { FolderModalData } from '@/components/FolderModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
 import SynapLogo from '@/components/SynapLogo';
+import WorkspaceRail from '@/components/WorkspaceRail';
+import DiscordChannelSidebar from '@/components/DiscordChannelSidebar';
+import DiscordChannelHeader from '@/components/DiscordChannelHeader';
+import DiscordToolsSidebar from '@/components/DiscordToolsSidebar';
+import CreateWorkspaceModal from '@/components/CreateWorkspaceModal';
+import WorkspaceSettingsModal from '@/components/WorkspaceSettingsModal';
+import LeaveWorkspaceModal from '@/components/LeaveWorkspaceModal';
 import { translations, Language } from '@/lib/i18n';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -48,12 +55,19 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const { theme, setTheme } = useTheme();
   
   const [workspace, setWorkspace] = useState<any>(null);
+  const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pastas, setPastas] = useState<any[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isCreateWorkspaceModalOpen, setIsCreateWorkspaceModalOpen] = useState(false);
+  const [isWorkspaceSettingsModalOpen, setIsWorkspaceSettingsModalOpen] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const isOwner = Boolean(workspace?.isOwner ?? (workspace?.userId && currentUser?.id && workspace.userId === currentUser.id));
+  const currentUserRole = workspace?.currentUserRole || (isOwner ? 'OWNER' : 'MEMBER');
 
   // Editor Typography & Actions Menu State
   const [editorFontFamily, setEditorFontFamily] = useState<string>("var(--font-sans), 'Geist Sans', sans-serif");
@@ -94,12 +108,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   const [selectedCardModal, setSelectedCardModal] = useState<any | null>(null);
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [isGraphViewOpen, setIsGraphViewOpen] = useState(false);
   const [isFlashcardsOpen, setIsFlashcardsOpen] = useState(false);
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
-  const [aiChatMode, setAiChatMode] = useState<'drawer' | 'fullscreen'>('drawer');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isMobileFilesSheetOpen, setIsMobileFilesSheetOpen] = useState(false);
@@ -111,6 +125,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       setIsMobile(mobile);
       if (mobile) {
         setIsSidebarOpen(false);
+        setIsRightSidebarOpen(false);
       }
     };
     handleResize();
@@ -243,6 +258,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     const query = sidebarSearch.toLowerCase().trim();
     return notas.filter((n) => (n.titulo || '').toLowerCase().includes(query));
   }, [notas, sidebarSearch]);
+
+  const openTabsList = useMemo(() => {
+    return openTabIds
+      .map((tabId) => notas.find((n) => n.id === tabId))
+      .filter(Boolean);
+  }, [openTabIds, notas]);
 
   // Load preferences from currentUser
   useEffect(() => {
@@ -422,15 +443,17 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     setIsLoading(true);
     setError('');
     try {
-      const [userData, workspaceData, pastasData, notasData] = await Promise.all([
+      const [userData, workspaceData, pastasData, notasData, allWorkspacesData] = await Promise.all([
         api('/auth/me').catch(() => null),
         api(`/workspaces/${id}`),
         api(`/pastas?workspaceId=${id}`),
         api(`/notas?workspaceId=${id}`),
+        api('/workspaces').catch(() => []),
       ]);
 
       if (userData) setCurrentUser(userData);
       if (workspaceData) setWorkspace(workspaceData);
+      if (allWorkspacesData) setAllWorkspaces(allWorkspacesData);
       if (pastasData) setPastas(pastasData);
       if (notasData) {
         setNotas(notasData);
@@ -805,6 +828,9 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     editContentRef.current = nextContent;
 
     setSelectedNota(nota);
+    setIsAiChatOpen(false);
+    setIsGraphViewOpen(false);
+    setIsFlashcardsOpen(false);
     setEditTitle(nextTitle);
     setCurrentContent(nextContent);
     setCurrentLine(1);
@@ -874,8 +900,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     });
   };
 
-  const toggleFolder = (pastaId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleFolder = (pastaId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setExpandedFolders(prev => ({ ...prev, [pastaId]: !prev[pastaId] }));
   };
 
@@ -996,6 +1022,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const autoSaveNota = async (newTitle: string, newContent: string, noteIdToSave: string) => {
+    if (currentUserRole === 'VIEWER') return;
     setSaveStatus('saving');
     try {
       const updated = await api(`/notas/${noteIdToSave}`, {
@@ -1021,6 +1048,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (currentUserRole === 'VIEWER') return;
     const val = e.target.value;
     setEditTitle(val);
     editTitleRef.current = val;
@@ -1053,6 +1081,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
   };
 
   const handleContentChange = useCallback((val: string) => {
+    if (currentUserRole === 'VIEWER') return;
     editContentRef.current = val;
     setCurrentContent(val);
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -1062,7 +1091,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
     if (currentNoteId) {
       saveTimeoutRef.current = setTimeout(() => autoSaveNota(currentTitle, val, currentNoteId), 1000);
     }
-  }, []);
+  }, [currentUserRole]);
 
   // DRAG AND DROP LOGIC
   const handleDragStart = (e: React.DragEvent, type: 'pasta' | 'nota', itemId: string) => {
@@ -1243,125 +1272,107 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           {notasSemPasta.map(nota => renderNota(nota))}
         </div>
       )}
-
-      {!filteredNotasBySearch && rootPastas.length === 0 && notasSemPasta.length === 0 && (
-         <div style={{ padding: '24px 8px', fontSize: '12px', color: 'var(--accents-4)', textAlign: 'center' }}>
-           Workspace vazio. Crie uma nota ou pasta acima.
-         </div>
-      )}
     </div>
   );
 
+  const handleWorkspaceCreated = (newWs: any) => {
+    setAllWorkspaces((prev) => [...prev, newWs]);
+    router.push(`/workspaces/${newWs.id}`);
+  };
+
+  const handleWorkspaceUpdated = (updatedWs: any) => {
+    setWorkspace(updatedWs);
+    setAllWorkspaces((prev) => prev.map((w) => (w.id === updatedWs.id ? updatedWs : w)));
+  };
+
+  const handleWorkspaceDeleted = (deletedId: string) => {
+    const remaining = allWorkspaces.filter((w) => w.id !== deletedId);
+    setAllWorkspaces(remaining);
+    if (remaining.length > 0) {
+      router.push(`/workspaces/${remaining[0].id}`);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--background)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', background: 'var(--discord-rail)' }}>
       
       {/* GLOBAL CONTEXT MENU */}
       {contextMenu && (
-        <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 100, background: 'var(--background)', border: '1px solid var(--accents-2)', borderRadius: '6px', boxShadow: '0 4px 14px 0 rgba(0,0,0,0.1)', padding: '4px', minWidth: '160px', fontSize: '13px', color: 'var(--foreground)' }}>
-          {contextMenu.type === 'pasta' && (
+        <div style={{ position: 'fixed', top: contextMenu.y, left: contextMenu.x, zIndex: 100, background: 'var(--discord-sidebar)', border: '1px solid var(--discord-border)', borderRadius: '6px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', padding: '4px', minWidth: '160px', fontSize: '13px', color: 'var(--discord-text-primary)' }}>
+          {currentUserRole !== 'VIEWER' && contextMenu.type === 'pasta' && (
             <>
-              <div onClick={() => handleTriggerCreatePasta(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Subpasta</div>
-              <div onClick={() => handleCreateNota(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Nota</div>
-              <div onClick={() => handleCreateDesenho(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Novo Desenho</div>
-              <div style={{ height: 1, background: 'var(--accents-2)', margin: '4px 0' }} />
+              <div onClick={() => handleTriggerCreatePasta(contextMenu.id)} className="hover:bg-[var(--discord-hover)] text-[var(--discord-text-primary)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Subpasta</div>
+              <div onClick={() => handleCreateNota(contextMenu.id)} className="hover:bg-[var(--discord-hover)] text-[var(--discord-text-primary)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Nova Nota</div>
+              <div onClick={() => handleCreateDesenho(contextMenu.id)} className="hover:bg-[var(--discord-hover)] text-[var(--discord-text-primary)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Novo Desenho</div>
+              <div style={{ height: 1, background: 'var(--discord-border)', margin: '4px 0' }} />
             </>
           )}
           {contextMenu.type === 'nota' && (
             <>
-              <div onClick={() => handleExportNota(contextMenu.id)} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Exportar (.md)</div>
-              <div style={{ height: 1, background: 'var(--accents-2)', margin: '4px 0' }} />
+              <div onClick={() => handleExportNota(contextMenu.id)} className="hover:bg-[var(--discord-hover)] text-[var(--discord-text-primary)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Exportar (.md)</div>
+              {currentUserRole !== 'VIEWER' && <div style={{ height: 1, background: 'var(--discord-border)', margin: '4px 0' }} />}
             </>
           )}
-          <div onClick={handleContextRename} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Renomear</div>
-          <div onClick={handleContextDelete} className="hover:bg-[var(--accents-2)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', color: 'var(--error)' }}>Excluir</div>
+          {currentUserRole !== 'VIEWER' && (
+            <>
+              <div onClick={handleContextRename} className="hover:bg-[var(--discord-hover)] text-[var(--discord-text-primary)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer' }}>Renomear</div>
+              <div onClick={handleContextDelete} className="hover:bg-[var(--discord-hover)]" style={{ padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', color: 'var(--error)' }}>Excluir</div>
+            </>
+          )}
         </div>
       )}
 
       {/* CUSTOM DELETE CONFIRMATION MODAL */}
+      {/* CUSTOM DELETE CONFIRMATION MODAL */}
       {deleteModal && (
         <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px'
-          }}
+          className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
           onClick={() => setDeleteModal(null)}
         >
           <div 
-            style={{
-              background: 'var(--background)',
-              border: '1px solid var(--accents-2)',
-              borderRadius: '10px',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-              width: '100%',
-              maxWidth: '420px',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px'
-            }}
+            className="w-full max-w-[420px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'rgba(238, 0, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--error)',
-                flexShrink: 0
-              }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 6h18"/>
-                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-                  <line x1="10" y1="11" x2="10" y2="17"/>
-                  <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
+            <div className="p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-[#f23f43]/15 text-[#f23f43] border border-[#f23f43]/30 flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-white leading-tight">
+                    Excluir {deleteModal.type === 'pasta' ? 'Pasta' : 'Nota'}
+                  </h3>
+                  <span className="text-xs text-[#949ba4]">
+                    Esta ação é irreversível
+                  </span>
+                </div>
               </div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
-                Excluir {deleteModal.type === 'pasta' ? 'Pasta' : 'Nota'}
-              </h3>
+
+              <p className="text-sm text-[#949ba4] leading-relaxed">
+                Tem certeza de que deseja excluir <strong className="text-white">"{deleteModal.name}"</strong>? {deleteModal.type === 'pasta' ? 'Todas as subpastas e notas contidas nela também serão excluídas permanentemente.' : 'Esta ação não poderá ser desfeita.'}
+              </p>
             </div>
 
-            <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: 'var(--accents-5)' }}>
-              Tem certeza de que deseja excluir <strong style={{ color: 'var(--foreground)' }}>"{deleteModal.name}"</strong>? {deleteModal.type === 'pasta' ? 'Todas as subpastas e notas contidas nela também serão excluídas permanentemente.' : 'Esta ação não poderá ser desfeita.'}
-            </p>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+            <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setDeleteModal(null)}
-                className="geist-button-secondary"
-                style={{ height: '36px', padding: '0 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                style={{
-                  height: '36px',
-                  padding: '0 16px',
-                  fontSize: '13px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  background: 'var(--error)',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 500,
-                  transition: 'opacity 0.2s ease'
-                }}
-                className="hover:opacity-90 active:opacity-80"
+                className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white shadow-sm transition-colors cursor-pointer"
               >
                 Excluir
               </button>
@@ -1371,907 +1382,119 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
       )}
 
       {/* ─────────────────────────────────────────────────────────
-          RENDER MASTER TOP HEADER (Full Width, 44px)
+          DISCORD UNIFIED 3-COLUMN LAYOUT
           ───────────────────────────────────────────────────────── */}
-      <header
-        style={{
-          height: '44px',
-          minHeight: '44px',
-          background: 'var(--background)',
-          borderBottom: '1px solid var(--accents-2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 16px',
-          zIndex: 40,
-          flexShrink: 0,
-          userSelect: 'none',
-        }}
-      >
-        {/* Left: Brand + Breadcrumb + Status Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-          <Link
-            href="/dashboard"
-            style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}
-            className="hover:opacity-80 transition-opacity shrink-0"
-            title="Voltar ao Dashboard"
-          >
-            <SynapLogo size={20} priority />
-          </Link>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', height: '100%', width: '100%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+        
+        {/* COLUMN 1: DISCORD WORKSPACE RAIL (72px) */}
+        <WorkspaceRail
+          workspaces={allWorkspaces}
+          activeWorkspaceId={id}
+          currentUser={currentUser}
+          isSidebarOpen={isSidebarOpen}
+          onSelectWorkspace={(wsId) => router.push(`/workspaces/${wsId}`)}
+          onOpenCreateModal={() => setIsCreateWorkspaceModalOpen(true)}
+          onOpenSettingsModal={() => setIsSettingsOpen(true)}
+          onGoHome={() => router.push('/dashboard')}
+        />
 
-          <div style={{ width: '1px', height: '14px', background: 'var(--accents-2)', flexShrink: 0 }} />
-
-          {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accents-5)', flexShrink: 0 }} className="hidden sm:inline">
-              WORKSPACE
-            </span>
-            <span style={{ color: 'var(--accents-4)', fontSize: '12px', flexShrink: 0 }} className="hidden sm:inline">/</span>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {workspace.nome}
-            </span>
-          </div>
-
-          {/* Live Status Pill (Render Style) */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '2px 8px',
-              borderRadius: '999px',
-              border: '1px solid var(--accents-2)',
-              background: 'var(--accents-1)',
-              fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--accents-5)',
-              flexShrink: 0,
-            }}
-            className="hidden md:inline-flex"
-          >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: saveStatus === 'saving' ? 'var(--warning)' : '#10b981',
-                boxShadow: saveStatus === 'saving' ? '0 0 6px var(--warning)' : '0 0 6px #10b981',
-              }}
-            />
-            <span>{saveStatus === 'saving' ? 'Salvando...' : 'Sincronizado'}</span>
-          </div>
-        </div>
-
-        {/* Center: Render Integrated View Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: '2px' }}>
-          {/* 1. Documentos / Editor */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsFlashcardsOpen(false);
-              setIsGraphViewOpen(false);
-              if (isAiChatOpen && aiChatMode === 'fullscreen') setAiChatMode('drawer');
-            }}
-            style={{
-              height: '44px',
-              padding: '0 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 600 : 500,
-              color: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? '2px solid var(--brand)' : '2px solid transparent',
-              background: 'transparent',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            className="hover:text-[var(--foreground)]"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            <span className="hidden sm:inline">Documentos</span>
-          </button>
-
-          {/* 2. Grafo */}
-          <button
-            type="button"
-            onClick={() => {
+        {/* COLUMN 2: DISCORD CHANNEL SIDEBAR (240px) */}
+        {(!isMobile || isSidebarOpen) && isSidebarOpen && (
+          <DiscordChannelSidebar
+            workspace={workspace}
+            pastas={pastas}
+            notas={notas}
+            currentUser={currentUser}
+            isOwner={isOwner}
+            currentUserRole={currentUserRole}
+            onOpenLeaveWorkspace={() => setIsLeaveModalOpen(true)}
+            selectedNota={selectedNota}
+            isGraphViewOpen={isGraphViewOpen}
+            isFlashcardsOpen={isFlashcardsOpen}
+            isAiChatOpen={isAiChatOpen}
+            isTerminalOpen={isTerminalOpen}
+            sidebarSearch={sidebarSearch}
+            setSidebarSearch={setSidebarSearch}
+            expandedFolders={expandedFolders}
+            toggleFolder={toggleFolder}
+            onSelectNota={openNota}
+            onOpenGraph={() => {
               setIsGraphViewOpen(true);
               setIsFlashcardsOpen(false);
+              setIsAiChatOpen(false);
             }}
-            style={{
-              height: '44px',
-              padding: '0 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: isGraphViewOpen ? 600 : 500,
-              color: isGraphViewOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isGraphViewOpen ? '2px solid var(--brand)' : '2px solid transparent',
-              background: 'transparent',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            className="hover:text-[var(--foreground)]"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="18" cy="5" r="3" />
-              <circle cx="6" cy="12" r="3" />
-              <circle cx="18" cy="19" r="3" />
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-            </svg>
-            <span className="hidden sm:inline">Grafo</span>
-          </button>
-
-          {/* 3. Flashcards */}
-          <button
-            type="button"
-            onClick={() => {
+            onOpenFlashcards={() => {
               setIsFlashcardsOpen(true);
               setIsGraphViewOpen(false);
+              setIsAiChatOpen(false);
             }}
-            style={{
-              height: '44px',
-              padding: '0 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: isFlashcardsOpen ? 600 : 500,
-              color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isFlashcardsOpen ? '2px solid var(--brand)' : '2px solid transparent',
-              background: 'transparent',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            className="hover:text-[var(--foreground)]"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-            <span className="hidden sm:inline">Flashcards</span>
-          </button>
-
-          {/* 4. Synap AI */}
-          <button
-            type="button"
-            onClick={() => {
+            onOpenAiChat={() => {
               setIsAiChatOpen((prev) => !prev);
+              setIsGraphViewOpen(false);
+              setIsFlashcardsOpen(false);
             }}
-            style={{
-              height: '44px',
-              padding: '0 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              fontWeight: isAiChatOpen ? 600 : 500,
-              color: isAiChatOpen ? 'var(--foreground)' : 'var(--accents-5)',
-              borderBottom: isAiChatOpen ? '2px solid var(--brand)' : '2px solid transparent',
-              background: 'transparent',
-              borderTop: 'none',
-              borderLeft: 'none',
-              borderRight: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
+            onOpenTerminal={() => setIsTerminalOpen((prev) => !prev)}
+            onOpenWorkspaceSettings={() => setIsWorkspaceSettingsModalOpen(true)}
+            onOpenUserSettings={() => setIsSettingsOpen(true)}
+            onOpenLogoutConfirm={() => setIsLogoutConfirmOpen(true)}
+            onOpenShareModal={() => setIsShareModalOpen(true)}
+            onToggleSidebar={() => setIsSidebarOpen(false)}
+            onTriggerCreatePasta={handleTriggerCreatePasta}
+            onTriggerCreateNota={handleCreateNota}
+            onTriggerCreateDesenho={handleCreateDesenho}
+            onDragStart={handleDragStart}
+            onDropToPasta={handleDropToPasta}
+            onContextMenu={(e, itemId, itemType, currentName) => {
+              setContextMenu({
+                visible: true,
+                x: Math.min(e.clientX, window.innerWidth - 180),
+                y: Math.min(e.clientY, window.innerHeight - 200),
+                id: itemId,
+                type: itemType,
+                currentName,
+              });
             }}
-            className="hover:text-[var(--foreground)]"
-            title="Synap AI Assistant (Ctrl + J)"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-            <span className="hidden sm:inline">Synap AI</span>
-          </button>
-        </div>
-
-        {/* Right: Quick Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Terminal */}
-          <button
-            type="button"
-            onClick={() => setIsTerminalOpen((prev) => !prev)}
-            className="geist-button-secondary"
-            style={{
-              height: '28px',
-              padding: '0 8px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '12px',
-              cursor: 'pointer',
-              background: isTerminalOpen ? 'var(--accents-2)' : undefined,
-            }}
-            title="Terminal (Ctrl + `)"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="4 17 10 11 4 5" />
-              <line x1="12" y1="19" x2="20" y2="19" />
-            </svg>
-            <span className="hidden md:inline">Terminal</span>
-          </button>
-
-          {/* Share / Invite */}
-          {workspace.isCollaborative && (
-            <button
-              type="button"
-              onClick={() => setIsShareModalOpen(true)}
-              className="geist-button-secondary"
-              style={{
-                height: '28px',
-                padding: '0 8px',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-              title="Compartilhar Workspace"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5c-2.2 0-4 1.8-4 4v2" />
-                <circle cx="8.5" cy="7" r="4" />
-                <line x1="20" y1="8" x2="20" y2="14" />
-                <line x1="23" y1="11" x2="17" y2="11" />
-              </svg>
-              <span className="hidden md:inline">Convidar</span>
-            </button>
-          )}
-
-          {/* Settings */}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            className="geist-button-secondary"
-            style={{
-              width: '28px',
-              height: '28px',
-              padding: 0,
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-            title="Configurações"
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-          </button>
-
-          {/* User Profile Avatar */}
-          {currentUser && (
-            <button
-              type="button"
-              onClick={() => setIsLogoutConfirmOpen(true)}
-              style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '50%',
-                background: 'var(--foreground)',
-                color: 'var(--background)',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              title={`Sair de ${currentUser.email}`}
-            >
-              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* ─────────────────────────────────────────────────────────
-          WORKSPACE MAIN BODY (SIDEBAR + MAIN CONTENT AREA)
-          ───────────────────────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-        
-        {/* MOBILE BACKDROP OVERLAY FOR SIDEBAR */}
-        {isMobile && isSidebarOpen && (
-          <div
-            onClick={() => setIsSidebarOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.65)',
-              backdropFilter: 'blur(3px)',
-              zIndex: 90,
-            }}
+            inlineAction={inlineAction}
+            setInlineAction={setInlineAction}
+            onInlineSubmit={handleInlineCommit}
+            inlineInputRef={inlineInputRef}
           />
         )}
 
-        {/* RENDER-STYLE ICON RAIL (desktop only) */}
-        {!isMobile && (
-          <div
-            style={{
-              width: '44px',
-              minWidth: '44px',
-              height: '100%',
-              borderRight: '1px solid var(--accents-2)',
-              background: 'var(--accents-1)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              paddingTop: '6px',
-              paddingBottom: '8px',
-              gap: '2px',
-              flexShrink: 0,
-              zIndex: 30,
-            }}
-          >
-            <Link
-              href="/dashboard"
-              title="Dashboard"
-              style={{ textDecoration: 'none', color: 'var(--accents-5)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', borderRadius: '6px' }}
-              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-            </Link>
-
-            <div style={{ width: '24px', height: '1px', background: 'var(--accents-2)', margin: '4px 0' }} />
-
-            {/* Documentos */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsFlashcardsOpen(false);
-                setIsGraphViewOpen(false);
-                if (isAiChatOpen && aiChatMode === 'fullscreen') setAiChatMode('drawer');
-              }}
-              title="Documentos"
-              style={{
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                background: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--brand-dim)' : 'transparent',
-                color: (!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen')) ? 'var(--brand)' : 'var(--accents-5)',
-                border: 'none',
-                transition: 'all 0.15s ease',
-              }}
-              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            </button>
-
-            {/* Grafo */}
-            <button
-              type="button"
-              onClick={() => { setIsGraphViewOpen(true); setIsFlashcardsOpen(false); }}
-              title="Grafo"
-              style={{
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                background: isGraphViewOpen ? 'var(--brand-dim)' : 'transparent',
-                color: isGraphViewOpen ? 'var(--brand)' : 'var(--accents-5)',
-                border: 'none',
-                transition: 'all 0.15s ease',
-              }}
-              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            </button>
-
-            {/* Cards */}
-            <button
-              type="button"
-              onClick={() => { setIsFlashcardsOpen(true); setIsGraphViewOpen(false); }}
-              title="Flashcards"
-              style={{
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                background: isFlashcardsOpen ? 'var(--brand-dim)' : 'transparent',
-                color: isFlashcardsOpen ? 'var(--brand)' : 'var(--accents-5)',
-                border: 'none',
-                transition: 'all 0.15s ease',
-              }}
-              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
-            </button>
-
-            {/* Synap AI */}
-            <button
-              type="button"
-              onClick={() => { setIsAiChatOpen(prev => !prev); }}
-              title="Synap AI (Ctrl+J)"
-              style={{
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                background: isAiChatOpen ? 'var(--brand-dim)' : 'transparent',
-                color: isAiChatOpen ? 'var(--brand)' : 'var(--accents-5)',
-                border: 'none',
-                transition: 'all 0.15s ease',
-              }}
-              className="hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-            </button>
-          </div>
-        )}
-
-        {/* DESKTOP / MOBILE SIDEBAR (RENDER TECHNICAL EXPLORER) */}
-        {(!isMobile || isSidebarOpen) && (
-          <aside
-            style={{
-              position: isMobile ? 'fixed' : 'relative',
-              top: 0,
-              bottom: 0,
-              left: 0,
-              zIndex: isMobile ? 100 : 'auto',
-              width: isSidebarOpen ? '270px' : '0px',
-              minWidth: isSidebarOpen ? '270px' : '0px',
-              background: 'var(--accents-1)',
-              borderRight: isSidebarOpen ? '1px solid var(--accents-2)' : 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              transition: 'all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <div style={{ width: '270px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-              
-              {/* Sidebar Header Bar */}
-              <div style={{ padding: '12px 14px 8px', borderBottom: '1px solid var(--accents-2)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--accents-5)' }}>
-                      DOCUMENTOS
-                    </span>
-                    <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', padding: '1px 5px', borderRadius: '4px', background: 'var(--accents-2)', color: 'var(--accents-5)' }}>
-                      {notas.length}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="geist-button-secondary"
-                    style={{ padding: 0, width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
-                    title="Recolher barra lateral (Ctrl + \)"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect width="18" height="18" x="3" y="3" rx="2" />
-                      <path d="M9 3v18" />
-                      <path d="m15 15-3-3 3-3" />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Technical Search Bar */}
-                <div style={{ position: 'relative', marginBottom: '8px' }}>
-                  <input
-                    ref={sidebarSearchInputRef}
-                    type="text"
-                    value={sidebarSearch}
-                    onChange={(e) => setSidebarSearch(e.target.value)}
-                    placeholder="Buscar... (⌘K)"
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '0 28px 0 26px',
-                      background: 'var(--background)',
-                      border: '1px solid var(--accents-2)',
-                      borderRadius: '5px',
-                      fontSize: '12px',
-                      color: 'var(--foreground)',
-                      outline: 'none',
-                    }}
-                  />
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    style={{ position: 'absolute', left: '8px', top: '8px', color: 'var(--accents-4)' }}
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  {sidebarSearch ? (
-                    <button
-                      type="button"
-                      onClick={() => setSidebarSearch('')}
-                      style={{ position: 'absolute', right: '6px', top: '6px', background: 'none', border: 'none', color: 'var(--accents-5)', cursor: 'pointer', padding: 0, fontSize: '11px' }}
-                    >
-                      ✕
-                    </button>
-                  ) : (
-                    <kbd style={{ position: 'absolute', right: '6px', top: '6px', fontSize: '9px', fontFamily: 'var(--font-mono)', padding: '1px 3px', background: 'var(--accents-2)', borderRadius: '3px', color: 'var(--accents-5)' }}>
-                      ⌘K
-                    </kbd>
-                  )}
-                </div>
-
-                {/* Technical Action Toolbar (3-button strip) */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleCreateNota(null)}
-                    className="geist-button-secondary"
-                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
-                    title="Nova Nota"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span>Nota</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTriggerCreatePasta(null)}
-                    className="geist-button-secondary"
-                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
-                    title="Nova Pasta"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
-                      <line x1="12" y1="10" x2="12" y2="16" />
-                      <line x1="9" y1="13" x2="15" y2="13" />
-                    </svg>
-                    <span>Pasta</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleCreateDesenho(null)}
-                    className="geist-button-secondary"
-                    style={{ height: '26px', padding: '0 6px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', borderRadius: '4px', cursor: 'pointer' }}
-                    title="Novo Canvas de Desenho"
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                    </svg>
-                    <span>Canvas</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Unified Document Tree */}
-              {renderFileTree()}
-
-              {/* Sidebar Technical Footer */}
-              <div
-                style={{
-                  borderTop: '1px solid var(--accents-2)',
-                  padding: '8px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: 'var(--background)',
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
-                  color: 'var(--accents-5)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
-                  <span>Online</span>
-                </div>
-                <span style={{ color: 'var(--accents-4)' }}>Ctrl+\ recolher</span>
-              </div>
-            </div>
-          </aside>
-        )}
-
-        {/* ─────────────────────────────────────────────────────────
-            MAIN WORKSPACE CONTENT CONTAINER (EDITOR / VIEWS)
-            ───────────────────────────────────────────────────────── */}
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative', paddingBottom: isMobile ? '64px' : '0' }}>
+        {/* COLUMN 3: MAIN WORKSPACE CONTENT CONTAINER (HEADER + VIEWS) */}
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative', background: 'var(--discord-canvas)', paddingBottom: isMobile ? '64px' : '0' }}>
           
-          {/* OPEN NOTE TABS SUB-BAR (ONLY IN NOTE/CANVAS VIEW) */}
-          {!isFlashcardsOpen && !isGraphViewOpen && (!isAiChatOpen || aiChatMode !== 'fullscreen') && (
-            <div 
-              style={{ 
-                height: '36px', 
-                minHeight: '36px',
-                borderBottom: '1px solid var(--accents-2)', 
-                background: 'var(--accents-1)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                padding: '0 12px 0 8px',
-                userSelect: 'none',
-                zIndex: 10
+          {/* DISCORD CHANNEL TOP HEADER */}
+          {!isAiChatOpen && (
+            <DiscordChannelHeader
+              selectedNota={selectedNota}
+              isGraphViewOpen={isGraphViewOpen}
+              isFlashcardsOpen={isFlashcardsOpen}
+              isAiChatOpen={isAiChatOpen}
+              isTerminalOpen={isTerminalOpen}
+              openTabs={openTabsList}
+              onSelectTab={openNota}
+              onCloseTab={(e, tabId) => handleCloseTab(tabId, e)}
+              onNewTab={() => handleCreateNota()}
+              saveStatus={saveStatus}
+              editTitle={editTitle}
+              setEditTitle={setEditTitle}
+              pastaName={pastas.find((p) => p.id === selectedNota?.pastaId)?.nome}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+              isSidebarOpen={isSidebarOpen}
+              onToggleRightSidebar={() => setIsRightSidebarOpen((prev) => !prev)}
+              isRightSidebarOpen={isRightSidebarOpen}
+              onToggleGraph={() => {
+                setIsGraphViewOpen((prev) => !prev);
+                if (!isGraphViewOpen) setIsFlashcardsOpen(false);
               }}
-            >
-              {/* Left: Reopen Sidebar + Tabs list */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', flex: 1, height: '100%', paddingRight: '8px' }} className="no-scrollbar">
-                {/* Reopen Sidebar Button if collapsed */}
-                {!isSidebarOpen && (
-                  <button
-                    onClick={() => setIsSidebarOpen(true)}
-                    className="geist-button-secondary"
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      padding: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      marginRight: '6px',
-                      flexShrink: 0
-                    }}
-                    title="Abrir barra lateral (Ctrl + \)"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect width="18" height="18" x="3" y="3" rx="2"/>
-                      <path d="M9 3v18"/>
-                      <path d="m14 9 3 3-3 3"/>
-                    </svg>
-                  </button>
-                )}
-
-                {/* List of open note tabs */}
-                {openTabIds.map((tabId, index) => {
-                  const tabNota = notas.find((n) => n.id === tabId);
-                  const isActive = selectedNota?.id === tabId;
-                  const isDrawing = (isActive ? selectedNota?.tipo : tabNota?.tipo) === 'desenho';
-                  const title = (isActive ? editTitle : tabNota?.titulo) || tabNota?.titulo || (isDrawing ? 'Novo Desenho' : 'Sem Título');
-
-                  return (
-                    <div
-                      key={tabId}
-                      onClick={() => {
-                        if (tabNota) openNota(tabNota);
-                      }}
-                      onAuxClick={(e) => {
-                        if (e.button === 1) {
-                          e.preventDefault();
-                          handleCloseTab(tabId);
-                        }
-                      }}
-                      title={`${title} (Ctrl+${index + 1})`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '0 10px',
-                        height: '26px',
-                        fontSize: '12px',
-                        fontWeight: isActive ? 500 : 400,
-                        color: isActive ? 'var(--foreground)' : 'var(--accents-5)',
-                        background: isActive ? 'var(--background)' : 'transparent',
-                        border: isActive ? '1px solid var(--accents-2)' : '1px solid transparent',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        flexShrink: 0,
-                        maxWidth: '180px',
-                        transition: 'all var(--duration-smooth) var(--ease-smooth)',
-                      }}
-                      className={`group active:scale-[0.98] ${!isActive ? 'hover:bg-[var(--accents-2)] hover:text-[var(--foreground)]' : ''}`}
-                    >
-                      {isDrawing ? (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                        </svg>
-                      ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }}>
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                          <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                      )}
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {title}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleCloseTab(tabId, e)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '14px',
-                          height: '14px',
-                          borderRadius: '3px',
-                          border: 'none',
-                          background: 'transparent',
-                          cursor: 'pointer',
-                          color: 'inherit',
-                          padding: 0,
-                          flexShrink: 0
-                        }}
-                        className="hover:bg-[var(--accents-3)] hover:text-[var(--foreground)] opacity-60 hover:opacity-100 transition-opacity"
-                        title="Fechar aba"
-                      >
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <line x1="18" y1="6" x2="6" y2="18"/>
-                          <line x1="6" y1="6" x2="18" y2="18"/>
-                        </svg>
-                      </button>
-                    </div>
-                  );
-                })}
-
-                {/* Quick New Note tab button */}
-                <button
-                  onClick={() => handleCreateNota(null)}
-                  className="hover:bg-[var(--accents-2)]"
-                  style={{
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--accents-5)',
-                    cursor: 'pointer',
-                    flexShrink: 0
-                  }}
-                  title="Nova nota"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Right: Actions menu */}
-              {selectedNota && (
-                <div className="relative flex items-center" ref={actionsMenuRef}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsActionsMenuOpen((prev) => !prev);
-                      setActiveSubmenu('none');
-                    }}
-                    className="geist-button-secondary"
-                    style={{
-                      height: '24px',
-                      padding: '0 8px',
-                      fontSize: '11px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                    title="Opções de tipografia e visualização"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="12" cy="12" r="1"/>
-                      <circle cx="19" cy="12" r="1"/>
-                      <circle cx="5" cy="12" r="1"/>
-                    </svg>
-                    <span className="hidden sm:inline">Opções</span>
-                  </button>
-
-                  {/* Actions Dropdown */}
-                  {isActionsMenuOpen && (
-                    <div
-                      className="absolute right-0 top-7 z-50 w-56 p-1 bg-[var(--background)] border border-[var(--accents-2)] rounded-lg shadow-xl text-[12px] text-[var(--foreground)]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-[var(--accents-5)] border-b border-[var(--accents-2)] mb-1">
-                        Formatação
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setActiveSubmenu(activeSubmenu === 'font' ? 'none' : 'font')}
-                        className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
-                      >
-                        <span>Fonte</span>
-                        <span className="text-[11px] text-[var(--accents-5)] font-mono">{TOP_FONTS.find(f => f.family === editorFontFamily)?.name || 'Geist'}</span>
-                      </button>
-
-                      {activeSubmenu === 'font' && (
-                        <div className="mt-1 p-1 bg-[var(--accents-1)] rounded border border-[var(--accents-2)] max-h-48 overflow-y-auto">
-                          {TOP_FONTS.map(f => (
-                            <button
-                              key={f.id}
-                              type="button"
-                              onClick={() => {
-                                setEditorFontFamily(f.family);
-                                setActiveSubmenu('none');
-                              }}
-                              className={`w-full text-left px-2 py-1 rounded text-[11px] ${editorFontFamily === f.family ? 'bg-[var(--foreground)] text-[var(--background)] font-medium' : 'hover:bg-[var(--accents-2)] text-[var(--foreground)]'}`}
-                            >
-                              {f.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveSubmenu(activeSubmenu === 'size' ? 'none' : 'size')}
-                        className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
-                      >
-                        <span>Tamanho</span>
-                        <span className="text-[11px] text-[var(--accents-5)] font-mono">{editorFontSize}</span>
-                      </button>
-
-                      {activeSubmenu === 'size' && (
-                        <div className="mt-1 p-1 bg-[var(--accents-1)] rounded border border-[var(--accents-2)]">
-                          {FONT_SIZES.map(s => (
-                            <button
-                              key={s.value}
-                              type="button"
-                              onClick={() => {
-                                setEditorFontSize(s.value);
-                                setActiveSubmenu('none');
-                              }}
-                              className={`w-full text-left px-2 py-1 rounded text-[11px] ${editorFontSize === s.value ? 'bg-[var(--foreground)] text-[var(--background)] font-medium' : 'hover:bg-[var(--accents-2)] text-[var(--foreground)]'}`}
-                            >
-                              {s.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="my-1 border-t border-[var(--accents-2)]" />
-
-                      <button
-                        type="button"
-                        onClick={() => handleExportNota(selectedNota.id)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--accents-1)] text-left"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                          <polyline points="7 10 12 15 17 10"/>
-                          <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        <span>Exportar Markdown</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+              onToggleFlashcards={() => {
+                setIsFlashcardsOpen((prev) => !prev);
+                if (!isFlashcardsOpen) setIsGraphViewOpen(false);
+              }}
+              onToggleAiChat={() => setIsAiChatOpen((prev) => !prev)}
+              onOpenShareModal={() => setIsShareModalOpen(true)}
+            />
           )}
           
           {/* CSS for spinner */}
@@ -2306,19 +1529,22 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               onUpdateWorkspace={(updated) => setWorkspace(updated)}
             />
           </div>
-        ) : isAiChatOpen && aiChatMode === 'fullscreen' ? (
+        ) : isAiChatOpen ? (
           <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
             <AiChatView
               workspaceId={id}
+              notas={notas}
+              pastas={pastas}
+              currentUser={currentUser}
               activeNote={selectedNota}
               onOpenNota={(nota) => {
                 openNota(nota);
-                setAiChatMode('drawer');
+                setIsAiChatOpen(false);
               }}
               onRefreshWorkspace={refreshData}
               onClose={() => setIsAiChatOpen(false)}
-              isDrawer={false}
-              onToggleDrawerMode={() => setAiChatMode('drawer')}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+              isSidebarOpen={isSidebarOpen}
             />
           </div>
         ) : (
@@ -2326,13 +1552,14 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             {selectedNota?.tipo === 'desenho' ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             {/* Minimal Title Header for Canvas */}
-            <div style={{ padding: '8px 16px', background: 'var(--accents-1)', borderBottom: '1px solid var(--accents-2)', display: 'flex', alignItems: 'center' }}>
+            <div style={{ padding: '8px 16px', background: 'var(--discord-sidebar)', borderBottom: '1px solid var(--discord-border)', display: 'flex', alignItems: 'center' }}>
               <input
                 ref={titleInputRef}
                 value={editTitle}
                 onChange={handleTitleChange}
                 onKeyDown={handleTitleKeyDown}
                 placeholder="Nome do Desenho..."
+                readOnly={currentUserRole === 'VIEWER'}
                 style={{ fontSize: '15px', fontWeight: 600, border: 'none', background: 'transparent', outline: 'none', width: '100%', color: 'var(--foreground)' }}
               />
             </div>
@@ -2352,7 +1579,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             </div>
             {/* Bottom-Right Floating Status Pill for Canvas */}
             <div 
-              className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--background)]/90 backdrop-blur-md border border-[var(--accents-2)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--accents-5)] select-none pointer-events-auto"
+              className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--discord-sidebar)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--discord-text-muted)] select-none pointer-events-auto"
             >
               <div className="flex items-center gap-1.5 text-[var(--accents-5)]">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -2410,6 +1637,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                         onChange={handleTitleChange}
                         onKeyDown={handleTitleKeyDown}
                         placeholder="Sem Título"
+                        readOnly={currentUserRole === 'VIEWER'}
                         style={{ 
                           fontFamily: editorFontFamily || 'inherit',
                           fontSize: isMobile ? '24px' : '32px', 
@@ -2430,6 +1658,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                         notaId={selectedNota?.id}
                         value={editContentRef.current}
                         onChange={handleContentChange}
+                        readOnly={currentUserRole === 'VIEWER'}
                         onCursorLineChange={setCurrentLine}
                         fontFamily={editorFontFamily}
                         fontSize={editorFontSize}
@@ -2457,7 +1686,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
 
                 {/* Bottom-Right Floating Status & Statistics Pill */}
                 <div 
-                  className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--background)]/90 backdrop-blur-md border border-[var(--accents-2)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--accents-5)] select-none pointer-events-auto"
+                  className="absolute bottom-4 right-4 z-20 flex items-center gap-2.5 px-3.5 py-1.5 bg-[var(--discord-sidebar)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-full shadow-lg shadow-black/25 text-[11px] font-mono text-[var(--discord-text-muted)] select-none pointer-events-auto"
                 >
                   {/* Active Cursor Line */}
                   <div className="flex items-center gap-1 text-[var(--foreground)] font-medium whitespace-nowrap" title="Linha atual onde o cursor está posicionado">
@@ -2563,7 +1792,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                     {/* Popover Dropdown (Opens upwards) */}
                     {isActionsMenuOpen && (
                       <div
-                        className="absolute bottom-full right-0 mb-2 w-64 bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 backdrop-blur-md animate-smooth-pop text-xs text-[var(--foreground)] z-50 select-none font-sans"
+                        className="absolute bottom-full right-0 mb-2 w-64 bg-[var(--discord-sidebar)]/95 border border-[var(--discord-border)] rounded-lg shadow-2xl p-1.5 backdrop-blur-md animate-smooth-pop text-xs text-[var(--discord-text-primary)] z-50 select-none font-sans"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {activeSubmenu === 'none' && (
@@ -2852,23 +2081,43 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {/* Synap AI Side-Panel Drawer */}
-        {isAiChatOpen && aiChatMode === 'drawer' && (
-          <div className="w-[380px] sm:w-[420px] lg:w-[460px] h-full shrink-0 flex flex-col z-10 transition-all">
-            <AiChatView
-              workspaceId={id}
-              activeNote={selectedNota}
-              onOpenNota={(nota) => openNota(nota)}
-              onRefreshWorkspace={refreshData}
-              onClose={() => setIsAiChatOpen(false)}
-              isDrawer={true}
-              onToggleDrawerMode={() => setAiChatMode('fullscreen')}
-            />
-          </div>
-        )}
       </div>
     )}
         </main>
+
+        {/* COLUMN 4: DISCORD RIGHT TOOLS SIDEBAR (220px) */}
+        {!isMobile && (
+          <DiscordToolsSidebar
+            isOpen={isRightSidebarOpen}
+            onClose={() => setIsRightSidebarOpen(false)}
+            isGraphViewOpen={isGraphViewOpen}
+            isFlashcardsOpen={isFlashcardsOpen}
+            isAiChatOpen={isAiChatOpen}
+            isTerminalOpen={isTerminalOpen}
+            onToggleGraph={() => {
+              setIsGraphViewOpen((prev) => !prev);
+              if (!isGraphViewOpen) {
+                setIsFlashcardsOpen(false);
+                setIsAiChatOpen(false);
+              }
+            }}
+            onToggleFlashcards={() => {
+              setIsFlashcardsOpen((prev) => !prev);
+              if (!isFlashcardsOpen) {
+                setIsGraphViewOpen(false);
+                setIsAiChatOpen(false);
+              }
+            }}
+            onToggleAiChat={() => {
+              setIsAiChatOpen((prev) => !prev);
+              if (!isAiChatOpen) {
+                setIsGraphViewOpen(false);
+                setIsFlashcardsOpen(false);
+              }
+            }}
+            onToggleTerminal={() => setIsTerminalOpen((prev) => !prev)}
+          />
+        )}
       </div>
 
         {/* Retractable Bottom Terminal Drawer (VS Code style) */}
@@ -2904,7 +2153,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         )}
 
         {/* Share Workspace Modal */}
-        {workspace?.isCollaborative && (
+        {workspace?.isCollaborative && isOwner && (
           <ShareWorkspaceModal
             workspaceId={workspace.id}
             isOpen={isShareModalOpen}
@@ -2932,6 +2181,33 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           onConfirm={handleConfirmFolderModal}
         />
 
+        {/* Discord Create Workspace Modal */}
+        <CreateWorkspaceModal
+          isOpen={isCreateWorkspaceModalOpen}
+          onClose={() => setIsCreateWorkspaceModalOpen(false)}
+          onWorkspaceCreated={handleWorkspaceCreated}
+          showToast={showToast}
+        />
+
+        {/* Discord Workspace Settings Modal */}
+        <WorkspaceSettingsModal
+          isOpen={isWorkspaceSettingsModalOpen}
+          workspace={workspace}
+          isOwner={isOwner}
+          onClose={() => setIsWorkspaceSettingsModalOpen(false)}
+          onWorkspaceUpdated={handleWorkspaceUpdated}
+          onWorkspaceDeleted={handleWorkspaceDeleted}
+          showToast={showToast}
+        />
+
+        {/* Leave Workspace Modal */}
+        <LeaveWorkspaceModal
+          isOpen={isLeaveModalOpen}
+          workspaceId={workspace?.id || ''}
+          workspaceNome={workspace?.nome || ''}
+          onClose={() => setIsLeaveModalOpen(false)}
+        />
+
       {/* MOBILE BOTTOM NAVIGATION */}
       {isMobile && (
         <div 
@@ -2941,8 +2217,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             left: 0,
             right: 0,
             height: '64px',
-            background: 'var(--background)',
-            borderTop: '1px solid var(--accents-2)',
+            background: '#1e1f22',
+            borderTop: '1px solid #383a40',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-around',
@@ -2952,7 +2228,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         >
           <button 
             onClick={() => setIsMobileFilesSheetOpen(true)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isMobileFilesSheetOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isMobileFilesSheetOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Arquivos</span>
@@ -2963,7 +2239,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsGraphViewOpen(false);
               setIsFlashcardsOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: !isGraphViewOpen && !isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: !isGraphViewOpen && !isFlashcardsOpen && !isAiChatOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Notas</span>
@@ -2973,10 +2249,11 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             onClick={() => {
               setIsGraphViewOpen(true);
               setIsFlashcardsOpen(false);
+              setIsAiChatOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isGraphViewOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isGraphViewOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="3" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Grafo</span>
           </button>
 
@@ -2986,7 +2263,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsGraphViewOpen(false);
               setIsAiChatOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Cards</span>
@@ -2995,11 +2272,10 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           <button 
             onClick={() => {
               setIsAiChatOpen(prev => !prev);
-              setAiChatMode('fullscreen');
               setIsFlashcardsOpen(false);
               setIsGraphViewOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isAiChatOpen ? 'var(--foreground)' : 'var(--accents-5)', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isAiChatOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
@@ -3015,18 +2291,19 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           {/* Backdrop */}
           <div 
             onClick={() => setIsMobileFilesSheetOpen(false)}
-            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(2px)' }}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
           />
           {/* Sheet */}
           <div style={{ 
             position: 'relative', 
-            background: 'var(--accents-1)', 
+            background: '#2b2d31', 
             height: '75vh', 
             borderTopLeftRadius: '16px', 
             borderTopRightRadius: '16px',
+            borderTop: '1px solid #383a40',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 -4px 24px rgba(0,0,0,0.3)',
+            boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
             animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
           }}>
             {/* Drag Handle / Header */}
@@ -3034,25 +2311,31 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               onClick={() => setIsMobileFilesSheetOpen(false)}
               style={{ padding: '12px', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
             >
-              <div style={{ width: '40px', height: '4px', background: 'var(--accents-3)', borderRadius: '2px' }} />
+              <div style={{ width: '40px', height: '4px', background: '#4e5058', borderRadius: '2px' }} />
             </div>
             
-            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--accents-2)' }}>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Arquivos</h3>
+            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #383a40' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>Arquivos</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => handleTriggerCreatePasta(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova pasta">
+                <button 
+                  onClick={() => handleTriggerCreatePasta(null)} 
+                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer" 
+                  title="Nova pasta"
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
                 </button>
-                <button onClick={() => handleCreateNota(null)} className="geist-button-secondary" style={{ padding: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }} title="Nova nota">
+                <button 
+                  onClick={() => handleCreateNota(null)} 
+                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer" 
+                  title="Nova nota"
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </button>
               </div>
             </div>
             
             {/* Tree Container */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} onClick={(e) => {
-               // Optional: close sheet when clicking a file, but keeping it simple for now
-            }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
               {renderFileTree()}
             </div>
           </div>
