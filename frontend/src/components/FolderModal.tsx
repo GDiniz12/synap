@@ -93,174 +93,93 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2000,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[420px] w-full"
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '12px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
+        className="w-full max-w-[420px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'var(--accents-1)',
-              border: '1px solid var(--accents-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--foreground)',
-              flexShrink: 0,
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
-            </svg>
-          </div>
-          <div>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '16px',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                lineHeight: 1.2,
-              }}
-            >
-              {title}
-            </h3>
-            {data.parentFolderName && !isRename && (
-              <span
-                style={{
-                  fontSize: '12px',
-                  color: 'var(--accents-5)',
-                  display: 'block',
-                  marginTop: '2px',
-                }}
+        <div className="p-6 flex flex-col gap-4">
+          {/* Header */}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-[#20b8cd]/15 text-[#20b8cd] border border-[#20b8cd]/30 flex items-center justify-center shrink-0">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                Dentro de: <strong style={{ color: 'var(--foreground)' }}>{data.parentFolderName}</strong>
-              </span>
-            )}
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-white leading-tight">
+                {title}
+              </h3>
+              {data.parentFolderName && !isRename && (
+                <span className="text-xs text-[#949ba4] block mt-0.5">
+                  Dentro de: <strong className="text-white">{data.parentFolderName}</strong>
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Form */}
+          <form id="folder-modal-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <div>
+              <label
+                htmlFor="folder-name-input"
+                className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[#949ba4] mb-1.5"
+              >
+                Nome da Pasta
+              </label>
+              <input
+                id="folder-name-input"
+                ref={inputRef}
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="Ex: Projetos, Estudos, Ideias..."
+                disabled={loading}
+                className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+              />
+              {error && (
+                <span className="block text-[#f23f43] text-xs mt-1.5 font-medium">
+                  {error}
+                </span>
+              )}
+            </div>
+          </form>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label
-              htmlFor="folder-name-input"
-              style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--accents-6)',
-                marginBottom: '6px',
-              }}
-            >
-              Nome da Pasta
-            </label>
-            <input
-              id="folder-name-input"
-              ref={inputRef}
-              type="text"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (error) setError('');
-              }}
-              placeholder="Ex: Projetos, Estudos, Ideias..."
-              disabled={loading}
-              className="geist-input"
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '0 12px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                outline: 'none',
-              }}
-            />
-            {error && (
-              <span
-                style={{
-                  display: 'block',
-                  color: 'var(--error)',
-                  fontSize: '12px',
-                  marginTop: '6px',
-                }}
-              >
-                {error}
-              </span>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="geist-button-secondary"
-              style={{
-                height: '34px',
-                padding: '0 14px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading || !name.trim()}
-              className="geist-button"
-              style={{
-                height: '34px',
-                padding: '0 16px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: loading || !name.trim() ? 'not-allowed' : 'pointer',
-                opacity: loading || !name.trim() ? 0.6 : 1,
-              }}
-            >
-              {loading ? (isRename ? 'Salvando...' : 'Criando...') : isRename ? 'Salvar' : 'Criar Pasta'}
-            </button>
-          </div>
-        </form>
+        {/* Discord Action Footer */}
+        <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="folder-modal-form"
+            disabled={loading || !name.trim()}
+            className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-sm transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (isRename ? 'Salvando...' : 'Criando...') : isRename ? 'Salvar' : 'Criar Pasta'}
+          </button>
+        </div>
       </div>
     </div>
   );

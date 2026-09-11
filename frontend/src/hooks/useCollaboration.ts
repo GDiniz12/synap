@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
+export interface CollaboratorUser {
+  id: string;
+  name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
+  color: string;
+}
+
 export interface RemoteCursor {
   id: string;
   name: string;
+  username?: string | null;
+  avatarUrl?: string | null;
   color: string;
   x: number;
   y: number;
@@ -39,7 +49,7 @@ export function useCollaboration(
   valueType: 'document_change' | 'drawing_change',
   onRemoteChange: (newValue: string) => void
 ) {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<CollaboratorUser[]>([]);
   const [cursors, setCursors] = useState<Record<string, RemoteCursor>>({});
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const wsRef = useRef<WebSocket | null>(null);
@@ -100,8 +110,8 @@ export function useCollaboration(
           }
         };
         
-        ws.onerror = (err) => {
-          console.error('[useCollaboration] WebSocket error:', err);
+        ws.onerror = () => {
+          // Set disconnected status gracefully when WebSocket is unreachable or offline
           setStatus('disconnected');
         };
       
@@ -122,7 +132,7 @@ export function useCollaboration(
         try {
           const data = JSON.parse(event.data);
           if (data.type === 'presence') {
-            setUsers(data.users);
+            setUsers(data.users || []);
           } else if (data.type === 'cursor_move') {
             // Never track or display own cursor
             if (myUserId && data.userId === myUserId) {
@@ -132,7 +142,9 @@ export function useCollaboration(
               ...prev,
               [data.userId]: {
                 id: data.userId,
-                name: data.userName || 'Anônimo',
+                name: data.userName || (data.username ? `@${data.username}` : 'Anônimo'),
+                username: data.username || null,
+                avatarUrl: data.avatarUrl || null,
                 color: data.color || '#3b82f6',
                 x: data.x,
                 y: data.y,

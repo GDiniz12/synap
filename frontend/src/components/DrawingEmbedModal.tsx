@@ -51,187 +51,154 @@ export default function DrawingEmbedModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-        padding: '16px',
-      }}
+      className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="animate-smooth-pop"
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '10px',
-          width: '100%',
-          maxWidth: '480px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4)',
-        }}
+        className="w-full max-w-[480px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-            </svg>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--foreground)' }}>
-              Inserir Desenho / Canvas
-            </h3>
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-[#383a40] bg-[#1e1f22] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#20b8cd]/15 text-[#20b8cd] border border-[#20b8cd]/30 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white leading-tight">
+                Inserir Canvas / Desenho
+              </h3>
+              <span className="text-xs text-[#949ba4]">
+                Crie um novo desenho vetorial ou incorpore um existente
+              </span>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="geist-button-secondary"
-            style={{ width: '24px', height: '24px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
+            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+            aria-label="Fechar"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div style={{ display: 'flex', gap: '6px', padding: '3px', background: 'var(--accents-1)', border: '1px solid var(--accents-2)', borderRadius: '6px', marginBottom: '16px' }}>
-          <button
-            type="button"
-            onClick={() => setTab('create')}
-            style={{
-              flex: 1,
-              height: '28px',
-              fontSize: '12px',
-              fontWeight: tab === 'create' ? 600 : 500,
-              background: tab === 'create' ? 'var(--background)' : 'transparent',
-              color: tab === 'create' ? 'var(--foreground)' : 'var(--accents-5)',
-              border: tab === 'create' ? '1px solid var(--accents-2)' : 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Novo Desenho
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('existing')}
-            style={{
-              flex: 1,
-              height: '28px',
-              fontSize: '12px',
-              fontWeight: tab === 'existing' ? 600 : 500,
-              background: tab === 'existing' ? 'var(--background)' : 'transparent',
-              color: tab === 'existing' ? 'var(--foreground)' : 'var(--accents-5)',
-              border: tab === 'existing' ? '1px solid var(--accents-2)' : 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Desenho Existente ({existingDrawings.length})
-          </button>
+        <div className="p-5 pb-0">
+          <div className="flex gap-1.5 p-1 bg-[#1e1f22] border border-[#383a40] rounded-lg">
+            <button
+              type="button"
+              onClick={() => setTab('create')}
+              className={`flex-1 h-8 text-xs font-medium rounded transition-colors cursor-pointer ${
+                tab === 'create'
+                  ? 'bg-[#20b8cd] text-white shadow-xs font-semibold'
+                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+              }`}
+            >
+              Novo Desenho
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('existing')}
+              className={`flex-1 h-8 text-xs font-medium rounded transition-colors cursor-pointer ${
+                tab === 'existing'
+                  ? 'bg-[#20b8cd] text-white shadow-xs font-semibold'
+                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+              }`}
+            >
+              Desenho Existente ({existingDrawings.length})
+            </button>
+          </div>
         </div>
 
-        {tab === 'create' ? (
-          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--accents-5)', display: 'block', marginBottom: '6px' }}>
-                Título do Desenho
-              </label>
-              <input
-                type="text"
-                value={drawingTitle}
-                onChange={(e) => setDrawingTitle(e.target.value)}
-                placeholder="Ex: Diagrama de Arquitetura, Rascunho..."
-                autoFocus
-                style={{
-                  width: '100%',
-                  height: '36px',
-                  padding: '0 10px',
-                  background: 'var(--background)',
-                  border: '1px solid var(--accents-2)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  color: 'var(--foreground)',
-                  outline: 'none',
-                }}
-              />
-            </div>
+        {/* Body Content */}
+        <div className="p-5">
+          {tab === 'create' ? (
+            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#949ba4]">
+                  Título do Desenho
+                </label>
+                <input
+                  type="text"
+                  value={drawingTitle}
+                  onChange={(e) => setDrawingTitle(e.target.value)}
+                  placeholder="Ex: Diagrama Conceitual, Rascunho de Ideias..."
+                  autoFocus
+                  className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+                />
+              </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={onClose}
-                className="geist-button-secondary"
-                style={{ height: '32px', padding: '0 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={creating}
-                className="geist-button"
-                style={{ height: '32px', padding: '0 14px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer' }}
-              >
-                {creating ? 'Criando...' : 'Criar e Inserir'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ maxHeight: '240px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {existingDrawings.length === 0 ? (
-                <div style={{ padding: '24px 0', textAlign: 'center', fontSize: '12px', color: 'var(--accents-4)' }}>
-                  Nenhum desenho encontrado no workspace.
-                </div>
-              ) : (
-                existingDrawings.map((drawing) => (
-                  <div
-                    key={drawing.id}
-                    onClick={() => {
-                      onSelectDrawing(drawing);
-                      onClose();
-                    }}
-                    className="hover:bg-[var(--accents-2)]"
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--accents-2)',
-                      background: 'var(--accents-1)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accents-5)' }}>
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                      </svg>
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--foreground)' }}>
-                        {drawing.titulo}
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#383a40]">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {creating ? 'Criando...' : 'Criar e Inserir'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="max-h-[260px] overflow-y-auto flex flex-col gap-1.5 no-scrollbar pr-1">
+                {existingDrawings.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-[#949ba4]">
+                    Nenhum desenho encontrado neste workspace.
+                  </div>
+                ) : (
+                  existingDrawings.map((drawing) => (
+                    <div
+                      key={drawing.id}
+                      onClick={() => {
+                        onSelectDrawing(drawing);
+                        onClose();
+                      }}
+                      className="p-3 rounded-lg border border-[#383a40] bg-[#1e1f22] hover:bg-[#35373c] hover:border-[#20b8cd]/50 cursor-pointer flex items-center justify-between transition-all group"
+                    >
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="w-6 h-6 rounded bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[#949ba4] group-hover:text-[#20b8cd] shrink-0 transition-colors">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-medium text-white truncate">
+                          {drawing.titulo || 'Desenho sem título'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-medium text-[#20b8cd] shrink-0 flex items-center gap-1 opacity-80 group-hover:opacity-100">
+                        Selecionar →
                       </span>
                     </div>
-                    <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>
-                      Selecionar →
-                    </span>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
+              <div className="flex justify-end pt-3 border-t border-[#383a40]">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-dev';
 const rooms = new Map<string, Set<WebSocket>>();
 
 // Map to store user info per socket
-const socketUsers = new WeakMap<WebSocket, { id: string; name: string; color: string }>();
+interface SocketUser {
+  id: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  color: string;
+}
+
+const socketUsers = new WeakMap<WebSocket, SocketUser>();
 
 function generateColor(id: string) {
   let hash = 0;
@@ -38,7 +46,7 @@ function broadcastUsersList(roomId: string) {
   if (!clients) return;
   
   // Get all users in the room and deduplicate by userId
-  const uniqueUsersMap = new Map<string, any>();
+  const uniqueUsersMap = new Map<string, SocketUser>();
   
   Array.from(clients).forEach(client => {
     const user = socketUsers.get(client);
@@ -72,12 +80,19 @@ export function initializeWebSockets(wss: WebSocketServer) {
 
     const userId = decoded.userId;
     
-    // Fetch user name from DB
+    // Fetch user details from DB
     let userName = 'Usuário';
+    let userUsername: string | null = null;
+    let userAvatarUrl: string | null = null;
     try {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
+      const user = await prisma.user.findUnique({ 
+        where: { id: userId },
+        select: { id: true, name: true, username: true, email: true, avatarUrl: true }
+      });
       if (user) {
-        userName = user.name || user.email.split('@')[0];
+        userName = user.name || (user.username ? `@${user.username}` : user.email.split('@')[0]);
+        userUsername = user.username;
+        userAvatarUrl = user.avatarUrl;
       }
     } catch (e) {
       console.error('Failed to fetch user', e);
@@ -87,6 +102,8 @@ export function initializeWebSockets(wss: WebSocketServer) {
     socketUsers.set(ws, { 
       id: userId, 
       name: userName,
+      username: userUsername,
+      avatarUrl: userAvatarUrl,
       color: generateColor(userId)
     });
 
@@ -112,6 +129,8 @@ export function initializeWebSockets(wss: WebSocketServer) {
             type: 'cursor_move',
             userId: user.id,
             userName: user.name,
+            username: user.username,
+            avatarUrl: user.avatarUrl,
             color: user.color,
             x: data.x,
             y: data.y,
@@ -130,6 +149,8 @@ export function initializeWebSockets(wss: WebSocketServer) {
           type: 'cursor_move',
           userId: user.id,
           userName: user.name,
+          username: user.username,
+          avatarUrl: user.avatarUrl,
           color: user.color,
           active: false
         }, ws);

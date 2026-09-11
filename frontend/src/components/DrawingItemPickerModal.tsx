@@ -50,67 +50,48 @@ export default function DrawingItemPickerModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2500,
-        background: 'rgba(0, 0, 0, 0.7)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        userSelect: 'none',
-      }}
+      className="fixed inset-0 z-[2500] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '12px',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.4)',
-          width: '100%',
-          maxWidth: '480px',
-          maxHeight: '520px',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
+        className="bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl w-full max-w-[480px] max-h-[520px] flex flex-col overflow-hidden animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--accents-2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--accents-1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="px-5 py-4 border-b border-[var(--discord-border)] flex items-center justify-between bg-[var(--discord-sidebar)]">
+          <div className="flex items-center gap-2.5">
             {type === 'nota' ? (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--foreground)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--discord-text-channel)]">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
             ) : (
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--foreground)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--discord-text-channel)]">
                 <rect width="18" height="14" x="3" y="5" rx="2"/>
                 <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
             )}
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
+            <h3 className="m-0 text-sm font-semibold text-[var(--discord-text-primary)]">
               {type === 'nota' ? 'Inserir Nota no Desenho' : 'Inserir Flashcard no Desenho'}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="geist-button-secondary"
-            style={{ width: '26px', height: '26px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
+            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--discord-text-muted)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+            aria-label="Fechar"
           >
-            ✕
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
         {/* Search Bar */}
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--accents-2)', background: 'var(--background)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 10px', height: '36px', background: 'var(--accents-1)', border: '1px solid var(--accents-2)', borderRadius: '6px' }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--accents-4)]">
+        <div className="px-4 py-3 border-b border-[var(--discord-border)] bg-[var(--discord-sidebar)]">
+          <div className="flex items-center gap-2 px-2.5 h-9 bg-[var(--discord-input)] border border-[var(--discord-border)] focus-within:border-[var(--brand)] rounded-[4px] transition-colors">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-muted)]">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -120,20 +101,20 @@ export default function DrawingItemPickerModal({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
-              style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--foreground)' }}
+              className="w-full bg-transparent border-none outline-none text-xs text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)]"
             />
           </div>
         </div>
 
         {/* List of Items */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '6px' }} className="no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 no-scrollbar">
           {type === 'card' ? (
             loadingCards ? (
-              <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--accents-4)', fontSize: '13px' }}>
+              <div className="py-9 px-4 text-center text-[var(--discord-text-muted)] text-xs">
                 Carregando flashcards...
               </div>
             ) : filteredCards.length === 0 ? (
-              <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--accents-4)', fontSize: '13px' }}>
+              <div className="py-9 px-4 text-center text-[var(--discord-text-muted)] text-xs">
                 Nenhum flashcard encontrado. Crie cards na aba Flashcards primeiro.
               </div>
             ) : (
@@ -145,31 +126,18 @@ export default function DrawingItemPickerModal({
                     onSelect(card);
                     onClose();
                   }}
-                  className="hover:bg-[var(--accents-2)]"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    gap: '4px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    background: 'var(--accents-1)',
-                    border: '1px solid var(--accents-2)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease',
-                  }}
+                  className="flex flex-col items-start gap-1 p-2.5 rounded-[6px] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] border border-[var(--discord-border)] cursor-pointer text-left transition-colors"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--foreground)' }}>
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-semibold text-[var(--discord-text-primary)]">
                       {card.frente || 'Card sem pergunta'}
                     </span>
-                    <span style={{ fontSize: '10px', color: 'var(--accents-5)', border: '1px solid var(--accents-2)', padding: '1px 6px', borderRadius: '4px', background: 'var(--background)' }}>
+                    <span className="text-[10px] font-mono text-[var(--discord-text-muted)] border border-[var(--discord-border)] px-1.5 py-0.5 rounded-[3px] bg-[var(--discord-input)]">
                       Card
                     </span>
                   </div>
                   {card.verso && (
-                    <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--accents-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                    <p className="m-0 text-[11px] text-[var(--discord-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap w-full">
                       {card.verso}
                     </p>
                   )}
@@ -178,7 +146,7 @@ export default function DrawingItemPickerModal({
             )
           ) : (
             filteredNotas.length === 0 ? (
-              <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--accents-4)', fontSize: '13px' }}>
+              <div className="py-9 px-4 text-center text-[var(--discord-text-muted)] text-xs">
                 Nenhuma nota encontrada.
               </div>
             ) : (
@@ -198,31 +166,18 @@ export default function DrawingItemPickerModal({
                       onSelect(nota);
                       onClose();
                     }}
-                    className="hover:bg-[var(--accents-2)]"
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'flex-start',
-                      gap: '4px',
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      background: 'var(--accents-1)',
-                      border: '1px solid var(--accents-2)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.15s ease',
-                    }}
+                    className="flex flex-col items-start gap-1 p-2.5 rounded-[6px] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] border border-[var(--discord-border)] cursor-pointer text-left transition-colors"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--foreground)' }}>
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-semibold text-[var(--discord-text-primary)]">
                         {nota.titulo || 'Sem Título'}
                       </span>
-                      <span style={{ fontSize: '10px', color: 'var(--accents-5)', border: '1px solid var(--accents-2)', padding: '1px 6px', borderRadius: '4px', background: 'var(--background)' }}>
+                      <span className="text-[10px] font-mono text-[var(--discord-text-muted)] border border-[var(--discord-border)] px-1.5 py-0.5 rounded-[3px] bg-[var(--discord-input)]">
                         Nota
                       </span>
                     </div>
                     {preview && (
-                      <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--accents-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>
+                      <p className="m-0 text-[11px] text-[var(--discord-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap w-full">
                         {preview}
                       </p>
                     )}

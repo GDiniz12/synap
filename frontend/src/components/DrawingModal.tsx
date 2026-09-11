@@ -51,47 +51,17 @@ export default function DrawingModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2000,
-        background: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0',
-        userSelect: 'none',
-      }}
+      className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-xs flex flex-col items-center justify-center p-0 md:p-6 select-none animate-in fade-in duration-150"
       onClick={handleSaveAndClose}
     >
       <div
-        className="mobile-fullscreen-dialog md:w-[92vw] md:max-w-[1200px] md:h-[85vh] md:max-h-[900px] md:rounded-xl h-full w-full animate-smooth-pop"
-        style={{
-          background: '#0a0a0a',
-          border: '1px solid var(--accents-2)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.4)',
-          overflow: 'hidden',
-        }}
+        className="mobile-fullscreen-dialog md:w-[94vw] md:max-w-[1300px] md:h-[88vh] md:max-h-[920px] md:rounded-[8px] h-full w-full bg-[var(--discord-canvas)] border border-[var(--discord-border)] shadow-2xl flex flex-col overflow-hidden animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
-        <div
-          style={{
-            height: '48px',
-            borderBottom: '1px solid #242424',
-            padding: '0 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: '#141414',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--accents-5)' }}>
+        <div className="h-12 border-b border-[var(--discord-border)] px-4 flex items-center justify-between bg-[var(--discord-sidebar)]">
+          <div className="flex items-center gap-2.5 flex-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--discord-text-channel)]">
               <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
             </svg>
             <input
@@ -99,40 +69,36 @@ export default function DrawingModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Nome do desenho..."
-              style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                width: '320px',
-              }}
+              className="text-sm font-semibold text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] bg-transparent border-none outline-none w-80"
             />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleSaveAndClose}
-              className="geist-button"
-              style={{ height: '28px', padding: '0 12px', fontSize: '12px', borderRadius: '4px', cursor: 'pointer' }}
+              disabled={saving}
+              className="h-7 px-3 text-xs font-semibold rounded-[4px] bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
             >
               {saving ? 'Salvando...' : 'Salvar e Concluir'}
             </button>
             <button
               type="button"
               onClick={handleSaveAndClose}
-              className="geist-button-secondary"
-              style={{ width: '28px', height: '28px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
+              className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--discord-text-muted)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+              title="Fechar"
+              aria-label="Fechar"
             >
-              ✕
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           </div>
         </div>
 
         {/* Full Drawing Canvas Surface */}
-        <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div className="flex-1 relative overflow-hidden">
           <DrawingCanvas
             initialData={content}
             onChange={(newContentJson) => setContent(newContentJson)}

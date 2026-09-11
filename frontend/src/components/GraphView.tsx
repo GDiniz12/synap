@@ -6,7 +6,7 @@ import SynapLogo from './SynapLogo';
 import { api } from '@/lib/api';
 import { useTheme } from './ThemeProvider';
 import IsometricGraph from './graph/IsometricGraph';
-import CircuitBoardGraph from './graph/CircuitBoardGraph';
+import ObsidianGraph from './graph/ObsidianGraph';
 
 export type GroupRuleType = 'pasta' | 'tag' | 'titulo' | 'conteudo' | 'tipo';
 
@@ -18,37 +18,9 @@ export interface GraphGroup {
   enabled: boolean;
 }
 
-export interface GraphNode {
-  id: string;
-  title: string;
-  folderId: string | null;
-  folderName: string;
-  color: string;
-  connectionsCount: number;
-  previewText: string;
-  rawNota?: any;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  seed?: number;
-  renderX?: number;
-  renderY?: number;
-  renderRadius?: number;
-}
-
 export interface GraphLink {
   source: string;
   target: string;
-}
-
-interface Particle {
-  sourceId: string;
-  targetId: string;
-  progress: number;
-  speed: number;
-  color: string;
 }
 
 interface GraphViewProps {
@@ -60,34 +32,23 @@ interface GraphViewProps {
   onUpdateWorkspace?: (workspace: any) => void;
 }
 
-export const FOLDER_PALETTE = [
-  '#3b82f6', // blue
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#ec4899', // pink
-  '#8b5cf6', // violet
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#14b8a6', // teal
-  '#a855f7', // purple
-];
-
+// Discord Theme Color Presets for Color Groups
 export const PRESET_GROUP_COLORS = [
-  '#ef4444', // Red
-  '#f97316', // Orange
-  '#f59e0b', // Amber
-  '#10b981', // Emerald
-  '#06b6d4', // Cyan
-  '#3b82f6', // Blue
-  '#6366f1', // Indigo
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#14b8a6', // Teal
-  '#eab308', // Yellow
-  '#64748b', // Slate
+  '#20b8cd', // Synap Blue
+  '#23a55a', // Discord Green
+  '#f0b232', // Discord Yellow / Amber
+  '#f23f43', // Discord Red
+  '#eb459e', // Discord Fuchsia
+  '#38bdf8', // Discord Cyan / Sky
+  '#9b59b6', // Discord Purple
+  '#57f287', // Bright Green
+  '#fee75c', // Bright Yellow
+  '#e67e22', // Orange
+  '#1abc9c', // Teal
+  '#80848e', // Discord Muted Gray
 ];
 
-export const NEUTRAL_FALLBACK_COLOR = '#525252';
+export const NEUTRAL_FALLBACK_COLOR = '#4e5058';
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -146,11 +107,10 @@ export function matchNoteToGroup(nota: any, group: GraphGroup): boolean {
   }
 }
 
-// Resolve note color based on active groups or default folder colors
+// Resolve note color based solely on active groups (no automatic folder coloring!)
 export function resolveNodeColor(
   nota: any,
-  groups: GraphGroup[],
-  folderColorMap: Record<string, string>
+  groups: GraphGroup[] = []
 ): string {
   if (!nota) return NEUTRAL_FALLBACK_COLOR;
   const activeGroups = groups.filter((g) => g.enabled);
@@ -163,12 +123,7 @@ export function resolveNodeColor(
     }
   }
 
-  // If no groups exist, are enabled, or match, fallback to the folder palette
-  const pastaId = nota.pastaId || nota.folderId;
-  if (pastaId && folderColorMap[pastaId]) {
-    return folderColorMap[pastaId];
-  }
-  return folderColorMap['root'] || '#737373';
+  return NEUTRAL_FALLBACK_COLOR;
 }
 
 export default function GraphView({
@@ -179,17 +134,8 @@ export default function GraphView({
   onClose,
   onUpdateWorkspace,
 }: GraphViewProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { resolvedTheme } = useTheme();
-
-  // Folder palette mapping
-  const folderColorMap = useMemo(() => {
-    const map: Record<string, string> = { root: '#737373' };
-    pastas.forEach((p, idx) => {
-      map[p.id] = FOLDER_PALETTE[idx % FOLDER_PALETTE.length];
-    });
-    return map;
-  }, [pastas]);
+  const isLight = resolvedTheme === 'light';
 
   // Groups configuration state
   const [groups, setGroups] = useState<GraphGroup[]>(() => {
@@ -199,18 +145,11 @@ export default function GraphView({
     return [];
   });
 
-  const [isGroupsOpen, setIsGroupsOpen] = useState(false);
   const [activeColorPickerGroupId, setActiveColorPickerGroupId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keep a ref to groups for real-time physics and canvas rendering
-  const groupsRef = useRef<GraphGroup[]>(groups);
-  useEffect(() => {
-    groupsRef.current = groups;
-  }, [groups]);
-
-  // Sync groups when workspace prop changes externally
+  // Sync groups when workspace prop changes
   useEffect(() => {
     if (workspace?.graphConfig?.groups && Array.isArray(workspace.graphConfig.groups)) {
       setGroups(workspace.graphConfig.groups);
@@ -220,13 +159,7 @@ export default function GraphView({
   // Debounced save groups to backend
   const persistGroups = (newGroups: GraphGroup[]) => {
     setGroups(newGroups);
-    groupsRef.current = newGroups;
     setSaveStatus('saving');
-
-    // Instantly update color on all loaded nodes
-    nodesRef.current.forEach((n) => {
-      n.color = resolveNodeColor(n.rawNota || n, newGroups, folderColorMap);
-    });
 
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
@@ -291,23 +224,28 @@ export default function GraphView({
     persistGroups(reordered);
   };
 
+  // Graph Modes: 'obsidian' (2D physics graph) | 'isometric' (3D architectural graph)
+  const [graphMode, setGraphMode] = useState<'obsidian' | 'isometric'>('obsidian');
+
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFolderFilter, setSelectedFolderFilter] = useState<string>('all');
-  const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
-  const [graphMode, setGraphMode] = useState<'isometric' | 'circuit' | 'transit'>('isometric');
+  const [hideOrphans, setHideOrphans] = useState(false);
   const [showLabels, setShowLabels] = useState(true);
 
-  // Simulation physics parameters
-  const [repulsionForce, setRepulsionForce] = useState(300);
-  const [linkDistance, setLinkDistance] = useState(90);
+  // Obsidian Physics parameters
+  const [repulsionForce, setRepulsionForce] = useState(280);
+  const [linkDistance, setLinkDistance] = useState(80);
+  const [centerForce, setCenterForce] = useState(0.08);
+  const [nodeScale, setNodeScale] = useState(1);
   const [synapseParticlesEnabled, setSynapseParticlesEnabled] = useState(true);
 
-  // Pan & Zoom
-  const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
-  const isPanningRef = useRef(false);
-  const startPanRef = useRef({ x: 0, y: 0 });
-  const draggedNodeRef = useRef<GraphNode | null>(null);
+  // Settings drawer & active tab
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'filtros' | 'grupos' | 'fisica'>('grupos');
+
+  // Hovered note state for side preview
+  const [hoveredNota, setHoveredNota] = useState<any | null>(null);
 
   // Extract Links from HTML content of notes
   const links = useMemo<GraphLink[]>(() => {
@@ -348,7 +286,7 @@ export default function GraphView({
     return Array.from(unique.values());
   }, [notas]);
 
-  // Connection count for each node
+  // Connection count for each note
   const connectionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     links.forEach((l) => {
@@ -357,6 +295,37 @@ export default function GraphView({
     });
     return counts;
   }, [links]);
+
+  // Filtered notes based on folder, search term, and orphan filter
+  const filteredNotas = useMemo(() => {
+    let result = notas;
+
+    // Folder filter
+    if (selectedFolderFilter !== 'all') {
+      if (selectedFolderFilter === 'root') {
+        result = result.filter((n) => !n.pastaId);
+      } else {
+        result = result.filter((n) => n.pastaId === selectedFolderFilter);
+      }
+    }
+
+    // Search filter
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase().trim();
+      result = result.filter(
+        (n) =>
+          (n.titulo || '').toLowerCase().includes(q) ||
+          (n.conteudo || '').toLowerCase().includes(q)
+      );
+    }
+
+    // Hide orphans filter
+    if (hideOrphans) {
+      result = result.filter((n) => (connectionCounts[n.id] || 0) > 0);
+    }
+
+    return result;
+  }, [notas, selectedFolderFilter, searchTerm, hideOrphans, connectionCounts]);
 
   // Count matching notes for each group
   const groupMatchCounts = useMemo(() => {
@@ -367,648 +336,21 @@ export default function GraphView({
     return counts;
   }, [groups, notas]);
 
-  // Nodes reference maintained across animation loop
-  const nodesRef = useRef<GraphNode[]>([]);
-  const particlesRef = useRef<Particle[]>([]);
-  const alphaRef = useRef<number>(0.05);
-
-  // Helper physics simulation step (Force-directed around (0, 0))
-  const stepPhysics = useCallback(
-    (
-      nodes: GraphNode[],
-      graphLinks: GraphLink[],
-      repulsion: number,
-      linkDist: number,
-      alpha: number,
-      draggedNode: GraphNode | null = null
-    ) => {
-      if (alpha <= 0.0001 || nodes.length === 0) return;
-      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-      // 1. Repulsion between all nodes
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n1 = nodes[i];
-          const n2 = nodes[j];
-          const dx = n2.x - n1.x;
-          const dy = n2.y - n1.y;
-          const distSq = dx * dx + dy * dy || 1;
-          const dist = Math.sqrt(distSq);
-
-          if (dist < 450) {
-            const force = (repulsion * 16 * alpha) / distSq;
-            const fx = (dx / dist) * force;
-            const fy = (dy / dist) * force;
-            n1.vx -= fx;
-            n1.vy -= fy;
-            n2.vx += fx;
-            n2.vy += fy;
-          }
-        }
-      }
-
-      // 2. Attraction along connected links
-      for (const link of graphLinks) {
-        const source = nodeMap.get(link.source);
-        const target = nodeMap.get(link.target);
-        if (source && target) {
-          const dx = target.x - source.x;
-          const dy = target.y - source.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = (dist - linkDist) * 0.04 * alpha;
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-
-          source.vx += fx;
-          source.vy += fy;
-          target.vx -= fx;
-          target.vy -= fy;
-        }
-      }
-
-      // 3. Gentle center gravity pull towards (0, 0) and friction
-      for (const node of nodes) {
-        node.vx -= node.x * 0.0025 * alpha;
-        node.vy -= node.y * 0.0025 * alpha;
-
-        node.vx *= 0.82;
-        node.vy *= 0.82;
-
-        if (draggedNode !== node) {
-          node.x += node.vx;
-          node.y += node.vy;
-        }
-      }
-    },
-    []
-  );
-
-  // Initialize nodes positions, pre-warm physics layout, and auto-center
-  useEffect(() => {
-    const existingMap = new Map(nodesRef.current.map((n) => [n.id, n]));
-
-    const initializedNodes: GraphNode[] = notas.map((nota, i) => {
-      const existing = existingMap.get(nota.id);
-      const connections = connectionCounts[nota.id] || 0;
-      const folder = pastas.find((p) => p.id === nota.pastaId);
-      const folderName = folder ? folder.nome : 'Raiz';
-      const color = resolveNodeColor(nota, groups, folderColorMap);
-
-      // Plain text preview
-      let preview = '';
-      if (nota.conteudo) {
-        const div = document.createElement('div');
-        div.innerHTML = nota.conteudo;
-        preview = (div.innerText || div.textContent || '').slice(0, 140);
-      }
-
-      // Golden ratio spiral centered at origin (0, 0)
-      const angle = i * 2.39996;
-      const radiusDist = i === 0 ? 0 : Math.sqrt(i) * 55;
-      const seed = i * 1.61803398875;
-
-      return {
-        id: nota.id,
-        title: nota.titulo,
-        folderId: nota.pastaId || null,
-        folderName,
-        color,
-        connectionsCount: connections,
-        previewText: preview || 'Nota sem conteúdo.',
-        rawNota: nota,
-        x: existing ? existing.x : Math.cos(angle) * radiusDist,
-        y: existing ? existing.y : Math.sin(angle) * radiusDist,
-        vx: 0,
-        vy: 0,
-        radius: Math.max(6, Math.min(18, 7 + connections * 2.5)),
-        seed,
-        renderX: existing ? existing.x : Math.cos(angle) * radiusDist,
-        renderY: existing ? existing.y : Math.sin(angle) * radiusDist,
-        renderRadius: Math.max(6, Math.min(18, 7 + connections * 2.5)),
-      };
-    });
-
-    // Run 100 pre-warming iterations so the graph opens 100% stabilized
-    let preWarmAlpha = 1.0;
-    for (let tick = 0; tick < 100; tick++) {
-      stepPhysics(initializedNodes, links, repulsionForce, linkDistance, preWarmAlpha);
-      preWarmAlpha *= 0.95;
-    }
-
-    nodesRef.current = initializedNodes;
-    alphaRef.current = 0.05;
-
-    // Reset particles on connections change
-    particlesRef.current = links.map((l) => ({
-      sourceId: l.source,
-      targetId: l.target,
-      progress: Math.random(),
-      speed: 0.004 + Math.random() * 0.006,
-      color: '#38bdf8',
-    }));
-
-    // Auto-fit & Center the graph in canvas viewport
-    if (canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const width = rect.width || 800;
-      const height = rect.height || 600;
-      canvasRef.current.width = width * window.devicePixelRatio;
-      canvasRef.current.height = height * window.devicePixelRatio;
-
-      if (initializedNodes.length > 0) {
-        const minX = Math.min(...initializedNodes.map((n) => n.x));
-        const maxX = Math.max(...initializedNodes.map((n) => n.x));
-        const minY = Math.min(...initializedNodes.map((n) => n.y));
-        const maxY = Math.max(...initializedNodes.map((n) => n.y));
-
-        const graphW = Math.max(160, maxX - minX + 200);
-        const graphH = Math.max(160, maxY - minY + 200);
-        const idealK = Math.min(1.0, Math.max(0.4, Math.min((width - 80) / graphW, (height - 80) / graphH)));
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-
-        setTransform({
-          x: width / 2 - centerX * idealK,
-          y: height / 2 - centerY * idealK,
-          k: idealK,
-        });
-      } else {
-        setTransform({ x: width / 2, y: height / 2, k: 1 });
-      }
-    }
-  }, [notas, connectionCounts, links, pastas, groups, folderColorMap, repulsionForce, linkDistance, stepPhysics]);
-
-  // Re-heat physics gently when sliders change
-  useEffect(() => {
-    alphaRef.current = 0.25;
-  }, [repulsionForce, linkDistance]);
-
-  // Filtered nodes directly derived from notas
-  const filteredNodeIds = useMemo(() => {
-    return new Set(
-      notas
-        .filter((n) => {
-          const matchSearch = !searchTerm || (n.titulo || '').toLowerCase().includes(searchTerm.toLowerCase());
-          const matchFolder =
-            selectedFolderFilter === 'all' ||
-            (selectedFolderFilter === 'root' ? !n.pastaId : n.pastaId === selectedFolderFilter);
-          return matchSearch && matchFolder;
-        })
-        .map((n) => n.id)
-    );
-  }, [notas, searchTerm, selectedFolderFilter]);
-
-  // Animation Loop (Force-Directed Physics with Alpha Cooling + Particle Synapses)
-  useEffect(() => {
-    let animationFrameId: number;
-
-    const render = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const dpr = window.devicePixelRatio || 1;
-      const width = canvas.width / dpr;
-      const height = canvas.height / dpr;
-
-      const nodes = nodesRef.current;
-      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-
-      // PHYSICS STEP with Alpha decay (stabilizes equilibrium anchors)
-      if (alphaRef.current > 0.001) {
-        stepPhysics(nodes, links, repulsionForce, linkDistance, alphaRef.current, draggedNodeRef.current);
-        alphaRef.current *= 0.95;
-        if (alphaRef.current <= 0.001) {
-          alphaRef.current = 0;
-          nodes.forEach((n) => {
-            n.vx = 0;
-            n.vy = 0;
-          });
-        }
-      }
-
-      // Compute Organic Breathing / Cosmic Floating positions (Alive effect)
-      const now = performance.now();
-      nodes.forEach((node, i) => {
-        if (draggedNodeRef.current === node) {
-          node.renderX = node.x;
-          node.renderY = node.y;
-          node.renderRadius = node.radius;
-        } else {
-          const s = node.seed ?? i * 1.618;
-          // Smooth asynchronous harmonic waves
-          const floatX = Math.sin(now * 0.0012 + s * 3.1) * 3.5;
-          const floatY = Math.cos(now * 0.0009 + s * 4.7) * 3.5;
-          const breathR = Math.sin(now * 0.002 + s * 2.3) * 0.7;
-          node.renderX = node.x + floatX;
-          node.renderY = node.y + floatY;
-          node.renderRadius = Math.max(4, node.radius + breathR);
-        }
-      });
-
-      // DRAW STEP
-      ctx.save();
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.scale(dpr, dpr);
-
-      // Background subtle dark/light tone
-      ctx.fillStyle = resolvedTheme === 'light' ? '#ffffff' : '#0a0a0a';
-      ctx.fillRect(0, 0, width, height);
-
-      // Apply pan & zoom transform (camera stays steady and centered)
-      ctx.translate(transform.x, transform.y);
-      ctx.scale(transform.k, transform.k);
-
-      // Find neighbors of hovered node
-      const activeNeighborIds = new Set<string>();
-      if (hoveredNode) {
-        activeNeighborIds.add(hoveredNode.id);
-        links.forEach((l) => {
-          if (l.source === hoveredNode.id) activeNeighborIds.add(l.target);
-          if (l.target === hoveredNode.id) activeNeighborIds.add(l.source);
-        });
-      }
-
-      // Draw Links connecting organic live float coordinates
-      links.forEach((link) => {
-        const s = nodeMap.get(link.source);
-        const t = nodeMap.get(link.target);
-        if (!s || !t) return;
-
-        const sx = s.renderX ?? s.x;
-        const sy = s.renderY ?? s.y;
-        const tx = t.renderX ?? t.x;
-        const ty = t.renderY ?? t.y;
-
-        const isHighlighted = hoveredNode && (s.id === hoveredNode.id || t.id === hoveredNode.id);
-        const isDimmed = hoveredNode && !isHighlighted;
-
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
-
-        if (isHighlighted) {
-          ctx.strokeStyle = resolvedTheme === 'light' ? '#000000' : '#ffffff';
-          ctx.lineWidth = 2.0;
-          ctx.shadowColor = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.4)';
-          ctx.shadowBlur = 6;
-        } else if (isDimmed) {
-          ctx.strokeStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.03)';
-          ctx.lineWidth = 1;
-          ctx.shadowBlur = 0;
-        } else {
-          ctx.strokeStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.12)';
-          ctx.lineWidth = 1.2;
-          ctx.shadowBlur = 0;
-        }
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-      });
-
-      // Draw Synapse Particles traveling between live float coordinates
-      if (synapseParticlesEnabled) {
-        particlesRef.current.forEach((p) => {
-          const s = nodeMap.get(p.sourceId);
-          const t = nodeMap.get(p.targetId);
-          if (!s || !t) return;
-
-          const sx = s.renderX ?? s.x;
-          const sy = s.renderY ?? s.y;
-          const tx = t.renderX ?? t.x;
-          const ty = t.renderY ?? t.y;
-
-          p.progress += p.speed;
-          if (p.progress > 1) p.progress = 0;
-
-          const px = sx + (tx - sx) * p.progress;
-          const py = sy + (ty - sy) * p.progress;
-
-          ctx.beginPath();
-          ctx.arc(px, py, 2, 0, 2 * Math.PI);
-          ctx.fillStyle = resolvedTheme === 'light' ? '#0070f3' : '#ffffff';
-          ctx.shadowColor = resolvedTheme === 'light' ? '#0070f3' : '#ffffff';
-          ctx.shadowBlur = 4;
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        });
-      }
-
-      // Current live groups reference
-      const currentGroups = groupsRef.current;
-
-      // Draw Nodes with organic breathing float
-      nodes.forEach((node) => {
-        const nx = node.renderX ?? node.x;
-        const ny = node.renderY ?? node.y;
-        const nr = node.renderRadius ?? node.radius;
-
-        const isFiltered = filteredNodeIds.has(node.id);
-        const isHovered = hoveredNode?.id === node.id;
-        const isNeighbor = activeNeighborIds.has(node.id);
-        const isDimmed = (hoveredNode && !isNeighbor) || !isFiltered;
-
-        // Resolve live node color dynamically
-        const nodeColor = resolveNodeColor(node.rawNota || node, currentGroups, folderColorMap);
-        node.color = nodeColor;
-
-        // Dynamic breathing ambient glow
-        if (!isDimmed) {
-          ctx.beginPath();
-          ctx.arc(nx, ny, nr + 3, 0, 2 * Math.PI);
-          ctx.fillStyle = `${nodeColor}18`;
-          ctx.fill();
-        }
-
-        // Glow ring for hovered node
-        if (isHovered) {
-          ctx.beginPath();
-          ctx.arc(nx, ny, nr + 6, 0, 2 * Math.PI);
-          ctx.fillStyle = `${nodeColor}44`;
-          ctx.fill();
-        }
-
-        // Main Node circle
-        ctx.beginPath();
-        ctx.arc(nx, ny, nr, 0, 2 * Math.PI);
-        ctx.fillStyle = isDimmed ? (resolvedTheme === 'light' ? 'rgba(200, 200, 200, 0.3)' : 'rgba(50, 50, 50, 0.3)') : nodeColor;
-        if (isHovered || isNeighbor) {
-          ctx.shadowColor = nodeColor;
-          ctx.shadowBlur = 14;
-        }
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Node border
-        ctx.lineWidth = isHovered ? 2 : 1;
-        ctx.strokeStyle = isHovered
-          ? (resolvedTheme === 'light' ? '#000000' : '#ffffff')
-          : isDimmed
-          ? (resolvedTheme === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)')
-          : (resolvedTheme === 'light' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.5)');
-        ctx.stroke();
-
-        // Node Label
-        if (transform.k > 0.65 || isHovered || isNeighbor) {
-          ctx.font = `${isHovered ? '600 ' : '400 '}11px var(--font-sans, system-ui, sans-serif)`;
-          ctx.textAlign = 'center';
-          ctx.fillStyle = isDimmed 
-            ? (resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.2)') 
-            : (resolvedTheme === 'light' ? '#000000' : '#ffffff');
-          ctx.fillText(node.title, nx, ny + nr + 13);
-        }
-      });
-
-      ctx.restore();
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    animationFrameId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [links, repulsionForce, linkDistance, transform, hoveredNode, filteredNodeIds, synapseParticlesEnabled, folderColorMap, resolvedTheme]);
-
-  // Screen to world coordinates
-  const screenToWorld = (screenX: number, screenY: number) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    const mouseX = screenX - rect.left;
-    const mouseY = screenY - rect.top;
-    return {
-      x: (mouseX - transform.x) / transform.k,
-      y: (mouseY - transform.y) / transform.k,
-    };
-  };
-
-  // Find node under mouse (tests against live floating render position)
-  const getNodeAtPos = (worldX: number, worldY: number): GraphNode | null => {
-    const hitRadiusPadding = 8;
-    for (let i = nodesRef.current.length - 1; i >= 0; i--) {
-      const node = nodesRef.current[i];
-      const nx = node.renderX ?? node.x;
-      const ny = node.renderY ?? node.y;
-      const nr = node.renderRadius ?? node.radius;
-      const dx = nx - worldX;
-      const dy = ny - worldY;
-      if (Math.sqrt(dx * dx + dy * dy) <= nr + hitRadiusPadding) {
-        return node;
-      }
-    }
-    return null;
-  };
-
-  // Mouse Handlers (Pan, Zoom, Drag Node)
-  const handleMouseDown = (e: React.MouseEvent) => {
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-    const hitNode = getNodeAtPos(x, y);
-
-    if (hitNode) {
-      draggedNodeRef.current = hitNode;
-    } else {
-      isPanningRef.current = true;
-      startPanRef.current = { x: e.clientX - transform.x, y: e.clientY - transform.y };
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isPanningRef.current) {
-      setTransform((prev) => ({
-        ...prev,
-        x: e.clientX - startPanRef.current.x,
-        y: e.clientY - startPanRef.current.y,
-      }));
-      return;
-    }
-
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-
-    if (draggedNodeRef.current) {
-      draggedNodeRef.current.x = x;
-      draggedNodeRef.current.y = y;
-      draggedNodeRef.current.vx = 0;
-      draggedNodeRef.current.vy = 0;
-      alphaRef.current = 0.15;
-      return;
-    }
-
-    const hit = getNodeAtPos(x, y);
-    setHoveredNode(hit);
-  };
-
-  const handleMouseUp = () => {
-    isPanningRef.current = false;
-    draggedNodeRef.current = null;
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
-    const newK = Math.max(0.3, Math.min(3.5, transform.k * zoomFactor));
-
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    setTransform((prev) => ({
-      k: newK,
-      x: mouseX - (mouseX - prev.x) * (newK / prev.k),
-      y: mouseY - (mouseY - prev.y) * (newK / prev.k),
-    }));
-  };
-
-  const handleNodeClick = (e: React.MouseEvent) => {
-    const { x, y } = screenToWorld(e.clientX, e.clientY);
-    const hit = getNodeAtPos(x, y);
-    if (hit) {
-      const nota = notas.find((n) => n.id === hit.id);
-      if (nota) onOpenNota(nota);
-    }
-  };
-
-  const handleResetView = () => {
-    if (canvasRef.current && nodesRef.current.length > 0) {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const width = rect.width || 800;
-      const height = rect.height || 600;
-      const nodes = nodesRef.current;
-      const minX = Math.min(...nodes.map((n) => n.x));
-      const maxX = Math.max(...nodes.map((n) => n.x));
-      const minY = Math.min(...nodes.map((n) => n.y));
-      const maxY = Math.max(...nodes.map((n) => n.y));
-      const graphW = Math.max(160, maxX - minX + 200);
-      const graphH = Math.max(160, maxY - minY + 200);
-      const idealK = Math.min(1.0, Math.max(0.4, Math.min((width - 80) / graphW, (height - 80) / graphH)));
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-
-      setTransform({
-        x: width / 2 - centerX * idealK,
-        y: height / 2 - centerY * idealK,
-        k: idealK,
-      });
-    }
-  };
-
   const activeGroupsCount = groups.filter((g) => g.enabled).length;
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-[var(--background)] select-none overflow-hidden font-sans">
-      {/* Top Floating Control Bar */}
-      <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2.5 pointer-events-none">
-        {/* Left: Brand badge, Search, Folder, and Groups toggle */}
+    <div className="w-full h-full relative overflow-hidden bg-[#1e1f22] select-none font-sans">
+      {/* Top Floating Navigation Toolbar (Discord Aesthetic) */}
+      <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
+        {/* Left Control Cluster */}
         <div className="flex items-center gap-2 pointer-events-auto">
-          {/* Brand Pill */}
-          <div className="flex items-center justify-center bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] p-1.5 shadow-sm">
+          {/* Brand Icon */}
+          <div className="flex items-center justify-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-2 shadow-lg">
             <SynapLogo size={16} />
           </div>
 
-          {/* Search & Folder Pill */}
-          <div className="flex items-center gap-1.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] p-1 shadow-sm">
-            {/* Search Input */}
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--accents-1)] rounded-[calc(var(--radius)-2px)] border border-[var(--accents-2)]">
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-[var(--accents-4)]"
-              >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Buscar notas no grafo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-transparent border-none outline-none text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] w-28 sm:w-40"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="text-[var(--accents-4)] hover:text-[var(--foreground)] text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {/* Folder Select */}
-            <select
-              value={selectedFolderFilter}
-              onChange={(e) => setSelectedFolderFilter(e.target.value)}
-              className="bg-[var(--accents-1)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
-            >
-              <option value="all">Todas as Pastas</option>
-              <option value="root">Sem Pasta (Raiz)</option>
-              {pastas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Graph Mode Selector (Geist Segmented Control) */}
-          <div className="flex items-center bg-[var(--accents-1)] border border-[var(--accents-2)] rounded-[var(--radius)] p-0.5 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setGraphMode('isometric')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-[calc(var(--radius)-2px)] transition-colors cursor-pointer ${
-                graphMode === 'isometric'
-                  ? 'bg-[var(--background)] text-[var(--foreground)] shadow-sm border border-[var(--accents-2)]'
-                  : 'text-[var(--accents-5)] hover:text-[var(--foreground)] border border-transparent'
-              }`}
-            >
-              Isométrico
-            </button>
-            <button
-              type="button"
-              onClick={() => setGraphMode('circuit')}
-              className={`px-2.5 py-1 text-xs font-medium rounded-[calc(var(--radius)-2px)] transition-colors cursor-pointer ${
-                graphMode === 'circuit'
-                  ? 'bg-[var(--background)] text-[var(--foreground)] shadow-sm border border-[var(--accents-2)]'
-                  : 'text-[var(--accents-5)] hover:text-[var(--foreground)] border border-transparent'
-              }`}
-            >
-              Circuit Board
-            </button>
-          </div>
-
-          {/* Labels Toggle Button */}
-          {graphMode === 'isometric' && (
-            <button
-              type="button"
-              onClick={() => setShowLabels((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius)] border text-xs font-medium transition-colors shadow-sm cursor-pointer ${
-                showLabels
-                  ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]'
-                  : 'bg-[var(--background)] text-[var(--accents-6)] hover:text-[var(--foreground)] border-[var(--accents-2)] hover:bg-[var(--accents-1)]'
-              }`}
-              title="Mostrar/Ocultar Nomes das Notas"
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
-              </svg>
-              <span>Nomes</span>
-            </button>
-          )}
-
-          {/* Groups Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setIsGroupsOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius)] border text-xs font-medium transition-colors shadow-sm cursor-pointer ${
-              isGroupsOpen
-                ? 'bg-[var(--foreground)] text-[var(--background)] border-[var(--foreground)]'
-                : 'bg-[var(--background)] text-[var(--accents-6)] hover:text-[var(--foreground)] border-[var(--accents-2)] hover:bg-[var(--accents-1)]'
-            }`}
-            title="Gerenciar Grupos de Cores do Grafo"
-          >
+          {/* Search Input Box */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#2b2d31]/90 backdrop-blur-md rounded-[8px] border border-[#383a40] shadow-lg focus-within:border-[#20b8cd] transition-colors">
             <svg
               width="13"
               height="13"
@@ -1016,53 +358,121 @@ export default function GraphView({
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              className="text-[#949ba4]"
             >
-              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <span>Grupos</span>
-            {activeGroupsCount > 0 && (
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-                  isGroupsOpen
-                    ? 'bg-[var(--background)] text-[var(--foreground)]'
-                    : 'bg-[var(--accents-2)] text-[var(--foreground)]'
-                }`}
+            <input
+              type="text"
+              placeholder="Filtrar notas no grafo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent border-none outline-none text-xs text-[#dbdee1] placeholder-[#80848e] w-28 sm:w-44"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="text-[#949ba4] hover:text-white text-xs cursor-pointer"
               >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Graph Mode Switch (Discord Pills) */}
+          <div className="flex items-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-1 shadow-lg gap-1">
+            <button
+              type="button"
+              onClick={() => setGraphMode('obsidian')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-[5px] transition-all cursor-pointer ${
+                graphMode === 'obsidian'
+                  ? 'bg-[#20b8cd] text-white shadow-sm'
+                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#35373c]'
+              }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="6" cy="6" r="3" />
+                <circle cx="18" cy="18" r="3" />
+                <circle cx="18" cy="6" r="3" />
+                <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+                <line x1="15.5" y1="7.5" x2="8.5" y2="16.5" />
+              </svg>
+              <span>Grafo 2D</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setGraphMode('isometric')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-[5px] transition-all cursor-pointer ${
+                graphMode === 'isometric'
+                  ? 'bg-[#20b8cd] text-white shadow-sm'
+                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#35373c]'
+              }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+              <span>Isométrico 3D</span>
+            </button>
+          </div>
+
+          {/* Labels Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowLabels((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border text-xs font-medium transition-all shadow-lg cursor-pointer ${
+              showLabels
+                ? 'bg-[#35373c] text-white border-[#4e5058]'
+                : 'bg-[#2b2d31]/90 text-[#949ba4] border-[#383a40] hover:text-white hover:bg-[#35373c]'
+            }`}
+            title="Mostrar ou ocultar títulos das notas"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+            </svg>
+            <span>Nomes</span>
+          </button>
+
+          {/* Settings & Groups Drawer Button */}
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border text-xs font-medium transition-all shadow-lg cursor-pointer ${
+              isSettingsOpen
+                ? 'bg-[#20b8cd] text-white border-[#20b8cd]'
+                : 'bg-[#2b2d31]/90 text-[#dbdee1] border-[#383a40] hover:bg-[#35373c]'
+            }`}
+            title="Abrir painel de configurações, filtros e grupos de cores"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span>Ajustes & Grupos</span>
+            {activeGroupsCount > 0 && (
+              <span className="bg-[#1e1f22] text-[#20b8cd] font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                 {activeGroupsCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* Right: View Controls & Stats */}
-        <div className="flex items-center gap-2 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] px-2.5 py-1.5 shadow-sm pointer-events-auto text-xs text-[var(--accents-5)]">
-          <span className="text-[var(--foreground)] font-medium">{notas.length} notas</span>
+        {/* Right Stats & Action Cluster */}
+        <div className="flex items-center gap-2 bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] px-3 py-1.5 shadow-lg pointer-events-auto text-xs text-[#949ba4]">
+          <span className="text-white font-medium">{filteredNotas.length} notas</span>
           <span>•</span>
-          <span className="text-[var(--foreground)] font-medium">{links.length} conexões</span>
+          <span className="text-white font-medium">{links.length} conexões</span>
 
-          <div className="w-[1px] h-3.5 bg-[var(--accents-2)] mx-0.5" />
-
-          {/* Reset Zoom */}
-          <button
-            type="button"
-            onClick={handleResetView}
-            className="px-2 py-1 rounded-[calc(var(--radius)-2px)] text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-1)] transition-colors cursor-pointer"
-            title="Recentralizar visualização"
-          >
-            Recentralizar
-          </button>
+          <div className="w-[1px] h-3.5 bg-[#383a40] mx-1" />
 
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="w-5 h-5 flex items-center justify-center rounded-[calc(var(--radius)-2px)] text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] transition-colors ml-0.5 cursor-pointer"
+              className="w-5 h-5 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
               title="Fechar Grafo"
             >
               ✕
@@ -1071,491 +481,466 @@ export default function GraphView({
         </div>
       </div>
 
-      {/* Retractable Floating Color Groups Manager Panel (Geist Minimalist Theme) */}
-      {isGroupsOpen && (
-        <div className="absolute top-14 left-3 z-30 w-[350px] sm:w-[390px] max-h-[calc(100vh-120px)] bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] shadow-xl flex flex-col overflow-hidden animate-in fade-in duration-100">
-          {/* Panel Header */}
-          <div className="p-3 px-3.5 border-b border-[var(--accents-2)] bg-[var(--accents-1)] flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-[var(--foreground)]"
-              >
-                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
-              </svg>
-              <h3 className="text-xs font-semibold text-[var(--foreground)] tracking-tight">
-                Grupos de Cores
-              </h3>
-              <span className="text-[10px] text-[var(--accents-4)] font-mono">
-                ({groups.length})
-              </span>
-              {saveStatus === 'saving' && (
-                <span className="text-[10px] text-[var(--accents-4)]">Salvando...</span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="text-[10px] text-[var(--foreground)]">✓ Salvo</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handleAddGroup}
-                className="px-2 py-1 bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 rounded-[calc(var(--radius)-2px)] text-xs font-medium transition-opacity flex items-center gap-1 cursor-pointer"
-              >
-                <svg
-                  width="11"
-                  height="11"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
+      {/* Retractable Floating Discord Control Panel (Filters, Groups, Physics) */}
+      {isSettingsOpen && (
+        <div className="absolute top-14 left-3 z-30 w-[360px] sm:w-[390px] max-h-[calc(100vh-100px)] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-100">
+          {/* Drawer Header with Discord Tabs */}
+          <div className="border-b border-[#383a40] bg-[#1e1f22]/80">
+            <div className="flex items-center justify-between p-2.5 px-3">
+              <span className="text-xs font-semibold text-white tracking-tight flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd]">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                  <polyline points="2 17 12 22 22 17" />
+                  <polyline points="2 12 12 17 22 12" />
                 </svg>
-                <span>Novo Grupo</span>
-              </button>
+                Controles do Grafo
+              </span>
               <button
                 type="button"
-                onClick={() => setIsGroupsOpen(false)}
-                className="w-5 h-5 flex items-center justify-center rounded text-[var(--accents-4)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] text-xs transition-colors cursor-pointer"
-                title="Fechar painel"
+                onClick={() => setIsSettingsOpen(false)}
+                className="w-5 h-5 flex items-center justify-center rounded text-[#949ba4] hover:text-white hover:bg-[#35373c] text-xs transition-colors cursor-pointer"
               >
                 ✕
               </button>
             </div>
-          </div>
 
-          {/* Groups List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[50vh] no-scrollbar">
-            {groups.length === 0 ? (
-              <div className="py-6 px-4 text-center">
-                <p className="text-xs text-[var(--foreground)] mb-1 font-medium">
-                  Nenhum grupo de cores configurado
-                </p>
-                <p className="text-[11px] text-[var(--accents-4)] mb-3 leading-relaxed">
-                  Crie regras para colorir notas por pasta, tags (#), palavras-chave ou tipo de nota.
-                </p>
+            {/* Segmented Tab Headers */}
+            <div className="flex items-center px-2 pb-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setSettingsTab('grupos')}
+                className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
+                  settingsTab === 'grupos'
+                    ? 'bg-[#35373c] text-white'
+                    : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                }`}
+              >
+                Grupos ({groups.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsTab('filtros')}
+                className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
+                  settingsTab === 'filtros'
+                    ? 'bg-[#35373c] text-white'
+                    : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                }`}
+              >
+                Filtros
+              </button>
+              {graphMode === 'obsidian' && (
                 <button
                   type="button"
-                  onClick={handleAddGroup}
-                  className="px-3 py-1.5 bg-[var(--foreground)] text-[var(--background)] hover:opacity-90 text-xs font-medium rounded-[var(--radius)] transition-opacity cursor-pointer inline-flex items-center gap-1.5"
+                  onClick={() => setSettingsTab('fisica')}
+                  className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
+                    settingsTab === 'fisica'
+                      ? 'bg-[#35373c] text-white'
+                      : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                  }`}
                 >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                  >
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  <span>Adicionar Primeiro Grupo</span>
+                  Física 2D
                 </button>
-              </div>
-            ) : (
-              groups.map((group, index) => {
-                const matchCount = groupMatchCounts[group.id] || 0;
-                const isColorPickerOpen = activeColorPickerGroupId === group.id;
+              )}
+            </div>
+          </div>
 
-                return (
-                  <div
-                    key={group.id}
-                    className={`p-2.5 rounded-[var(--radius)] border transition-all ${
-                      group.enabled
-                        ? 'bg-[var(--accents-1)] border-[var(--accents-2)]'
-                        : 'bg-[var(--background)] border-[var(--accents-2)] opacity-50'
-                    }`}
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[55vh] text-xs text-[#dbdee1]">
+            {/* TAB 1: GRUPOS DE CORES */}
+            {settingsTab === 'grupos' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between pb-1 border-b border-[#383a40]">
+                  <span className="text-[11px] text-[#949ba4]">
+                    Crie regras personalizadas para colorir notas
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddGroup}
+                    className="px-2 py-0.5 bg-[#20b8cd] hover:bg-[#1ba2b4] text-white rounded-[4px] text-[11px] font-medium transition-colors flex items-center gap-1 cursor-pointer"
                   >
-                    {/* Top Row: Reorder, Enabled Toggle, Color Swatch, Criteria, Match count, Delete */}
-                    <div className="flex items-center gap-2 mb-2">
-                      {/* Reorder Buttons */}
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => handleMoveGroup(index, 'up')}
-                          className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-4)] hover:text-[var(--foreground)] disabled:opacity-20 disabled:hover:text-[var(--accents-4)] cursor-pointer"
-                          title="Mover para cima"
-                        >
-                          ▲
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === groups.length - 1}
-                          onClick={() => handleMoveGroup(index, 'down')}
-                          className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-4)] hover:text-[var(--foreground)] disabled:opacity-20 disabled:hover:text-[var(--accents-4)] cursor-pointer"
-                          title="Mover para baixo"
-                        >
-                          ▼
-                        </button>
-                      </div>
+                    + Novo Grupo
+                  </button>
+                </div>
 
-                      {/* Enable Checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={group.enabled}
-                        onChange={(e) => handleUpdateGroup(group.id, { enabled: e.target.checked })}
-                        className="rounded cursor-pointer w-3.5 h-3.5"
-                        title={group.enabled ? 'Desativar grupo' : 'Ativar grupo'}
-                      />
+                {groups.length === 0 ? (
+                  <div className="py-6 px-3 text-center">
+                    <p className="text-white font-medium mb-1">Nenhum grupo ativo</p>
+                    <p className="text-[11px] text-[#949ba4] mb-3 leading-relaxed">
+                      Notas sem grupo utilizam a cor neutra do Discord. Adicione regras para destacar pastas, tags ou termos.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddGroup}
+                      className="px-3 py-1 bg-[#20b8cd] hover:bg-[#1ba2b4] text-white font-medium rounded-[4px] cursor-pointer"
+                    >
+                      Adicionar Primeiro Grupo
+                    </button>
+                  </div>
+                ) : (
+                  groups.map((group, index) => {
+                    const matchCount = groupMatchCounts[group.id] || 0;
+                    const isColorPickerOpen = activeColorPickerGroupId === group.id;
 
-                      {/* Color Swatch Circle */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveColorPickerGroupId((prev) =>
-                              prev === group.id ? null : group.id
-                            )
-                          }
-                          className="w-5 h-5 rounded-full border border-[var(--accents-2)] flex items-center justify-center cursor-pointer transition-transform hover:scale-105"
-                          style={{ backgroundColor: group.color }}
-                          title="Alterar cor do grupo"
-                        />
-
-                        {/* Color Picker Palette Popover */}
-                        {isColorPickerOpen && (
-                          <div className="absolute top-7 left-0 z-50 p-2.5 bg-[var(--background)] border border-[var(--accents-2)] rounded-[var(--radius)] shadow-2xl w-48 animate-in fade-in duration-75">
-                            <div className="text-[10px] font-medium text-[var(--accents-4)] mb-1.5 uppercase tracking-wider">
-                              Paleta de Cores
-                            </div>
-                            <div className="grid grid-cols-6 gap-1.5 mb-2.5">
-                              {PRESET_GROUP_COLORS.map((c) => (
-                                <button
-                                  key={c}
-                                  type="button"
-                                  onClick={() => {
-                                    handleUpdateGroup(group.id, { color: c });
-                                    setActiveColorPickerGroupId(null);
-                                  }}
-                                  className={`w-5 h-5 rounded-full border cursor-pointer transition-transform hover:scale-110 ${
-                                    group.color.toLowerCase() === c.toLowerCase()
-                                      ? 'border-[var(--foreground)] ring-2 ring-[var(--foreground)]/20 scale-105'
-                                      : 'border-transparent'
-                                  }`}
-                                  style={{ backgroundColor: c }}
-                                />
-                              ))}
-                            </div>
-                            <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--accents-2)]">
-                              <span className="text-[10px] text-[var(--accents-4)]">Hex</span>
-                              <input
-                                type="color"
-                                value={group.color}
-                                onChange={(e) => handleUpdateGroup(group.id, { color: e.target.value })}
-                                className="w-5 h-5 p-0 bg-transparent border-0 rounded cursor-pointer"
-                              />
-                              <input
-                                type="text"
-                                value={group.color}
-                                onChange={(e) => handleUpdateGroup(group.id, { color: e.target.value })}
-                                className="bg-[var(--accents-1)] text-[11px] text-[var(--foreground)] px-1.5 py-0.5 rounded border border-[var(--accents-2)] w-20 font-mono"
-                              />
-                            </div>
+                    return (
+                      <div
+                        key={group.id}
+                        className={`p-2 rounded-[6px] border transition-all ${
+                          group.enabled
+                            ? 'bg-[#1e1f22] border-[#383a40]'
+                            : 'bg-[#1e1f22]/50 border-[#2b2d31] opacity-50'
+                        }`}
+                      >
+                        {/* Top row: reorder, checkbox, color swatch, type, match count, delete */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="flex flex-col gap-0.5">
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMoveGroup(index, 'up')}
+                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[#949ba4] hover:text-white disabled:opacity-20 cursor-pointer"
+                            >
+                              ▲
+                            </button>
+                            <button
+                              type="button"
+                              disabled={index === groups.length - 1}
+                              onClick={() => handleMoveGroup(index, 'down')}
+                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[#949ba4] hover:text-white disabled:opacity-20 cursor-pointer"
+                            >
+                              ▼
+                            </button>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Criteria Type Dropdown */}
-                      <select
-                        value={group.ruleType}
-                        onChange={(e) => {
-                          const newType = e.target.value as GroupRuleType;
-                          let defaultVal = '';
-                          if (newType === 'pasta') defaultVal = pastas[0]?.id || 'root';
-                          if (newType === 'tipo') defaultVal = 'texto';
-                          handleUpdateGroup(group.id, { ruleType: newType, ruleValue: defaultVal });
-                        }}
-                        className="bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer flex-1"
-                      >
-                        <option value="pasta">Pasta</option>
-                        <option value="tag">Tag (#)</option>
-                        <option value="titulo">Título contém</option>
-                        <option value="conteudo">Conteúdo contém</option>
-                        <option value="tipo">Tipo de nota</option>
-                      </select>
-
-                      {/* Match Count Badge */}
-                      <span
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--accents-2)] text-[var(--accents-6)] whitespace-nowrap"
-                        title={`${matchCount} notas correspondem`}
-                      >
-                        {matchCount} {matchCount === 1 ? 'nota' : 'notas'}
-                      </span>
-
-                      {/* Delete Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteGroup(group.id)}
-                        className="w-5 h-5 flex items-center justify-center text-[var(--accents-4)] hover:text-red-500 hover:bg-[var(--accents-2)] rounded transition-colors text-xs cursor-pointer"
-                        title="Excluir grupo"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Bottom Row: Rule Value Input */}
-                    <div className="pl-6">
-                      {group.ruleType === 'pasta' ? (
-                        <select
-                          value={group.ruleValue || (pastas[0]?.id || 'root')}
-                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
-                        >
-                          <option value="root">Sem Pasta (Raiz)</option>
-                          {pastas.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nome}
-                            </option>
-                          ))}
-                        </select>
-                      ) : group.ruleType === 'tipo' ? (
-                        <select
-                          value={group.ruleValue || 'texto'}
-                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none cursor-pointer"
-                        >
-                          <option value="texto">Nota de Texto</option>
-                          <option value="desenho">Nota de Desenho / Canvas</option>
-                        </select>
-                      ) : group.ruleType === 'tag' ? (
-                        <div className="relative flex items-center">
-                          <span className="absolute left-2 text-xs text-[var(--accents-4)] font-mono">
-                            #
-                          </span>
                           <input
-                            type="text"
-                            placeholder="nome-da-tag"
-                            value={(group.ruleValue || '').replace(/^#/, '')}
+                            type="checkbox"
+                            checked={group.enabled}
+                            onChange={(e) => handleUpdateGroup(group.id, { enabled: e.target.checked })}
+                            className="rounded cursor-pointer w-3.5 h-3.5 accent-[#20b8cd]"
+                          />
+
+                          {/* Color button */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveColorPickerGroupId((prev) => (prev === group.id ? null : group.id))
+                              }
+                              className="w-5 h-5 rounded-full border border-white/20 flex items-center justify-center cursor-pointer hover:scale-105"
+                              style={{ backgroundColor: group.color }}
+                            />
+
+                            {/* Color popover */}
+                            {isColorPickerOpen && (
+                              <div className="absolute top-7 left-0 z-50 p-2 bg-[#1e1f22] border border-[#383a40] rounded-[6px] shadow-2xl w-44">
+                                <div className="grid grid-cols-6 gap-1.5">
+                                  {PRESET_GROUP_COLORS.map((c) => (
+                                    <button
+                                      key={c}
+                                      type="button"
+                                      onClick={() => {
+                                        handleUpdateGroup(group.id, { color: c });
+                                        setActiveColorPickerGroupId(null);
+                                      }}
+                                      className={`w-5 h-5 rounded-full cursor-pointer border ${
+                                        group.color.toLowerCase() === c.toLowerCase()
+                                          ? 'border-white ring-2 ring-[#20b8cd]'
+                                          : 'border-transparent'
+                                      }`}
+                                      style={{ backgroundColor: c }}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Rule Type */}
+                          <select
+                            value={group.ruleType}
                             onChange={(e) =>
                               handleUpdateGroup(group.id, {
-                                ruleValue: e.target.value.replace(/^#/, ''),
+                                ruleType: e.target.value as GroupRuleType,
+                                ruleValue:
+                                  e.target.value === 'pasta'
+                                    ? pastas[0]?.id || 'root'
+                                    : '',
                               })
                             }
-                            className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] pl-5 pr-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
-                          />
+                            className="bg-[#2b2d31] text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-0.5 text-xs outline-none"
+                          >
+                            <option value="pasta">Pasta</option>
+                            <option value="tag">Tag (#)</option>
+                            <option value="titulo">Título</option>
+                            <option value="conteudo">Conteúdo</option>
+                            <option value="tipo">Tipo</option>
+                          </select>
+
+                          {/* Match count */}
+                          <span className="font-mono text-[10px] text-[#949ba4] shrink-0">
+                            {matchCount} {matchCount === 1 ? 'nota' : 'notas'}
+                          </span>
+
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGroup(group.id)}
+                            className="w-4 h-4 ml-auto text-[#949ba4] hover:text-[#f23f43] text-xs cursor-pointer"
+                          >
+                            ✕
+                          </button>
                         </div>
-                      ) : group.ruleType === 'titulo' ? (
-                        <input
-                          type="text"
-                          placeholder="Termo no título..."
-                          value={group.ruleValue || ''}
-                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
-                        />
-                      ) : (
-                        <input
-                          type="text"
-                          placeholder="Termo no conteúdo..."
-                          value={group.ruleValue || ''}
-                          onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                          className="w-full bg-[var(--background)] text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] border border-[var(--accents-2)] rounded-[calc(var(--radius)-2px)] px-2 py-1 outline-none focus:border-[var(--accents-5)] transition-colors"
-                        />
-                      )}
-                    </div>
+
+                        {/* Value input */}
+                        <div>
+                          {group.ruleType === 'pasta' ? (
+                            <select
+                              value={group.ruleValue || 'root'}
+                              onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none"
+                            >
+                              <option value="root">Sem Pasta (Raiz)</option>
+                              {pastas.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.nome}
+                                </option>
+                              ))}
+                            </select>
+                          ) : group.ruleType === 'tag' ? (
+                            <input
+                              type="text"
+                              placeholder="ex: historia, matematica"
+                              value={group.ruleValue || ''}
+                              onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] placeholder-[#80848e] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Digite termo de busca..."
+                              value={group.ruleValue || ''}
+                              onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
+                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] placeholder-[#80848e] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: FILTROS */}
+            {settingsTab === 'filtros' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] text-[#949ba4] block mb-1">Filtrar por Pasta</label>
+                  <select
+                    value={selectedFolderFilter}
+                    onChange={(e) => setSelectedFolderFilter(e.target.value)}
+                    className="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-1 text-xs outline-none"
+                  >
+                    <option value="all">Todas as Pastas</option>
+                    <option value="root">Sem Pasta (Raiz)</option>
+                    {pastas.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-[6px] bg-[#1e1f22] border border-[#383a40]">
+                  <span className="text-xs text-[#dbdee1]">Ocultar notas órfãs (isoladas)</span>
+                  <input
+                    type="checkbox"
+                    checked={hideOrphans}
+                    onChange={(e) => setHideOrphans(e.target.checked)}
+                    className="cursor-pointer accent-[#20b8cd] w-4 h-4"
+                  />
+                </div>
+
+                {graphMode === 'obsidian' && (
+                  <div className="flex items-center justify-between p-2 rounded-[6px] bg-[#1e1f22] border border-[#383a40]">
+                    <span className="text-xs text-[#dbdee1]">Partículas de Sinapse</span>
+                    <input
+                      type="checkbox"
+                      checked={synapseParticlesEnabled}
+                      onChange={(e) => setSynapseParticlesEnabled(e.target.checked)}
+                      className="cursor-pointer accent-[#20b8cd] w-4 h-4"
+                    />
                   </div>
-                );
-              })
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: FÍSICA OBSIDIAN */}
+            {settingsTab === 'fisica' && graphMode === 'obsidian' && (
+              <div className="space-y-3.5">
+                <div>
+                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                    <span>Força de Repulsão (Espaçamento)</span>
+                    <span className="font-mono text-white">{repulsionForce}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="100"
+                    max="600"
+                    value={repulsionForce}
+                    onChange={(e) => setRepulsionForce(Number(e.target.value))}
+                    className="w-full accent-[#20b8cd] cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                    <span>Distância dos Links</span>
+                    <span className="font-mono text-white">{linkDistance}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="30"
+                    max="200"
+                    value={linkDistance}
+                    onChange={(e) => setLinkDistance(Number(e.target.value))}
+                    className="w-full accent-[#20b8cd] cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                    <span>Gravidade Central</span>
+                    <span className="font-mono text-white">{(centerForce * 100).toFixed(0)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.02"
+                    max="0.25"
+                    step="0.01"
+                    value={centerForce}
+                    onChange={(e) => setCenterForce(Number(e.target.value))}
+                    className="w-full accent-[#20b8cd] cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                    <span>Escala do Tamanho dos Nós</span>
+                    <span className="font-mono text-white">{nodeScale.toFixed(1)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.6"
+                    max="2.0"
+                    step="0.1"
+                    value={nodeScale}
+                    onChange={(e) => setNodeScale(Number(e.target.value))}
+                    className="w-full accent-[#20b8cd] cursor-pointer"
+                  />
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Panel Footer */}
-          {groups.length > 0 && (
-            <div className="p-2.5 px-3.5 bg-[var(--accents-1)] border-t border-[var(--accents-2)] flex items-center justify-between text-[11px] text-[var(--accents-4)]">
-              <span>Notas sem grupo: <strong className="text-[var(--accents-5)] font-normal">Cinza Neutro</strong></span>
-              <button
-                type="button"
-                onClick={handleAddGroup}
-                className="text-[var(--foreground)] hover:underline cursor-pointer font-medium"
-              >
-                + Outro grupo
-              </button>
-            </div>
-          )}
+          {/* Footer Save indicator */}
+          <div className="p-2 px-3 bg-[#1e1f22]/60 border-t border-[#383a40] flex items-center justify-between text-[11px] text-[#949ba4]">
+            <span>Notas sem grupo: <strong className="text-white font-normal">Cinza Neutro</strong></span>
+            {saveStatus === 'saving' && <span className="text-[#f0b232]">Salvando...</span>}
+            {saveStatus === 'saved' && <span className="text-[#23a55a]">✓ Salvo</span>}
+          </div>
         </div>
       )}
 
-      {/* Graph Rendering */}
+      {/* Main Graph Viewport */}
       <div className="absolute inset-0 z-0">
-        {graphMode === 'isometric' && (
-          <IsometricGraph 
-            notas={notas} 
-            links={links} 
+        {graphMode === 'obsidian' && (
+          <ObsidianGraph
+            notas={filteredNotas}
+            links={links}
             groups={groups}
-            folderColorMap={folderColorMap}
-            hoveredNodeId={hoveredNode?.id || null}
+            hoveredNodeId={hoveredNota?.id || null}
             showLabels={showLabels}
-            onHoverNode={(nota) => {
-              if (!nota) {
-                setHoveredNode(null);
-              } else {
-                const fullNode = nodesRef.current.find(n => n.id === nota.id);
-                setHoveredNode(fullNode || null);
-              }
+            repulsionForce={repulsionForce}
+            linkDistance={linkDistance}
+            centerForce={centerForce}
+            nodeScale={nodeScale}
+            synapseParticlesEnabled={synapseParticlesEnabled}
+            onHoverNode={(nota) => setHoveredNota(nota)}
+            onOpenNota={(nota) => {
+              if (onOpenNota) onOpenNota(nota);
             }}
-            onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
           />
         )}
-        {graphMode === 'circuit' && (
-          <CircuitBoardGraph 
-            notas={notas} 
-            links={links} 
+
+        {graphMode === 'isometric' && (
+          <IsometricGraph
+            notas={filteredNotas}
+            links={links}
             groups={groups}
-            folderColorMap={folderColorMap}
-            hoveredNodeId={hoveredNode?.id || null}
-            onHoverNode={(nota) => {
-              if (!nota) {
-                setHoveredNode(null);
-              } else {
-                const fullNode = nodesRef.current.find(n => n.id === nota.id);
-                setHoveredNode(fullNode || null);
-              }
+            hoveredNodeId={hoveredNota?.id || null}
+            showLabels={showLabels}
+            onHoverNode={(nota) => setHoveredNota(nota)}
+            onOpenNota={(nota) => {
+              if (onOpenNota) onOpenNota(nota);
             }}
-            onOpenNota={(nota) => { if (onOpenNota) onOpenNota(nota); }} 
           />
         )}
       </div>
 
-      {/* Side Preview Card */}
-      {hoveredNode && hoveredNode.rawNota && (
+      {/* Discord Embed-style Side Preview Card on Hover */}
+      {hoveredNota && (
         <div
-          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-16 left-3 md:left-auto right-3 md:right-4 top-auto md:top-16 md:w-[320px] max-h-[60vh] md:max-h-none"
-          style={{
-            background: 'var(--background)',
-            border: '1px solid var(--accents-2)',
-            borderRadius: 'var(--radius)',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.35)',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 30,
-            overflow: 'hidden',
-            pointerEvents: 'none',
-          }}
+          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none"
         >
-          {/* Header */}
+          {/* Top color accent strip */}
           <div
-            style={{
-              padding: '12px 16px',
-              borderBottom: '1px solid var(--accents-2)',
-              background: 'var(--accents-1)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '6px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: hoveredNode.color,
-                    display: 'inline-block',
-                  }}
-                />
-                <span style={{ fontSize: '11px', color: 'var(--accents-4)', fontWeight: 500 }}>
-                  {hoveredNode.folderName}
-                </span>
-              </div>
-              <span style={{ fontSize: '10px', color: 'var(--accents-4)', fontFamily: 'var(--font-mono)' }}>
-                {hoveredNode.connectionsCount}{' '}
-                {hoveredNode.connectionsCount === 1 ? 'conexão' : 'conexões'}
+            className="h-1.5 w-full"
+            style={{ backgroundColor: resolveNodeColor(hoveredNota, groups) || '#20b8cd' }}
+          />
+
+          {/* Header */}
+          <div className="p-3 bg-[#1e1f22]/50 border-b border-[#383a40]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] text-[#949ba4]">
+                {pastas.find((p) => p.id === hoveredNota.pastaId)?.nome || 'Sem pasta'}
+              </span>
+              <span className="text-[10px] font-mono text-[#949ba4]">
+                {connectionCounts[hoveredNota.id] || 0}{' '}
+                {(connectionCounts[hoveredNota.id] || 0) === 1 ? 'conexão' : 'conexões'}
               </span>
             </div>
-
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '14px',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                letterSpacing: '-0.02em',
-                lineHeight: '1.4',
-              }}
-            >
-              {hoveredNode.title || 'Sem Título'}
-            </h3>
+            <h4 className="text-sm font-semibold text-white tracking-tight leading-snug">
+              {hoveredNota.titulo || 'Sem Título'}
+            </h4>
           </div>
 
-          {/* Content Preview Surface */}
-          <div
-            style={{ flex: 1, padding: '14px 16px', overflowY: 'auto' }}
-            className="no-scrollbar"
-          >
-            {hoveredNode.rawNota.tipo === 'desenho' ? (
+          {/* Preview Content */}
+          <div className="p-3 overflow-y-auto max-h-48 text-xs text-[#dbdee1] leading-relaxed no-scrollbar">
+            {hoveredNota.tipo === 'desenho' ? (
               <div>
-                <GraphDrawingPreview conteudoJson={hoveredNode.rawNota.conteudo} />
-                <p
-                  style={{
-                    fontSize: '11px',
-                    color: 'var(--accents-4)',
-                    textAlign: 'center',
-                    marginTop: '10px',
-                  }}
-                >
-                  Nota de Desenho / Canvas
+                <GraphDrawingPreview conteudoJson={hoveredNota.conteudo} />
+                <p className="text-[10px] text-[#949ba4] text-center mt-2">
+                  Canvas de Desenho / Diagrama
                 </p>
               </div>
-            ) : hoveredNode.rawNota.conteudo && hoveredNode.rawNota.conteudo.trim() ? (
+            ) : hoveredNota.conteudo && hoveredNota.conteudo.trim() ? (
               <div
-                className="notion-editor text-[13px] leading-[1.6] text-[var(--foreground)]"
-                dangerouslySetInnerHTML={{ __html: hoveredNode.rawNota.conteudo }}
-                style={{ wordBreak: 'break-word', userSelect: 'none', pointerEvents: 'none' }}
+                className="notion-editor text-[12px] leading-[1.5] text-[#dbdee1]"
+                dangerouslySetInnerHTML={{ __html: hoveredNota.conteudo }}
+                style={{ wordBreak: 'break-word' }}
               />
             ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: 'var(--accents-4)',
-                  fontSize: '12px',
-                  fontStyle: 'italic',
-                }}
-              >
-                Nota vazia
-              </div>
+              <p className="text-[#80848e] italic text-center py-2">Nota sem conteúdo</p>
             )}
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              padding: '8px 16px',
-              borderTop: '1px solid var(--accents-2)',
-              background: 'var(--accents-1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>Pré-visualização</span>
-            <span style={{ fontSize: '11px', color: 'var(--accents-4)' }}>Clique no nó para abrir</span>
+          <div className="p-2 px-3 bg-[#1e1f22]/60 border-t border-[#383a40] flex items-center justify-between text-[10px] text-[#949ba4]">
+            <span>Pré-visualização</span>
+            <span className="text-[#20b8cd] font-medium">Clique no nó para abrir ↗</span>
           </div>
         </div>
       )}
-
     </div>
   );
 }

@@ -7,7 +7,28 @@ import DrawingModal from './DrawingModal';
 import MathEquationModal from './MathEquationModal';
 import LiveCursors from './LiveCursors';
 import katex from 'katex';
+import { marked } from 'marked';
 import { parseYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
+
+// Configure marked for rich GFM parsing
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
+
+export function ensureHtmlContent(raw: string): string {
+  if (!raw || !raw.trim()) return '<p><br></p>';
+  // If already has common HTML block tags, return as-is
+  if (/<\s*(p|h[1-6]|div|table|ul|ol|blockquote|pre)\b/i.test(raw)) {
+    return raw;
+  }
+  try {
+    const parsed = marked.parse(raw) as string;
+    return parsed;
+  } catch (err) {
+    return raw;
+  }
+}
 
 interface EditorProps {
   value: string;
@@ -25,12 +46,16 @@ interface EditorProps {
   fontSize?: string;
   slashMenuEnabled?: boolean;
   wikilinksEnabled?: boolean;
+  readOnly?: boolean;
 }
 
 interface CommandItem {
   id: string;
+  command: string;
   title: string;
   subtitle: string;
+  category: string;
+  badge: string;
   keywords: string[];
   icon: React.ReactNode;
   action: (editor: HTMLDivElement) => void;
@@ -87,7 +112,8 @@ function Editor({
   fontFamily,
   fontSize,
   slashMenuEnabled = true,
-  wikilinksEnabled = true
+  wikilinksEnabled = true,
+  readOnly = false
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -318,7 +344,7 @@ function Editor({
 
   const [copied, setCopied] = useState(false);
   const isKeyboardNavRef = useRef(false);
-  const initialValueRef = useRef(value || '');
+  const initialValueRef = useRef(ensureHtmlContent(value || ''));
   const isInitializedRef = useRef(false);
 
   // Initialize content once on mount imperatively to keep contentEditable isolated from React reconciliation
@@ -1245,8 +1271,11 @@ function Editor({
   const commands: CommandItem[] = [
     {
       id: 'connect',
+      command: 'conectar',
       title: 'Conectar Nota',
-      subtitle: 'Criar link/conexão com outra nota do workspace (wikilink)',
+      subtitle: 'Vincular nota bidirecionalmente (wikilink)',
+      category: 'CONEXÕES & MÍDIA',
+      badge: 'WIKILINK',
       keywords: ['conectar', 'conectar nota', 'link nota', 'wikilink', 'relacao', 'grafo', '[[', 'nota'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1261,7 +1290,7 @@ function Editor({
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          const pos = computeFloatingPosition(rect, 280, 300, 8);
+          const pos = computeFloatingPosition(rect, 320, 320, 8);
           setWikiMenu({
             visible: true,
             x: pos.x,
@@ -1274,8 +1303,11 @@ function Editor({
     },
     {
       id: 'connect_card',
+      command: 'card',
       title: 'Conectar Flashcard',
-      subtitle: 'Conectar badge de flashcard para revisão rápida (::)',
+      subtitle: 'Badge de revisão espaçada rápida (::)',
+      category: 'CONEXÕES & MÍDIA',
+      badge: 'FLASHCARD',
       keywords: ['conectar card', 'flashcard', 'card', 'anki', 'revisao', 'conectar flashcard', '::'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1289,7 +1321,7 @@ function Editor({
         if (sel && sel.rangeCount > 0) {
           const range = sel.getRangeAt(0);
           const rect = range.getBoundingClientRect();
-          const pos = computeFloatingPosition(rect, 280, 300, 8);
+          const pos = computeFloatingPosition(rect, 320, 320, 8);
           setCardMenu({
             visible: true,
             x: pos.x,
@@ -1302,8 +1334,11 @@ function Editor({
     },
     {
       id: 'image',
+      command: 'imagem',
       title: 'Imagem',
-      subtitle: 'Upload de arquivo, arrastar ou link da web',
+      subtitle: 'Upload de arquivo ou link da web',
+      category: 'CONEXÕES & MÍDIA',
+      badge: 'MÍDIA',
       keywords: ['imagem', 'image', 'foto', 'picture', 'upload', 'figura', 'img'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1316,8 +1351,11 @@ function Editor({
     },
     {
       id: 'drawing',
+      command: 'canvas',
       title: 'Desenho / Canvas',
-      subtitle: 'Criar ou inserir retângulo de desenho na nota',
+      subtitle: 'Quadro interativo vetorial integrado na nota',
+      category: 'CONEXÕES & MÍDIA',
+      badge: 'CANVAS',
       keywords: ['desenho', 'canvas', 'excalidraw', 'quadro', 'draw', 'esboco', 'rascunho', 'diagrama'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1332,11 +1370,14 @@ function Editor({
     },
     {
       id: 'math',
-      title: 'Função / Equação Matemática',
-      subtitle: 'Inserir equação ou fórmula LaTeX (KaTeX)',
+      command: 'math',
+      title: 'Equação Matemática',
+      subtitle: 'Fórmula ou função LaTeX (KaTeX)',
+      category: 'CONEXÕES & MÍDIA',
+      badge: 'LATEX',
       keywords: ['math', 'matematica', 'funcao', 'equacao', 'formula', 'latex', 'katex', 'integral', 'fracao', 'soma', 'fx'],
       icon: (
-        <span className="font-mono font-bold text-[11px] px-1 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-mono font-bold text-[11px] px-1 py-0.5 rounded border border-current">
           f(x)
         </span>
       ),
@@ -1350,11 +1391,14 @@ function Editor({
     },
     {
       id: 'h1',
+      command: 'h1',
       title: 'Título 1',
-      subtitle: 'Título de seção grande',
+      subtitle: 'Título de seção principal grande',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'H1',
       keywords: ['titulo 1', 'h1', 'heading 1', 't1', 'grande'],
       icon: (
-        <span className="font-bold text-xs px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-bold text-xs px-1 py-0.5 rounded border border-current font-mono">
           H1
         </span>
       ),
@@ -1362,11 +1406,14 @@ function Editor({
     },
     {
       id: 'h2',
+      command: 'h2',
       title: 'Título 2',
       subtitle: 'Título de seção médio',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'H2',
       keywords: ['titulo 2', 'h2', 'heading 2', 't2', 'medio'],
       icon: (
-        <span className="font-bold text-xs px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-bold text-xs px-1 py-0.5 rounded border border-current font-mono">
           H2
         </span>
       ),
@@ -1374,11 +1421,14 @@ function Editor({
     },
     {
       id: 'h3',
+      command: 'h3',
       title: 'Título 3',
       subtitle: 'Título de seção pequeno',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'H3',
       keywords: ['titulo 3', 'h3', 'heading 3', 't3', 'pequeno'],
       icon: (
-        <span className="font-bold text-xs px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-bold text-xs px-1 py-0.5 rounded border border-current font-mono">
           H3
         </span>
       ),
@@ -1386,11 +1436,14 @@ function Editor({
     },
     {
       id: 'h4',
+      command: 'h4',
       title: 'Título 4',
       subtitle: 'Título menor de subtópico',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'H4',
       keywords: ['titulo 4', 'h4', 'heading 4', 't4', 'subtopico'],
       icon: (
-        <span className="font-bold text-xs px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-bold text-xs px-1 py-0.5 rounded border border-current font-mono">
           H4
         </span>
       ),
@@ -1398,8 +1451,11 @@ function Editor({
     },
     {
       id: 'ul',
+      command: 'lista',
       title: 'Lista com Marcadores',
-      subtitle: 'Criar lista simples com bullet points',
+      subtitle: 'Lista simples com bullet points',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'BULLET',
       keywords: ['lista', 'bullet', 'marcadores', 'pontos', 'ul', 'lista com marcadores'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1415,8 +1471,11 @@ function Editor({
     },
     {
       id: 'ol',
+      command: 'numerada',
       title: 'Lista Numerada',
-      subtitle: 'Criar lista organizada sequencial (1, 2, 3...)',
+      subtitle: 'Lista ordenada sequencial (1, 2, 3...)',
+      category: 'ESTRUTURA DE TEXTO',
+      badge: 'NÚMEROS',
       keywords: ['lista numerada', 'numerada', 'ordenada', 'numeros', 'ol', '1.'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1432,8 +1491,11 @@ function Editor({
     },
     {
       id: 'code',
+      command: 'codigo',
       title: 'Bloco de Código',
-      subtitle: 'Área para código de programação (estilo VS Code)',
+      subtitle: 'Área com syntax highlight e numeração',
+      category: 'BLOCOS & FORMATAÇÃO',
+      badge: 'CÓDIGO',
       keywords: ['codigo', 'code', 'bloco de codigo', 'programacao', 'linguagem', 'pre', 'script', 'dev'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1445,11 +1507,14 @@ function Editor({
     },
     {
       id: 'bold',
+      command: 'negrito',
       title: 'Negrito',
-      subtitle: 'Texto em destaque forte',
+      subtitle: 'Texto com formatação em destaque forte',
+      category: 'BLOCOS & FORMATAÇÃO',
+      badge: 'NEGRITO',
       keywords: ['negrito', 'bold', 'forte', 'b'],
       icon: (
-        <span className="font-bold text-sm px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="font-bold text-sm px-1 py-0.5 rounded border border-current font-mono">
           B
         </span>
       ),
@@ -1457,11 +1522,14 @@ function Editor({
     },
     {
       id: 'italic',
+      command: 'italico',
       title: 'Itálico',
-      subtitle: 'Texto inclinado para ênfase',
+      subtitle: 'Texto com formatação inclinada para ênfase',
+      category: 'BLOCOS & FORMATAÇÃO',
+      badge: 'ITÁLICO',
       keywords: ['italico', 'italic', 'inclinado', 'i', 'enfase'],
       icon: (
-        <span className="italic font-serif text-sm px-1.5 py-0.5 rounded border border-[var(--accents-3)]">
+        <span className="italic font-serif text-sm px-1 py-0.5 rounded border border-current">
           I
         </span>
       ),
@@ -1469,8 +1537,11 @@ function Editor({
     },
     {
       id: 'link',
+      command: 'link',
       title: 'Link Web',
-      subtitle: 'Adicionar link ou hiperlink externo',
+      subtitle: 'Adicionar hiperlink para endereço externo',
+      category: 'BLOCOS & FORMATAÇÃO',
+      badge: 'LINK',
       keywords: ['link', 'url', 'hiperlink', 'site', 'adicionar link'],
       icon: (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1489,8 +1560,10 @@ function Editor({
     if (!slashMenu.query) return true;
     const q = slashMenu.query.toLowerCase().trim();
     return (
+      cmd.command.toLowerCase().includes(q) ||
       cmd.title.toLowerCase().includes(q) ||
       cmd.subtitle.toLowerCase().includes(q) ||
+      cmd.badge.toLowerCase().includes(q) ||
       cmd.keywords.some((k) => k.toLowerCase().includes(q))
     );
   });
@@ -1544,7 +1617,7 @@ function Editor({
           clonedRange.setEnd(textNode, caretOffset);
           const rect = clonedRange.getBoundingClientRect();
 
-          const { x, y } = computeFloatingPosition(rect, 280, 340, 8);
+          const { x, y } = computeFloatingPosition(rect, 390, 380, 8);
 
           setSlashMenu((prev) => ({
             visible: true,
@@ -2191,26 +2264,56 @@ function Editor({
         <LiveCursors cursors={cursors} />
       )}
 
-      {/* Presence UI */}
+      {/* Active Collaborators Presence Pill (Discord Style) */}
       {workspaceId && notaId && isCollaborative && (
-        <div className="w-full flex justify-end items-center gap-3 py-1 px-4 pointer-events-none sticky top-0 bg-[var(--background)]/90 backdrop-blur-md z-40 border-b border-[var(--accents-2)] mb-2">
+        <div className="sticky top-2 self-end ml-auto z-30 -mb-8 mr-1 pointer-events-auto flex items-center gap-2 px-2.5 py-1 bg-[var(--discord-sidebar)]/85 hover:bg-[var(--discord-sidebar)] backdrop-blur-md border border-[var(--discord-border)] rounded-full shadow-lg shadow-black/30 transition-all select-none">
           {status !== 'connected' && (
-            <div className="text-[11px] text-[var(--accents-5)] pointer-events-auto">
-              {status === 'connecting' ? 'Conectando...' : 'Desconectado'}
-            </div>
+            <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">
+              {status === 'connecting' ? 'Conectando...' : 'Offline'}
+            </span>
           )}
-          <div className="flex -space-x-2 pointer-events-auto">
-            {users.map((u: any, i: number) => (
-              <div 
-                key={i} 
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white font-bold border-2 border-[var(--background)] shadow-sm"
-                style={{ backgroundColor: u.color || '#ccc' }}
-                title={u.name || 'Anon'}
-              >
-                {(u.name || 'A').charAt(0).toUpperCase()}
-              </div>
-            ))}
+          <div className="flex -space-x-1.5 items-center">
+            {users.map((u: any, i: number) => {
+              const displayName = u.username ? `@${u.username}` : (u.name || 'Anônimo');
+              return (
+                <div
+                  key={u.id || i}
+                  className="relative group/avatar cursor-pointer"
+                >
+                  <div
+                    className="w-6 h-6 rounded-full overflow-hidden border-2 border-[var(--discord-sidebar)] shadow-xs flex items-center justify-center text-[10px] text-white font-bold transition-transform duration-150 group-hover/avatar:scale-115 group-hover/avatar:z-20 relative"
+                    style={{ backgroundColor: u.color || 'var(--brand)' }}
+                  >
+                    {u.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={u.avatarUrl}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span>{(u.name || u.username || 'U').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+
+                  {/* Tooltip on hover */}
+                  <div className="absolute right-0 top-full mt-1.5 hidden group-hover/avatar:flex flex-col items-center z-50 pointer-events-none animate-smooth-pop">
+                    <div className="px-2 py-0.5 rounded bg-[var(--discord-user-bar)] border border-[var(--discord-border)] shadow-xl text-[11px] font-medium text-white whitespace-nowrap">
+                      {displayName}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          {users.length > 1 && (
+            <span className="text-[10px] font-mono text-[var(--discord-text-muted)] pl-0.5">
+              {users.length}
+            </span>
+          )}
         </div>
       )}
 
@@ -2342,128 +2445,140 @@ function Editor({
       {/* Image Upload / Embed Modal */}
       {imageModal?.visible && (
         <div 
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-100"
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
           onClick={() => setImageModal(null)}
         >
           <div 
             ref={imagePopoverRef}
-            className="w-full max-w-md bg-[var(--background)] border border-[var(--accents-2)] rounded-xl shadow-2xl p-5 text-sm"
+            className="w-full max-w-md bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                  <circle cx="9" cy="9" r="2"/>
-                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                </svg>
-                Adicionar Imagem
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[#383a40] bg-[#1e1f22] flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-[#20b8cd]/15 text-[#20b8cd] border border-[#20b8cd]/30 flex items-center justify-center">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                  </svg>
+                </div>
+                <span>Adicionar Imagem</span>
               </h3>
               <button 
                 type="button"
                 onClick={() => setImageModal(null)}
-                className="text-[var(--accents-5)] hover:text-[var(--foreground)] text-xs"
+                className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                aria-label="Fechar"
               >
-                ✕
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
               </button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-[var(--accents-2)] mb-4">
-              <button
-                type="button"
-                onClick={() => setImageModal(prev => prev ? { ...prev, tab: 'upload' } : null)}
-                className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
-                  imageModal.tab === 'upload'
-                    ? 'border-[var(--foreground)] text-[var(--foreground)]'
-                    : 'border-transparent text-[var(--accents-5)] hover:text-[var(--foreground)]'
-                }`}
-              >
-                Upload do Computador
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageModal(prev => prev ? { ...prev, tab: 'url' } : null)}
-                className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
-                  imageModal.tab === 'url'
-                    ? 'border-[var(--foreground)] text-[var(--foreground)]'
-                    : 'border-transparent text-[var(--accents-5)] hover:text-[var(--foreground)]'
-                }`}
-              >
-                Link da Web (URL)
-              </button>
-            </div>
-
-            {imageModal.tab === 'upload' ? (
-              <div className="flex flex-col gap-3">
-                <div 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-[var(--accents-3)] hover:border-[var(--foreground)] rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors text-center"
+            <div className="p-5 flex flex-col gap-4">
+              {/* Tabs */}
+              <div className="flex border-b border-[#383a40]">
+                <button
+                  type="button"
+                  onClick={() => setImageModal(prev => prev ? { ...prev, tab: 'upload' } : null)}
+                  className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+                    imageModal.tab === 'upload'
+                      ? 'border-[#20b8cd] text-white font-semibold'
+                      : 'border-transparent text-[#949ba4] hover:text-[#dbdee1]'
+                  }`}
                 >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-5)]">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  <span className="text-xs font-medium text-[var(--foreground)]">Escolha um arquivo do seu dispositivo</span>
-                  <span className="text-[11px] text-[var(--accents-4)]">ou arraste e solte direto no editor</span>
-                </div>
-                <div className="flex justify-end gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setImageModal(null)}
-                    className="geist-button-secondary h-8 text-xs px-3"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="geist-button h-8 text-xs px-3"
-                  >
-                    Procurar Arquivo
-                  </button>
-                </div>
+                  Upload do Dispositivo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageModal(prev => prev ? { ...prev, tab: 'url' } : null)}
+                  className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
+                    imageModal.tab === 'url'
+                      ? 'border-[#20b8cd] text-white font-semibold'
+                      : 'border-transparent text-[#949ba4] hover:text-[#dbdee1]'
+                  }`}
+                >
+                  Link da Web (URL)
+                </button>
               </div>
-            ) : (
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (imageModal.url.trim()) {
-                    insertImageAtRange(imageModal.url.trim(), 'Imagem', imageModal.savedRange);
-                    setImageModal(null);
-                  }
-                }}
-                className="flex flex-col gap-3"
-              >
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--accents-6)]">URL da Imagem</label>
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="https://exemplo.com/imagem.png"
-                    value={imageModal.url}
-                    onChange={(e) => setImageModal(prev => prev ? { ...prev, url: e.target.value } : null)}
-                    className="w-full px-3 py-2 text-xs bg-[var(--background)] border border-[var(--accents-2)] rounded-md outline-none focus:border-[var(--accents-5)] text-[var(--foreground)]"
-                  />
-                </div>
-                <div className="flex justify-end gap-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setImageModal(null)}
-                    className="geist-button-secondary h-8 text-xs px-3"
+
+              {imageModal.tab === 'upload' ? (
+                <div className="flex flex-col gap-3">
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-[#383a40] hover:border-[#20b8cd] bg-[#1e1f22] rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors text-center group"
                   >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="geist-button h-8 text-xs px-3"
-                  >
-                    Inserir Imagem
-                  </button>
+                    <div className="w-10 h-10 rounded-full bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[#949ba4] group-hover:text-[#20b8cd] transition-colors">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                    </div>
+                    <span className="text-xs font-medium text-white">Escolha um arquivo do seu computador</span>
+                    <span className="text-[11px] text-[#949ba4]">ou arraste e solte direto no editor</span>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40]">
+                    <button
+                      type="button"
+                      onClick={() => setImageModal(null)}
+                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-xs transition-colors cursor-pointer"
+                    >
+                      Procurar Arquivo
+                    </button>
+                  </div>
                 </div>
-              </form>
-            )}
+              ) : (
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (imageModal.url.trim()) {
+                      insertImageAtRange(imageModal.url.trim(), 'Imagem', imageModal.savedRange);
+                      setImageModal(null);
+                    }
+                  }}
+                  className="flex flex-col gap-3"
+                >
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#949ba4]">URL da Imagem</label>
+                    <input
+                      type="text"
+                      autoFocus
+                      placeholder="https://exemplo.com/imagem.png"
+                      value={imageModal.url}
+                      onChange={(e) => setImageModal(prev => prev ? { ...prev, url: e.target.value } : null)}
+                      className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40]">
+                    <button
+                      type="button"
+                      onClick={() => setImageModal(null)}
+                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!imageModal.url.trim()}
+                      className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Inserir Imagem
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2745,19 +2860,19 @@ function Editor({
             left: wikiMenu.x,
             zIndex: 1000,
           }}
-          className="w-[280px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
+          className="w-[320px] max-h-[320px] overflow-y-auto no-scrollbar bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl shadow-black/50 p-1.5 text-sm animate-smooth-pop select-none"
         >
-          <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[var(--foreground)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--accents-2)] mb-1 pb-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-75">
+          <div className="px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-[var(--discord-text-muted)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--discord-border)] mb-1 font-mono">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--brand)]">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
             </svg>
             <span>Conectar Nota</span>
-            <span className="text-[10px] text-[var(--accents-4)] normal-case font-normal">(Wikilink)</span>
+            <span className="text-[10px] text-[var(--discord-text-muted)] normal-case font-normal">(Wikilink)</span>
           </div>
 
           {filteredWikiNotas.length === 0 ? (
-            <div className="px-3 py-4 text-center text-xs text-[var(--accents-4)]">
+            <div className="px-3 py-4 text-center text-xs text-[var(--discord-text-muted)]">
               Nenhuma nota encontrada
             </div>
           ) : (
@@ -2782,10 +2897,10 @@ function Editor({
                       setWikiMenu((prev) => ({ ...prev, selectedIndex: idx }));
                     }
                   }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-all duration-150 active:scale-[0.98] cursor-pointer select-none ${
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[4px] text-left transition-all duration-100 cursor-pointer select-none ${
                     isSelected
-                      ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
-                      : 'text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
+                      ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
+                      : 'text-[var(--discord-text-channel)] hover:bg-[var(--discord-hover)] hover:text-[var(--discord-text-primary)]'
                   }`}
                 >
                   <div className="flex items-center justify-center w-5 h-5 shrink-0 text-[var(--accents-5)]">
@@ -2832,19 +2947,19 @@ function Editor({
             left: cardMenu.x,
             zIndex: 1000,
           }}
-          className="w-[300px] max-h-[300px] overflow-y-auto no-scrollbar bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
+          className="w-[320px] max-h-[320px] overflow-y-auto no-scrollbar bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl shadow-black/50 p-1.5 text-sm animate-smooth-pop select-none"
         >
-          <div className="px-2 py-1 text-[11px] font-semibold tracking-wider text-[var(--foreground)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--accents-2)] mb-1 pb-1.5">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-75">
+          <div className="px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-[var(--discord-text-muted)] uppercase select-none flex items-center gap-1.5 border-b border-[var(--discord-border)] mb-1 font-mono">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--brand)]">
               <rect width="18" height="18" x="3" y="3" rx="2"/>
               <path d="m9 12 2 2 4-4"/>
             </svg>
             <span>Conectar Flashcard</span>
-            <span className="text-[10px] text-[var(--accents-4)] normal-case font-normal">(::)</span>
+            <span className="text-[10px] text-[var(--discord-text-muted)] normal-case font-normal">(::)</span>
           </div>
 
           {filteredCards.length === 0 ? (
-            <div className="px-3 py-4 text-center text-xs text-[var(--accents-4)]">
+            <div className="px-3 py-4 text-center text-xs text-[var(--discord-text-muted)]">
               Nenhum flashcard encontrado
             </div>
           ) : (
@@ -2868,10 +2983,10 @@ function Editor({
                       setCardMenu((prev) => ({ ...prev, selectedIndex: idx }));
                     }
                   }}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left transition-colors cursor-pointer select-none ${
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[4px] text-left transition-all duration-100 cursor-pointer select-none ${
                     isSelected
-                      ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
-                      : 'text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
+                      ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
+                      : 'text-[var(--discord-text-channel)] hover:bg-[var(--discord-hover)] hover:text-[var(--discord-text-primary)]'
                   }`}
                 >
                   <div className="flex items-center justify-center w-5 h-5 shrink-0 text-[var(--accents-5)]">
@@ -2884,7 +2999,7 @@ function Editor({
                     <span className="font-medium text-[13px] text-[var(--foreground)] truncate leading-snug">
                       {card.frente}
                     </span>
-                    <span className="text-[11px] text-[var(--accents-4)] truncate leading-snug">
+                    <span className="text-[11px] text-[var(--discord-text-muted)] truncate leading-snug">
                       {card.deck ? `${card.deck.nome} • ` : ''}{card.verso}
                     </span>
                   </div>
@@ -2899,7 +3014,7 @@ function Editor({
       <div
         id={`synap-editor-${notaId}`}
         ref={editorRef}
-        contentEditable
+        contentEditable={!readOnly}
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}
@@ -2920,7 +3035,7 @@ function Editor({
         data-placeholder={placeholder}
       />
 
-      {/* Floating Slash Command Menu */}
+      {/* Discord-Style Floating Slash Command Menu */}
       {slashMenu.visible && (
         <div
           ref={menuRef}
@@ -2930,15 +3045,31 @@ function Editor({
             left: slashMenu.x,
             zIndex: 1000,
           }}
-          className="w-[280px] max-h-[340px] flex flex-col bg-[var(--background)]/95 border border-[var(--accents-2)] rounded-lg shadow-2xl p-1.5 text-sm backdrop-blur-md animate-smooth-pop"
+          className="w-[360px] sm:w-[390px] max-h-[380px] flex flex-col bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl shadow-black/60 overflow-hidden text-sm animate-smooth-pop select-none"
         >
+          {/* Top Discord Header Bar */}
+          <div className="px-3 py-2 bg-[var(--discord-user-bar)] border-b border-[var(--discord-border)] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-[4px] bg-[var(--brand)] text-white flex items-center justify-center text-[11px] font-mono font-bold shrink-0">
+                /
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                Comandos Correspondentes
+              </span>
+            </div>
+            <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">
+              {filteredCommands.length} {filteredCommands.length === 1 ? 'comando' : 'comandos'}
+            </span>
+          </div>
+
           {/* Search Input for Slash Commands */}
-          <div className="p-1 border-b border-[var(--accents-2)] mb-1">
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--accents-1)] rounded border border-[var(--accents-2)]">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accents-4)] shrink-0">
+          <div className="p-2 border-b border-[var(--discord-border)] bg-[var(--discord-sidebar)] shrink-0">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-[var(--discord-input)] rounded-[4px] border border-[var(--discord-border)] focus-within:border-[var(--brand)] transition-colors">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--discord-text-muted)] shrink-0">
                 <circle cx="11" cy="11" r="8"/>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
+              <span className="text-xs font-mono text-[var(--brand)] font-bold">/</span>
               <input
                 type="text"
                 value={slashMenu.query}
@@ -2946,74 +3077,132 @@ function Editor({
                   const val = e.target.value;
                   setSlashMenu((prev) => ({ ...prev, query: val, selectedIndex: 0 }));
                 }}
-                placeholder="Pesquisar comando..."
-                className="w-full bg-transparent border-none outline-none text-xs text-[var(--foreground)] placeholder-[var(--accents-4)] p-0"
+                placeholder="Pesquisar comandos..."
+                className="w-full bg-transparent border-none outline-none text-xs text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] p-0 font-sans"
               />
               {slashMenu.query && (
                 <button
                   type="button"
                   onClick={() => setSlashMenu((prev) => ({ ...prev, query: '', selectedIndex: 0 }))}
-                  className="text-[10px] text-[var(--accents-4)] hover:text-[var(--foreground)] transition-colors"
+                  className="w-4 h-4 flex items-center justify-center text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                  aria-label="Limpar busca"
                 >
-                  ✕
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
                 </button>
               )}
             </div>
           </div>
 
-          <div className="px-2 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--accents-4)] uppercase select-none">
-            Comandos
-          </div>
-
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-0.5">
+          {/* Commands List */}
+          <div className="flex-1 overflow-y-auto no-scrollbar p-1.5 space-y-0.5">
             {filteredCommands.length === 0 ? (
-              <div className="px-3 py-4 text-center text-xs text-[var(--accents-4)]">
-                Nenhum comando encontrado
+              <div className="px-3 py-6 text-center text-xs text-[var(--discord-text-muted)]">
+                Nenhum comando encontrado com "/{slashMenu.query}"
               </div>
             ) : (
               filteredCommands.map((cmd, idx) => {
                 const isSelected = idx === slashMenu.selectedIndex;
+                const prevCmd = idx > 0 ? filteredCommands[idx - 1] : null;
+                const isFirstInCategory = !prevCmd || prevCmd.category !== cmd.category;
+
                 return (
-                  <button
-                    key={cmd.id}
-                    ref={(el) => {
-                      itemRefs.current[idx] = el;
-                    }}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      executeCommand(cmd);
-                    }}
-                    onMouseMove={() => {
-                      if (isKeyboardNavRef.current) {
-                        isKeyboardNavRef.current = false;
-                      }
-                      if (slashMenu.selectedIndex !== idx) {
-                        setSlashMenu((prev) => ({ ...prev, selectedIndex: idx }));
-                      }
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left transition-all duration-150 active:scale-[0.98] cursor-pointer select-none ${
-                      isSelected
-                        ? 'bg-[var(--accents-2)] text-[var(--foreground)]'
-                        : 'text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center w-5 h-5 shrink-0 text-[var(--foreground)]">
-                      {cmd.icon}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-medium text-[13px] text-[var(--foreground)] leading-snug">
-                        {cmd.title}
+                  <div key={cmd.id} className="flex flex-col">
+                    {isFirstInCategory && (
+                      <div className="px-2.5 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono select-none flex items-center gap-1.5">
+                        <span>{cmd.category}</span>
+                      </div>
+                    )}
+                    <button
+                      ref={(el) => {
+                        itemRefs.current[idx] = el;
+                      }}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        executeCommand(cmd);
+                      }}
+                      onMouseMove={() => {
+                        if (isKeyboardNavRef.current) {
+                          isKeyboardNavRef.current = false;
+                        }
+                        if (slashMenu.selectedIndex !== idx) {
+                          setSlashMenu((prev) => ({ ...prev, selectedIndex: idx }));
+                        }
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-left transition-all duration-100 cursor-pointer select-none group ${
+                        isSelected
+                          ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
+                          : 'text-[var(--discord-text-channel)] hover:bg-[var(--discord-hover)] hover:text-[var(--discord-text-primary)]'
+                      }`}
+                    >
+                      {/* Discord Squircle Icon */}
+                      <div className={`w-7 h-7 rounded-[6px] flex items-center justify-center shrink-0 transition-colors border text-xs ${
+                        isSelected
+                          ? 'bg-[var(--brand)] text-white border-transparent shadow-xs'
+                          : 'bg-[var(--discord-input)] text-[var(--discord-text-primary)] border-[var(--discord-border)] group-hover:border-[var(--accents-4)]'
+                      }`}>
+                        {cmd.icon}
+                      </div>
+
+                      {/* Command Name & Subtitle */}
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`font-mono font-bold text-[13px] tracking-tight ${
+                            isSelected ? 'text-[var(--brand)]' : 'text-[var(--foreground)]'
+                          }`}>
+                            /{cmd.command}
+                          </span>
+                          <span className="text-[12px] font-medium text-[var(--discord-text-muted)] truncate">
+                            {cmd.title}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-[var(--discord-text-muted)] truncate leading-tight mt-0.5">
+                          {cmd.subtitle}
+                        </span>
+                      </div>
+
+                      {/* Right Badge */}
+                      <span className="text-[9px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] shrink-0 ml-1">
+                        {cmd.badge}
                       </span>
-                      <span className="text-[11px] text-[var(--accents-4)] truncate leading-snug">
-                        {cmd.subtitle}
-                      </span>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 );
               })
             )}
+          </div>
+
+          {/* Discord Bottom Keyboard Legend Footer */}
+          <div className="px-3 py-2 bg-[var(--discord-user-bar)] border-t border-[var(--discord-border)] flex items-center justify-between text-[11px] font-mono text-[var(--discord-text-muted)] select-none shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="px-1.5 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[10px] font-semibold text-[var(--foreground)] shadow-xs">
+                TAB
+              </span>
+              <span>ou</span>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[10px] font-semibold text-[var(--foreground)] shadow-xs">
+                ↵ ENTER
+              </span>
+              <span className="text-[var(--discord-text-muted)]">executar</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span className="px-1 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[10px] font-semibold text-[var(--foreground)] shadow-xs">
+                  ↑
+                </span>
+                <span className="px-1 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[10px] font-semibold text-[var(--foreground)] shadow-xs">
+                  ↓
+                </span>
+              </div>
+              <span>•</span>
+              <span className="px-1.5 py-0.5 rounded bg-[var(--discord-input)] border border-[var(--discord-border)] text-[10px] font-semibold text-[var(--foreground)] shadow-xs">
+                ESC
+              </span>
+            </div>
           </div>
         </div>
       )}

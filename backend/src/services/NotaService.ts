@@ -1,9 +1,6 @@
 import { prisma } from '../config/prisma';
 import { Prisma } from '@prisma/client';
-import path from 'path';
-import fs from 'fs';
-
-const uploadDir = path.resolve(__dirname, '../../uploads');
+import { deleteMultipleUploadedFiles } from '../utils/fileStorage';
 
 export class NotaService {
   async createNota(data: Prisma.NotaUncheckedCreateInput) {
@@ -29,21 +26,7 @@ export class NotaService {
   async deleteNota(id: string) {
     const nota = await prisma.nota.findUnique({ where: { id } });
     if (nota?.conteudo) {
-      // Find all /uploads/<filename> occurrences and remove corresponding files
-      const matches = nota.conteudo.matchAll(/\/uploads\/([a-zA-Z0-9._-]+)/g);
-      for (const match of matches) {
-        const filename = match[1];
-        if (filename) {
-          const filePath = path.join(uploadDir, path.basename(filename));
-          if (fs.existsSync(filePath)) {
-            try {
-              fs.unlinkSync(filePath);
-            } catch (err) {
-              console.error(`Erro ao remover imagem ${filename}:`, err);
-            }
-          }
-        }
-      }
+      deleteMultipleUploadedFiles(nota.conteudo);
     }
     return prisma.nota.delete({ where: { id } });
   }

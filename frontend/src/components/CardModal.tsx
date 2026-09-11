@@ -29,98 +29,75 @@ export default function CardModal({ card, onClose }: CardModalProps) {
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        background: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        userSelect: 'none',
-      }}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-100 select-none"
       onClick={onClose}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[480px] w-full"
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '10px',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-        }}
+        className="bg-[#313338] border border-[#383a40] rounded-[10px] w-full max-w-[480px] p-5 sm:p-6 shadow-2xl flex flex-col text-[#dbdee1] transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="18" x="3" y="3" rx="2"/>
-              <path d="m9 12 2 2 4-4"/>
+        {/* Modal Header (Discord style) */}
+        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#383a40]">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd] shrink-0">
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <path d="m9 12 2 2 4-4" />
             </svg>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--foreground)' }}>
+            <span className="text-xs sm:text-sm font-semibold text-white truncate">
               Flashcard Conectado {card.deck ? `• ${card.deck.nome}` : ''}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="geist-button-secondary"
-            style={{ width: '24px', height: '24px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px', cursor: 'pointer' }}
+            className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+            title="Fechar"
           >
-            ✕
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
         {/* Card interactive flip area */}
         <div
           onClick={() => setIsFlipped((prev) => !prev)}
-          style={{
-            minHeight: '200px',
-            background: 'var(--accents-1)',
-            border: '1px solid var(--accents-2)',
-            borderRadius: '8px',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            textAlign: 'center',
-          }}
+          className="min-h-[200px] bg-[#2b2d31] hover:border-[#4e5058] border border-[#383a40] rounded-[8px] p-5 flex flex-col justify-between cursor-pointer text-center transition-all shadow-md"
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--accents-4)' }}>
-            <span>{card.tipo === 'nota' ? 'Nota' : 'Card'}</span>
-            <span>{isFlipped ? 'Verso (Resposta)' : 'Frente (Pergunta)'}</span>
+          <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40] text-[#949ba4]">
+              {card.tipo === 'nota' ? 'Nota' : 'Card'}
+            </span>
+            <span className={isFlipped ? 'text-[#23a55a] font-semibold' : 'text-[#20b8cd] font-semibold'}>
+              {isFlipped ? 'Verso (Resposta)' : 'Frente (Pergunta)'}
+            </span>
           </div>
 
-          <div style={{ margin: '16px 0' }}>
-            <p style={{ fontSize: '16px', fontWeight: 500, color: 'var(--foreground)', lineHeight: '1.6', margin: 0 }}>
+          <div className="my-4">
+            <p className="text-base sm:text-lg font-medium text-white leading-relaxed m-0">
               {card.frente}
             </p>
 
             {isFlipped && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--accents-2)' }}>
-                <p style={{ fontSize: '14px', color: 'var(--foreground)', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>
+              <div className="mt-4 pt-4 border-t border-[#383a40] animate-in fade-in duration-150">
+                <p className="text-sm text-[#dbdee1] leading-relaxed m-0 whitespace-pre-wrap">
                   {card.verso}
                 </p>
               </div>
             )}
           </div>
 
-          <div style={{ fontSize: '11px', color: 'var(--accents-4)' }}>
-            {!isFlipped ? 'Clique para ver a resposta' : 'Clique para voltar'}
+          <div className="text-[11px] text-[#80848e]">
+            {!isFlipped ? 'Toque para revelar a resposta' : 'Toque para virar novamente'}
           </div>
         </div>
 
         {/* Card SRS Metadata Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--accents-2)', fontSize: '11px', color: 'var(--accents-5)', fontFamily: 'var(--font-mono)' }}>
-          <span>Intervalo: {card.interval}d</span>
-          <span>Facilidade: {card.easeFactor}x</span>
-          <span>Repetições: {card.reps}</span>
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#383a40] text-[11px] text-[#949ba4] font-mono">
+          <span>Intervalo: <strong className="text-[#dbdee1] font-semibold">{card.interval}d</strong></span>
+          <span>Facilidade: <strong className="text-[#dbdee1] font-semibold">{card.easeFactor}x</strong></span>
+          <span>Repetições: <strong className="text-[#dbdee1] font-semibold">{card.reps}</strong></span>
         </div>
       </div>
     </div>

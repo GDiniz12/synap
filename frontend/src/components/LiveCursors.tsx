@@ -49,13 +49,24 @@ export default function LiveCursors({ cursors, transformCoord }: LiveCursorsProp
 
             {/* Name Badge */}
             <div
-              className="absolute left-4 top-3 px-2 py-0.5 rounded-full text-[11px] font-semibold text-white tracking-wide shadow-md select-none whitespace-nowrap flex items-center gap-1"
+              className="absolute left-4 top-3 px-2 py-0.5 rounded-full text-[11px] font-semibold text-white tracking-wide shadow-md select-none whitespace-nowrap flex items-center gap-1.5"
               style={{
                 backgroundColor: cursor.color,
                 boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
               }}
             >
-              {firstName}
+              {cursor.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={cursor.avatarUrl}
+                  alt=""
+                  className="w-3.5 h-3.5 rounded-full object-cover border border-white/40"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
+              <span>{firstName}</span>
             </div>
           </div>
         );

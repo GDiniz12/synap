@@ -119,128 +119,55 @@ export default function MathEquationModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2000,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[540px] w-full"
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '12px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
+        className="mobile-bottom-sheet md:max-w-[540px] w-full bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl p-6 flex flex-col gap-4 animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'var(--accents-1)',
-              border: '1px solid var(--accents-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--foreground)',
-              flexShrink: 0,
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 700,
-              fontSize: '13px',
-            }}
-          >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--brand)] font-mono font-bold text-xs shrink-0">
             f(x)
           </div>
           <div>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '16px',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                lineHeight: 1.2,
-              }}
-            >
+            <h3 className="m-0 text-base font-semibold text-[var(--discord-text-primary)] leading-tight">
               {initialLatex ? 'Editar Função Matemática' : 'Inserir Função Matemática'}
             </h3>
-            <span
-              style={{
-                fontSize: '12px',
-                color: 'var(--accents-5)',
-                display: 'block',
-                marginTop: '2px',
-              }}
-            >
+            <span className="text-xs text-[var(--discord-text-muted)] block mt-0.5">
               Fórmula em formato LaTeX com renderização KaTeX
             </span>
           </div>
         </div>
 
         {/* Live Preview Box */}
-        <div
-          style={{
-            minHeight: '80px',
-            background: 'var(--accents-1)',
-            border: '1px solid var(--accents-2)',
-            borderRadius: '8px',
-            padding: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflowX: 'auto',
-            color: 'var(--foreground)',
-          }}
-        >
+        <div className="min-h-[80px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[6px] p-4 flex items-center justify-center overflow-x-auto text-[var(--discord-text-primary)]">
           {renderedHtml ? (
             <div
               dangerouslySetInnerHTML={{ __html: renderedHtml }}
-              style={{ fontSize: '18px', textAlign: 'center' }}
+              className="text-lg text-center text-[var(--discord-text-primary)]"
             />
           ) : (
-            <span style={{ fontSize: '13px', color: 'var(--accents-4)' }}>
+            <span className="text-xs text-[var(--discord-text-muted)]">
               A pré-visualização da fórmula aparecerá aqui...
             </span>
           )}
         </div>
 
         {/* Preset Chips */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accents-5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)]">
             Atalhos Rápidos
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <div className="flex flex-wrap gap-1.5">
             {PRESETS.map((p) => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => handleInsertPreset(p.latex)}
-                className="geist-button-secondary"
-                style={{
-                  padding: '3px 8px',
-                  fontSize: '11.5px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  height: '24px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                }}
+                className="px-2 py-1 rounded-[4px] text-xs font-mono bg-[var(--discord-input)] hover:bg-[var(--discord-hover)] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] border border-[var(--discord-border)] transition-colors cursor-pointer"
               >
                 {p.label}
               </button>
@@ -249,17 +176,11 @@ export default function MathEquationModal({
         </div>
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label
               htmlFor="math-latex-input"
-              style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--accents-6)',
-                marginBottom: '6px',
-              }}
+              className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)] mb-1.5"
             >
               Código LaTeX
             </label>
@@ -270,61 +191,28 @@ export default function MathEquationModal({
               value={latex}
               onChange={(e) => setLatex(e.target.value)}
               placeholder="Ex: \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"
-              className="geist-input"
-              style={{
-                width: '100%',
-                height: '75px',
-                padding: '8px 12px',
-                fontSize: '13px',
-                fontFamily: 'var(--font-mono)',
-                borderRadius: '6px',
-                outline: 'none',
-                resize: 'none',
-              }}
+              className="w-full h-20 p-2.5 text-xs font-mono bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] rounded-[4px] outline-none text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] resize-none transition-colors"
             />
             {renderError && (
-              <span
-                style={{
-                  display: 'block',
-                  color: 'var(--accents-5)',
-                  fontSize: '11px',
-                  marginTop: '4px',
-                  fontFamily: 'var(--font-mono)',
-                }}
-              >
+              <span className="block text-[var(--discord-text-muted)] text-[11px] font-mono mt-1">
                 {renderError}
               </span>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
             <button
               type="button"
               onClick={onClose}
-              className="geist-button-secondary"
-              style={{
-                height: '34px',
-                padding: '0 14px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
+              className="px-3.5 py-1.5 rounded-[4px] text-xs font-medium text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!latex.trim()}
-              className="geist-button"
-              style={{
-                height: '34px',
-                padding: '0 16px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: !latex.trim() ? 'not-allowed' : 'pointer',
-                opacity: !latex.trim() ? 0.6 : 1,
-              }}
+              className="px-4 py-1.5 rounded-[4px] text-xs font-semibold bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs"
             >
               {initialLatex ? 'Salvar Equação' : 'Inserir Equação'}
             </button>

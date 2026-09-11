@@ -56,75 +56,27 @@ export default function DrawingYouTubeModal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 2500,
-        background: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="fixed inset-0 z-[2500] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[480px] w-full"
-        style={{
-          background: 'var(--background)',
-          border: '1px solid var(--accents-2)',
-          borderRadius: '12px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}
+        className="mobile-bottom-sheet md:max-w-[480px] w-full bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl p-6 flex flex-col gap-4 animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'var(--accents-1)',
-              border: '1px solid var(--accents-2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--foreground)',
-              flexShrink: 0,
-            }}
-          >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--discord-text-channel)] shrink-0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/>
               <polygon points="10 15 15 12 10 9 10 15"/>
             </svg>
           </div>
           <div>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '16px',
-                fontWeight: 600,
-                color: 'var(--foreground)',
-                lineHeight: 1.2,
-              }}
-            >
+            <h3 className="m-0 text-base font-semibold text-[var(--discord-text-primary)] leading-tight">
               Inserir Vídeo do YouTube
             </h3>
-            <span
-              style={{
-                fontSize: '12px',
-                color: 'var(--accents-5)',
-                display: 'block',
-                marginTop: '2px',
-              }}
-            >
+            <span className="text-xs text-[var(--discord-text-muted)] block mt-0.5">
               Cole o link de qualquer vídeo ou shorts do YouTube
             </span>
           </div>
@@ -132,37 +84,22 @@ export default function DrawingYouTubeModal({
 
         {/* Live Preview If URL is valid */}
         {videoId && (
-          <div
-            style={{
-              width: '100%',
-              aspectRatio: '16/9',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              border: '1px solid var(--accents-2)',
-              background: 'var(--accents-1)',
-            }}
-          >
+          <div className="w-full aspect-video rounded-[6px] overflow-hidden border border-[var(--discord-border)] bg-[var(--discord-sidebar)]">
             <iframe
               src={getYouTubeEmbedUrl(videoId)}
               title="YouTube Preview"
-              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              className="w-full h-full border-none block"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             />
           </div>
         )}
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label
               htmlFor="youtube-url-input"
-              style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: 'var(--accents-6)',
-                marginBottom: '6px',
-              }}
+              className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)] mb-1.5"
             >
               Link do Vídeo
             </label>
@@ -176,58 +113,28 @@ export default function DrawingYouTubeModal({
                 if (error) setError('');
               }}
               placeholder="https://www.youtube.com/watch?v=..."
-              className="geist-input"
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '0 12px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                outline: 'none',
-              }}
+              className="w-full h-9 px-3 text-xs bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] rounded-[4px] outline-none text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] transition-colors"
             />
             {error && (
-              <span
-                style={{
-                  display: 'block',
-                  color: 'var(--error, #ef4444)',
-                  fontSize: '11.5px',
-                  marginTop: '4px',
-                }}
-              >
+              <span className="block text-[#ed4245] text-xs mt-1">
                 {error}
               </span>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
             <button
               type="button"
               onClick={onClose}
-              className="geist-button-secondary"
-              style={{
-                height: '34px',
-                padding: '0 14px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-              }}
+              className="px-3.5 py-1.5 rounded-[4px] text-xs font-medium text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!url.trim()}
-              className="geist-button"
-              style={{
-                height: '34px',
-                padding: '0 16px',
-                fontSize: '13px',
-                borderRadius: '6px',
-                cursor: !url.trim() ? 'not-allowed' : 'pointer',
-                opacity: !url.trim() ? 0.6 : 1,
-              }}
+              className="px-4 py-1.5 rounded-[4px] text-xs font-semibold bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs"
             >
               Inserir Vídeo
             </button>

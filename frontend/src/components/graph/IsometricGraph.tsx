@@ -81,74 +81,94 @@ export default function IsometricGraph({
 
     const posMap = new Map();
     d3Nodes.forEach((n: any) => {
-       // Save X as X, Y as Z (since Z is depth in 3D)
-        posMap.set(n.id, { 
-         x: snap(n.x || 0), 
-         z: snap(n.y || 0), 
-         height: n.height,
-         thickness: n.thickness, 
-         title: n.title,
-         color: resolveNodeColor(n.rawNota, groups, folderColorMap),
-         rawNota: n.rawNota
-       });
+      // Save X as X, Y as Z (since Z is depth in 3D)
+      posMap.set(n.id, {
+        x: snap(n.x || 0),
+        z: snap(n.y || 0),
+        height: n.height,
+        thickness: n.thickness,
+        title: n.title,
+        color: resolveNodeColor(n.rawNota, groups),
+        rawNota: n.rawNota,
+      });
     });
 
     return { nodes: d3Nodes, finalLinks: d3Links, positions: posMap };
-  }, [notas, links, groups, folderColorMap]);
+  }, [notas, links, groups]);
 
   if (nodes.length === 0) {
-    return <div className="w-full h-full flex items-center justify-center text-[var(--accents-5)]">Nenhuma nota no grafo.</div>;
+    return (
+      <div className="w-full h-full flex items-center justify-center text-[#949ba4] font-medium text-sm">
+        Nenhuma nota no grafo.
+      </div>
+    );
   }
 
   const isLight = resolvedTheme === 'light';
-  const gridColor1 = isLight ? '#eaeaea' : '#222222';
-  const gridColor2 = isLight ? '#fafafa' : '#111111';
+  const gridColor1 = isLight ? '#e2e8f0' : '#2b2d31';
+  const gridColor2 = isLight ? '#f1f5f9' : '#232428';
 
   return (
-    <div className="w-full h-full bg-[var(--background)]">
+    <div className="w-full h-full bg-[#1e1f22]">
       <Canvas>
         <OrthographicCamera makeDefault position={[150, 150, 150]} zoom={6} near={-1000} far={2000} />
         <OrbitControls makeDefault enableDamping dampingFactor={0.1} target={[0, 0, 0]} />
-        
-        <ambientLight intensity={isLight ? 0.8 : 0.5} />
-        <directionalLight position={[20, 50, 20]} intensity={1.5} />
-        
+
+        <ambientLight intensity={isLight ? 0.9 : 0.65} />
+        <directionalLight position={[20, 50, 20]} intensity={1.6} />
+
         <gridHelper args={[1000, 100, gridColor1, gridColor2]} position={[0, -0.5, 0]} />
 
-        {/* Nodes (Isometric Buildings) */}
+        {/* Nodes (Isometric Towers) */}
         {nodes.map((node: any) => {
           const pos = positions.get(node.id);
           if (!pos) return null;
           const isHovered = hoveredNodeId === node.id;
-          
-          // Use the group/folder color, or white if no color is specified
-          const baseColor = pos.color !== '#525252' && pos.color !== '#737373' ? pos.color : '#f5f5f5';
+
+          // Only color if an active group matched this note! Otherwise neutral Discord gray
+          const hasCustomGroupColor =
+            pos.color &&
+            pos.color !== '#525252' &&
+            pos.color !== '#737373' &&
+            pos.color !== '#4e5058' &&
+            pos.color !== '#80848e';
+
+          const baseColor = hasCustomGroupColor
+            ? pos.color
+            : isLight
+            ? '#cbd5e1'
+            : '#4e5058';
 
           return (
-            <mesh 
-              key={node.id} 
+            <mesh
+              key={node.id}
               position={[pos.x, pos.height / 2, pos.z]}
-              onPointerOver={(e) => { e.stopPropagation(); onHoverNode(pos.rawNota); }}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                onHoverNode(pos.rawNota);
+              }}
               onPointerOut={() => onHoverNode(null)}
-              onClick={(e) => { e.stopPropagation(); onOpenNota(pos.rawNota); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenNota(pos.rawNota);
+              }}
             >
               <boxGeometry args={[pos.thickness, pos.height, pos.thickness]} />
-              <meshStandardMaterial 
-                color={isHovered ? (isLight ? '#000000' : '#ffffff') : baseColor} 
-                emissive={isHovered ? (isLight ? '#000000' : '#ffffff') : baseColor}
-                emissiveIntensity={isHovered ? (isLight ? 0.2 : 0.4) : 0.1}
+              <meshStandardMaterial
+                color={isHovered ? '#20b8cd' : baseColor}
+                emissive={isHovered ? '#20b8cd' : baseColor}
+                emissiveIntensity={isHovered ? 0.5 : 0.08}
               />
-              
-              {/* Permanent Label */}
+
+              {/* Discord-styled Label */}
               {(showLabels || isHovered) && (
-                <Html position={[0, pos.height / 2 + 2, 0]} center zIndexRange={[100, 0]}>
-                  <div 
-                    className={`px-1.5 py-0.5 whitespace-nowrap font-mono text-[10px] pointer-events-none transition-colors ${
-                      isHovered 
-                        ? 'bg-[var(--foreground)] text-[var(--background)] border border-[var(--foreground)] z-50 shadow-lg' 
-                        : 'bg-[var(--background)] opacity-80 text-[var(--foreground)] border border-[var(--accents-2)]'
+                <Html position={[0, pos.height / 2 + 3, 0]} center zIndexRange={[100, 0]}>
+                  <div
+                    className={`px-2 py-0.5 whitespace-nowrap font-sans text-[11px] pointer-events-none transition-colors rounded-[4px] border ${
+                      isHovered
+                        ? 'bg-[#20b8cd] text-white border-[#20b8cd] shadow-lg font-medium'
+                        : 'bg-[#111214]/90 text-[#dbdee1] border-[#383a40]'
                     }`}
-                    style={{ borderRadius: 'var(--radius)' }}
                   >
                     {pos.title}
                   </div>
@@ -163,27 +183,27 @@ export default function IsometricGraph({
           const sourcePos = positions.get(link.source.id || link.source);
           const targetPos = positions.get(link.target.id || link.target);
           if (!sourcePos || !targetPos) return null;
-          
+
           const isSourceHovered = hoveredNodeId === (link.source.id || link.source);
           const isTargetHovered = hoveredNodeId === (link.target.id || link.target);
-          const isHighlighted = hoveredNodeId ? (isSourceHovered || isTargetHovered) : false;
+          const isHighlighted = hoveredNodeId ? isSourceHovered || isTargetHovered : false;
           const isDimmed = hoveredNodeId && !isHighlighted;
-          
-          const highlightColor = isLight ? '#000000' : '#ffffff';
-          const normalColor = isLight ? '#a3a3a3' : '#888888';
-          const dimmedColor = isLight ? '#e5e5e5' : '#333333';
-          
+
+          const highlightColor = '#20b8cd'; // Synap Blue
+          const normalColor = isLight ? '#94a3b8' : '#383a40';
+          const dimmedColor = isLight ? '#e2e8f0' : '#232428';
+
           return (
             <Line
               key={i}
               points={[
                 [sourcePos.x, sourcePos.height, sourcePos.z],
-                [targetPos.x, targetPos.height, targetPos.z]
+                [targetPos.x, targetPos.height, targetPos.z],
               ]}
               color={isHighlighted ? highlightColor : isDimmed ? dimmedColor : normalColor}
-              lineWidth={isHighlighted ? 2.5 : 1.5}
+              lineWidth={isHighlighted ? 2.5 : 1.2}
               transparent
-              opacity={isHighlighted ? 1 : isDimmed ? 0.2 : 0.6}
+              opacity={isHighlighted ? 1 : isDimmed ? 0.15 : 0.6}
             />
           );
         })}

@@ -773,8 +773,8 @@ export default function DrawingCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
-    // Canvas Background
-    ctx.fillStyle = resolvedTheme === 'light' ? '#ffffff' : '#121212';
+    // Canvas Background (Discord Canvas tone)
+    ctx.fillStyle = resolvedTheme === 'light' ? '#f2f3f5' : '#313338';
     ctx.fillRect(0, 0, width, height);
 
     // Dot Grid (Excalidraw style)
@@ -1605,7 +1605,7 @@ export default function DrawingCanvas({
           handleInsertImage(files[0]);
         }
       }}
-      className="relative w-full h-full flex flex-col bg-[var(--background)] overflow-hidden select-none font-sans"
+      className="relative w-full h-full flex flex-col bg-[var(--discord-canvas)] overflow-hidden select-none font-sans"
     >
       {/* Hidden Image File Input */}
       <input
@@ -1622,31 +1622,61 @@ export default function DrawingCanvas({
         className="hidden"
       />
 
-      {/* Presence UI */}
+      {/* Active Collaborators Presence Pill (Discord Style) */}
       {workspaceId && notaId && isCollaborative && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-3 bg-[var(--background)]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-[var(--accents-2)] shadow-lg pointer-events-auto">
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-[var(--discord-sidebar)]/85 hover:bg-[var(--discord-sidebar)] backdrop-blur-md px-2.5 py-1 rounded-full border border-[var(--discord-border)] shadow-lg shadow-black/30 pointer-events-auto transition-all select-none">
           {status !== 'connected' && (
-            <div className="text-[11px] text-[var(--accents-5)]">
-              {status === 'connecting' ? 'Conectando...' : 'Desconectado'}
-            </div>
+            <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">
+              {status === 'connecting' ? 'Conectando...' : 'Offline'}
+            </span>
           )}
-          <div className="flex -space-x-2">
-            {users.map((u: any, i: number) => (
-              <div 
-                key={i} 
-                className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] text-white font-bold border-2 border-[var(--background)] shadow-sm"
-                style={{ backgroundColor: u.color || '#ccc' }}
-                title={u.name || 'Anon'}
-              >
-                {(u.name || 'A').charAt(0).toUpperCase()}
-              </div>
-            ))}
+          <div className="flex -space-x-1.5 items-center">
+            {users.map((u: any, i: number) => {
+              const displayName = u.username ? `@${u.username}` : (u.name || 'Anônimo');
+              return (
+                <div
+                  key={u.id || i}
+                  className="relative group/canvas-avatar cursor-pointer"
+                >
+                  <div
+                    className="w-7 h-7 rounded-full overflow-hidden border-2 border-[var(--discord-sidebar)] shadow-xs flex items-center justify-center text-[10px] text-white font-bold transition-transform duration-150 group-hover/canvas-avatar:scale-115 group-hover/canvas-avatar:z-20 relative"
+                    style={{ backgroundColor: u.color || 'var(--brand)' }}
+                  >
+                    {u.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={u.avatarUrl}
+                        alt={displayName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span>{(u.name || u.username || 'U').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+
+                  {/* Tooltip on hover */}
+                  <div className="absolute right-0 top-full mt-1.5 hidden group-hover/canvas-avatar:flex flex-col items-center z-50 pointer-events-none animate-smooth-pop">
+                    <div className="px-2 py-0.5 rounded bg-[var(--discord-user-bar)] border border-[var(--discord-border)] shadow-xl text-[11px] font-medium text-white whitespace-nowrap">
+                      {displayName}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+          {users.length > 1 && (
+            <span className="text-[10px] font-mono text-[var(--discord-text-muted)] pl-0.5">
+              {users.length}
+            </span>
+          )}
         </div>
       )}
 
       {/* Top Floating Toolbar (Tools Menu with Number Badges) */}
-      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[var(--background)]/95 backdrop-blur-md border border-[var(--accents-2)] rounded-xl px-2 py-1.5 shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar">
+      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[var(--discord-sidebar)]/95 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] px-2 py-1.5 shadow-xl shadow-black/30 max-w-[95vw] overflow-x-auto no-scrollbar">
         {/* Hand Navigation Tool (0) */}
         <button
           type="button"
@@ -1654,8 +1684,10 @@ export default function DrawingCanvas({
             setTool('hand');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'hand' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'hand'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Mão / Navegar (0 ou H)"
         >
@@ -1665,7 +1697,7 @@ export default function DrawingCanvas({
             <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
             <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             0
           </span>
         </button>
@@ -1676,8 +1708,10 @@ export default function DrawingCanvas({
           onClick={() => {
             setTool('select');
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'select' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'select'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Seleção / Mover (1 ou V) - Arraste no vazio para selecionar múltiplos"
         >
@@ -1685,7 +1719,7 @@ export default function DrawingCanvas({
             <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
             <path d="m13 13 6 6"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             1
           </span>
         </button>
@@ -1697,15 +1731,17 @@ export default function DrawingCanvas({
             setTool('pencil');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'pencil' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'pencil'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Lápis / Caneta Livre (2 ou P)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             2
           </span>
         </button>
@@ -1717,15 +1753,17 @@ export default function DrawingCanvas({
             setTool('rectangle');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'rectangle' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'rectangle'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Retângulo (3 ou R)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="2"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             3
           </span>
         </button>
@@ -1737,15 +1775,17 @@ export default function DrawingCanvas({
             setTool('ellipse');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'ellipse' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'ellipse'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Círculo / Elipse (4 ou O)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             4
           </span>
         </button>
@@ -1757,8 +1797,10 @@ export default function DrawingCanvas({
             setTool('arrow');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'arrow' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'arrow'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Seta Conectora (5 ou A)"
         >
@@ -1766,7 +1808,7 @@ export default function DrawingCanvas({
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             5
           </span>
         </button>
@@ -1778,15 +1820,17 @@ export default function DrawingCanvas({
             setTool('line');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'line' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'line'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Linha (6 ou L)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="19" x2="19" y2="5"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             6
           </span>
         </button>
@@ -1798,8 +1842,10 @@ export default function DrawingCanvas({
             setTool('text');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'text' ? 'bg-[#38bdf8]/20 text-[#38bdf8] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'text'
+              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Texto (7 ou T) - Fonte Short Stack"
         >
@@ -1808,7 +1854,7 @@ export default function DrawingCanvas({
             <line x1="9" y1="20" x2="15" y2="20"/>
             <line x1="12" y1="4" x2="12" y2="20"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             7
           </span>
         </button>
@@ -1819,7 +1865,7 @@ export default function DrawingCanvas({
           onClick={() => {
             imageInputRef.current?.click();
           }}
-          className="relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer text-[#a0a0a0] hover:text-white hover:bg-[#282828]"
+          className="relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]"
           title="Adicionar Imagem (8 ou I / Ctrl+V / Arrastar para o canvas)"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1827,7 +1873,7 @@ export default function DrawingCanvas({
             <circle cx="9" cy="9" r="2"/>
             <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             8
           </span>
         </button>
@@ -1839,8 +1885,10 @@ export default function DrawingCanvas({
             setTool('eraser');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors cursor-pointer ${
-            tool === 'eraser' ? 'bg-[#ef4444]/20 text-[#ef4444] font-bold' : 'text-[#a0a0a0] hover:text-white hover:bg-[#282828]'
+          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+            tool === 'eraser'
+              ? 'bg-[#ed4245] text-white shadow-xs font-bold'
+              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
           }`}
           title="Borracha (9 ou E)"
         >
@@ -1849,18 +1897,18 @@ export default function DrawingCanvas({
             <path d="M22 21H7"/>
             <path d="m5 11 9 9"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-full bg-[var(--accents-2)] text-[var(--accents-5)] leading-none select-none">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
             9
           </span>
         </button>
 
-        <div className="w-[1px] h-4 bg-[#333333] mx-1" />
+        <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-1" />
 
         {/* Insert Note Container Button (Icon only) */}
         <button
           type="button"
           onClick={() => setPickerModal('nota')}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
           title="Inserir container de Nota no Desenho"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1875,7 +1923,7 @@ export default function DrawingCanvas({
         <button
           type="button"
           onClick={() => setPickerModal('card')}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
           title="Inserir container de Flashcard no Desenho"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1890,7 +1938,7 @@ export default function DrawingCanvas({
         <button
           type="button"
           onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer font-mono font-bold text-[11px]"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer font-mono font-bold text-[11px]"
           title="Inserir Equação Matemática (LaTeX / KaTeX)"
         >
           f(x)
@@ -1900,7 +1948,7 @@ export default function DrawingCanvas({
         <button
           type="button"
           onClick={() => setIsYouTubeModalOpen(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
           title="Inserir Vídeo do YouTube"
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1909,14 +1957,14 @@ export default function DrawingCanvas({
           </svg>
         </button>
 
-        <div className="w-[1px] h-4 bg-[#333333] mx-1" />
+        <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-1" />
 
         {/* Undo / Redo */}
         <button
           type="button"
           onClick={handleUndo}
           disabled={historyIndex <= 0}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
           title="Desfazer (Ctrl + Z)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1929,7 +1977,7 @@ export default function DrawingCanvas({
           type="button"
           onClick={handleRedo}
           disabled={historyIndex >= history.length - 1}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-[#a0a0a0] hover:text-white hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
           title="Refazer (Ctrl + Y)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1940,18 +1988,18 @@ export default function DrawingCanvas({
       </div>
 
       {/* Left Floating Style Settings Palette */}
-      <div className="absolute top-20 left-4 z-20 flex flex-col gap-3 bg-[var(--background)]/95 backdrop-blur-md border border-[var(--accents-2)] rounded-xl p-3 shadow-2xl text-xs text-[var(--foreground)]">
+      <div className="absolute top-20 left-4 z-20 flex flex-col gap-3 bg-[var(--discord-sidebar)]/95 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] p-3 shadow-xl shadow-black/30 text-xs text-[var(--discord-text-primary)] w-44">
         {/* Stroke Color */}
         <div className="flex flex-col gap-1.5">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Cor do Traço</span>
+          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Cor do Traço</span>
           <div className="grid grid-cols-3 gap-1.5">
             {STROKE_COLORS.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setStrokeColor(c)}
-                className={`w-5 h-5 rounded-full border transition-transform ${
-                  strokeColor === c ? 'scale-125 border-[var(--foreground)] shadow-md' : 'border-transparent hover:scale-110'
+                className={`w-5 h-5 rounded-full border border-black/20 transition-all cursor-pointer ${
+                  strokeColor === c ? 'scale-115 ring-2 ring-[var(--brand)] shadow-xs' : 'hover:scale-110 opacity-80 hover:opacity-100'
                 }`}
                 style={{ backgroundColor: c }}
               />
@@ -1960,30 +2008,30 @@ export default function DrawingCanvas({
         </div>
 
         {/* Fill Color */}
-        <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--accents-2)]">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Preenchimento</span>
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--discord-border)]">
+          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Preenchimento</span>
           <div className="grid grid-cols-4 gap-1.5">
             {FILL_COLORS.map((fc, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => setFillColor(fc)}
-                className={`w-5 h-5 rounded-md border flex items-center justify-center transition-transform ${
-                  fillColor === fc ? 'scale-125 border-[#38bdf8]' : 'border-[var(--accents-3)] hover:scale-110'
+                className={`w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${
+                  fillColor === fc ? 'scale-115 ring-2 ring-[var(--brand)] border-[var(--brand)] shadow-xs' : 'border-[var(--discord-border)] hover:scale-105 opacity-80 hover:opacity-100'
                 }`}
-                style={{ backgroundColor: fc === 'transparent' ? 'var(--accents-1)' : fc }}
+                style={{ backgroundColor: fc === 'transparent' ? 'var(--discord-input)' : fc }}
               >
-                {fc === 'transparent' && <span className="text-[9px] text-[var(--accents-5)]">✕</span>}
+                {fc === 'transparent' && <span className="text-[9px] text-[var(--discord-text-muted)]">✕</span>}
               </button>
             ))}
           </div>
         </div>
 
         {/* Stroke Width Slider (Force Bar / Range) */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--accents-2)]">
+        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--discord-border)]">
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--accents-5)]">Espessura</span>
-            <span className="text-[11px] font-mono text-[#38bdf8] font-bold">{strokeWidth}px</span>
+            <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Espessura</span>
+            <span className="text-[11px] font-mono text-[var(--brand)] font-bold">{strokeWidth}px</span>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -1993,11 +2041,11 @@ export default function DrawingCanvas({
               step="1"
               value={strokeWidth}
               onChange={(e) => setStrokeWidth(Number(e.target.value))}
-              className="w-full h-1.5 bg-[var(--accents-2)] rounded-lg appearance-none cursor-pointer accent-[#38bdf8] hover:bg-[var(--accents-3)] transition-colors"
+              className="w-full h-1.5 bg-[var(--discord-input)] rounded appearance-none cursor-pointer accent-[var(--brand)] hover:bg-[var(--discord-border)] transition-colors"
             />
           </div>
           {/* Dynamic stroke preview bar */}
-          <div className="h-4 flex items-center justify-center bg-[var(--accents-1)] rounded border border-[var(--accents-2)] px-2 overflow-hidden">
+          <div className="h-4 flex items-center justify-center bg-[var(--discord-input)] rounded-[4px] border border-[var(--discord-border)] px-2 overflow-hidden">
             <div
               className="rounded-full transition-all"
               style={{
@@ -2013,10 +2061,10 @@ export default function DrawingCanvas({
         <button
           type="button"
           onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
-          className="mt-1 py-1.5 px-2 rounded-lg geist-button-secondary flex items-center justify-center gap-1.5 text-xs transition-colors"
+          className="mt-1 py-1.5 px-2 rounded-[4px] bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer font-medium"
           title="Inserir Equação Matemática (LaTeX / KaTeX)"
         >
-          <span className="font-mono font-bold text-[11px] text-[#38bdf8]">f(x)</span>
+          <span className="font-mono font-bold text-[11px] text-[var(--brand)]">f(x)</span>
           <span>Equação</span>
         </button>
 
@@ -2024,7 +2072,7 @@ export default function DrawingCanvas({
         <button
           type="button"
           onClick={handleExportPNG}
-          className="py-1.5 px-2 rounded-lg geist-button-secondary flex items-center justify-center gap-1.5 text-xs transition-colors"
+          className="py-1.5 px-2 rounded-[4px] bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer font-medium"
           title="Exportar como imagem PNG"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2032,7 +2080,6 @@ export default function DrawingCanvas({
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          <span>Exportar PNG</span>
         </button>
       </div>
 
@@ -2095,7 +2142,7 @@ export default function DrawingCanvas({
             placeholder="Digite seu texto..."
             autoFocus
             rows={Math.max(2, (editingText.text.match(/\n/g) || []).length + 1)}
-            className="bg-[#181818]/95 border border-[#38bdf8] rounded-md outline-none text-white p-2 m-0 resize-none shadow-2xl"
+            className="bg-[var(--discord-sidebar)]/95 border border-[var(--brand)] rounded-[6px] outline-none text-white p-2.5 m-0 resize-none shadow-2xl"
             style={{
               color: strokeColor === '#ffffff' ? '#ffffff' : strokeColor,
               fontSize: `${Math.max(14, 18 * zoom)}px`,
@@ -2104,7 +2151,7 @@ export default function DrawingCanvas({
               minWidth: `${Math.max(160, 160 * zoom)}px`,
               minHeight: `${Math.max(42, 42 * zoom)}px`,
               width: `${Math.max(180, (Math.max(...(editingText.text || '').split('\n').map((l) => l.length), 1) + 4) * 12 * zoom)}px`,
-              caretColor: '#38bdf8',
+              caretColor: 'var(--brand)',
             }}
           />
         </div>
@@ -2169,19 +2216,19 @@ export default function DrawingCanvas({
       />
 
       {/* Bottom Zoom and Pan Info */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-[#1e1e1e]/90 backdrop-blur-md border border-[#2d2d2d] rounded-lg px-2.5 py-1 text-xs text-[#888888]">
+      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-[var(--discord-sidebar)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-[6px] px-2.5 py-1 text-xs text-[var(--discord-text-muted)] shadow-lg shadow-black/20">
         <button
           type="button"
           onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))}
-          className="hover:text-white px-1"
+          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded px-1.5 py-0.5 cursor-pointer transition-colors"
         >
           -
         </button>
-        <span>{Math.round(zoom * 100)}%</span>
+        <span className="font-mono">{Math.round(zoom * 100)}%</span>
         <button
           type="button"
           onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
-          className="hover:text-white px-1"
+          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded px-1.5 py-0.5 cursor-pointer transition-colors"
         >
           +
         </button>
@@ -2191,7 +2238,7 @@ export default function DrawingCanvas({
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          className="hover:text-white pl-1.5 border-l border-[#333333]"
+          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded pl-1.5 pr-1 py-0.5 border-l border-[var(--discord-border)] cursor-pointer transition-colors"
         >
           Reset
         </button>
