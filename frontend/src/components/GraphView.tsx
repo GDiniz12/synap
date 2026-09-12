@@ -35,10 +35,10 @@ interface GraphViewProps {
 // Discord Theme Color Presets for Color Groups
 export const PRESET_GROUP_COLORS = [
   '#20b8cd', // Synap Blue
-  '#23a55a', // Discord Green
-  '#f0b232', // Discord Yellow / Amber
-  '#f23f43', // Discord Red
-  '#eb459e', // Discord Fuchsia
+  'var(--success)', // Discord Green
+  'var(--warning)', // Discord Yellow / Amber
+  'var(--error)', // Discord Red
+  'var(--brand)', // Discord Fuchsia
   '#38bdf8', // Discord Cyan / Sky
   '#9b59b6', // Discord Purple
   '#57f287', // Bright Green
@@ -48,7 +48,7 @@ export const PRESET_GROUP_COLORS = [
   '#80848e', // Discord Muted Gray
 ];
 
-export const NEUTRAL_FALLBACK_COLOR = '#4e5058';
+export const NEUTRAL_FALLBACK_COLOR = 'var(--accents-3)';
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -339,18 +339,18 @@ export default function GraphView({
   const activeGroupsCount = groups.filter((g) => g.enabled).length;
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#1e1f22] select-none font-sans">
+    <div className="w-full h-full relative overflow-hidden bg-[var(--background)] select-none font-sans">
       {/* Top Floating Navigation Toolbar (Discord Aesthetic) */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
         {/* Left Control Cluster */}
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Brand Icon */}
-          <div className="flex items-center justify-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-2 shadow-lg">
+          <div className="flex items-center justify-center bg-[var(--accents-1)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] p-2 shadow-lg">
             <SynapLogo size={16} />
           </div>
 
           {/* Search Input Box */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#2b2d31]/90 backdrop-blur-md rounded-[8px] border border-[#383a40] shadow-lg focus-within:border-[#20b8cd] transition-colors">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[var(--accents-1)]/90 backdrop-blur-md rounded-[8px] border border-[var(--discord-border)] shadow-lg focus-within:border-[#20b8cd] transition-colors">
             <svg
               width="13"
               height="13"
@@ -358,7 +358,7 @@ export default function GraphView({
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className="text-[#949ba4]"
+              className="text-[var(--accents-5)]"
             >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -368,13 +368,13 @@ export default function GraphView({
               placeholder="Filtrar notas no grafo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs text-[#dbdee1] placeholder-[#80848e] w-28 sm:w-44"
+              className="bg-transparent border-none outline-none text-xs text-[var(--accents-6)] placeholder-[#80848e] w-28 sm:w-44"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="text-[#949ba4] hover:text-white text-xs cursor-pointer"
+                className="text-[var(--accents-5)] hover:text-white text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -382,14 +382,14 @@ export default function GraphView({
           </div>
 
           {/* Graph Mode Switch (Discord Pills) */}
-          <div className="flex items-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-1 shadow-lg gap-1">
+          <div className="flex items-center bg-[var(--accents-1)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] p-1 shadow-lg gap-1">
             <button
               type="button"
               onClick={() => setGraphMode('obsidian')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-[5px] transition-all cursor-pointer ${
                 graphMode === 'obsidian'
                   ? 'bg-[#20b8cd] text-white shadow-sm'
-                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#35373c]'
+                  : 'text-[var(--accents-5)] hover:text-[var(--accents-6)] hover:bg-[var(--accents-2)]'
               }`}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -407,7 +407,7 @@ export default function GraphView({
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-[5px] transition-all cursor-pointer ${
                 graphMode === 'isometric'
                   ? 'bg-[#20b8cd] text-white shadow-sm'
-                  : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#35373c]'
+                  : 'text-[var(--accents-5)] hover:text-[var(--accents-6)] hover:bg-[var(--accents-2)]'
               }`}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -425,8 +425,8 @@ export default function GraphView({
             onClick={() => setShowLabels((prev) => !prev)}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border text-xs font-medium transition-all shadow-lg cursor-pointer ${
               showLabels
-                ? 'bg-[#35373c] text-white border-[#4e5058]'
-                : 'bg-[#2b2d31]/90 text-[#949ba4] border-[#383a40] hover:text-white hover:bg-[#35373c]'
+                ? 'bg-[var(--accents-2)] text-white border-[var(--accents-3)]'
+                : 'bg-[var(--accents-1)]/90 text-[var(--accents-5)] border-[var(--discord-border)] hover:text-white hover:bg-[var(--accents-2)]'
             }`}
             title="Mostrar ou ocultar títulos das notas"
           >
@@ -443,7 +443,7 @@ export default function GraphView({
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] border text-xs font-medium transition-all shadow-lg cursor-pointer ${
               isSettingsOpen
                 ? 'bg-[#20b8cd] text-white border-[#20b8cd]'
-                : 'bg-[#2b2d31]/90 text-[#dbdee1] border-[#383a40] hover:bg-[#35373c]'
+                : 'bg-[var(--accents-1)]/90 text-[var(--accents-6)] border-[var(--discord-border)] hover:bg-[var(--accents-2)]'
             }`}
             title="Abrir painel de configurações, filtros e grupos de cores"
           >
@@ -453,7 +453,7 @@ export default function GraphView({
             </svg>
             <span>Ajustes & Grupos</span>
             {activeGroupsCount > 0 && (
-              <span className="bg-[#1e1f22] text-[#20b8cd] font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+              <span className="bg-[var(--background)] text-[#20b8cd] font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                 {activeGroupsCount}
               </span>
             )}
@@ -461,18 +461,18 @@ export default function GraphView({
         </div>
 
         {/* Right Stats & Action Cluster */}
-        <div className="flex items-center gap-2 bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] px-3 py-1.5 shadow-lg pointer-events-auto text-xs text-[#949ba4]">
+        <div className="flex items-center gap-2 bg-[var(--accents-1)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] px-3 py-1.5 shadow-lg pointer-events-auto text-xs text-[var(--accents-5)]">
           <span className="text-white font-medium">{filteredNotas.length} notas</span>
           <span>•</span>
           <span className="text-white font-medium">{links.length} conexões</span>
 
-          <div className="w-[1px] h-3.5 bg-[#383a40] mx-1" />
+          <div className="w-[1px] h-3.5 bg-[var(--discord-border)] mx-1" />
 
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="w-5 h-5 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+              className="w-5 h-5 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
               title="Fechar Grafo"
             >
               ✕
@@ -483,9 +483,9 @@ export default function GraphView({
 
       {/* Retractable Floating Discord Control Panel (Filters, Groups, Physics) */}
       {isSettingsOpen && (
-        <div className="absolute top-14 left-3 z-30 w-[360px] sm:w-[390px] max-h-[calc(100vh-100px)] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-100">
+        <div className="absolute top-14 left-3 z-30 w-[360px] sm:w-[390px] max-h-[calc(100vh-100px)] bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-100">
           {/* Drawer Header with Discord Tabs */}
-          <div className="border-b border-[#383a40] bg-[#1e1f22]/80">
+          <div className="border-b border-[var(--discord-border)] bg-[var(--background)]/80">
             <div className="flex items-center justify-between p-2.5 px-3">
               <span className="text-xs font-semibold text-white tracking-tight flex items-center gap-2">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd]">
@@ -498,7 +498,7 @@ export default function GraphView({
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="w-5 h-5 flex items-center justify-center rounded text-[#949ba4] hover:text-white hover:bg-[#35373c] text-xs transition-colors cursor-pointer"
+                className="w-5 h-5 flex items-center justify-center rounded text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] text-xs transition-colors cursor-pointer"
               >
                 ✕
               </button>
@@ -511,8 +511,8 @@ export default function GraphView({
                 onClick={() => setSettingsTab('grupos')}
                 className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
                   settingsTab === 'grupos'
-                    ? 'bg-[#35373c] text-white'
-                    : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                    ? 'bg-[var(--accents-2)] text-white'
+                    : 'text-[var(--accents-5)] hover:text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
                 }`}
               >
                 Grupos ({groups.length})
@@ -522,8 +522,8 @@ export default function GraphView({
                 onClick={() => setSettingsTab('filtros')}
                 className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
                   settingsTab === 'filtros'
-                    ? 'bg-[#35373c] text-white'
-                    : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                    ? 'bg-[var(--accents-2)] text-white'
+                    : 'text-[var(--accents-5)] hover:text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
                 }`}
               >
                 Filtros
@@ -534,8 +534,8 @@ export default function GraphView({
                   onClick={() => setSettingsTab('fisica')}
                   className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
                     settingsTab === 'fisica'
-                      ? 'bg-[#35373c] text-white'
-                      : 'text-[#949ba4] hover:text-[#dbdee1] hover:bg-[#2b2d31]'
+                      ? 'bg-[var(--accents-2)] text-white'
+                      : 'text-[var(--accents-5)] hover:text-[var(--accents-6)] hover:bg-[var(--accents-1)]'
                   }`}
                 >
                   Física 2D
@@ -545,12 +545,12 @@ export default function GraphView({
           </div>
 
           {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[55vh] text-xs text-[#dbdee1]">
+          <div className="flex-1 overflow-y-auto p-3 space-y-3 max-h-[55vh] text-xs text-[var(--accents-6)]">
             {/* TAB 1: GRUPOS DE CORES */}
             {settingsTab === 'grupos' && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between pb-1 border-b border-[#383a40]">
-                  <span className="text-[11px] text-[#949ba4]">
+                <div className="flex items-center justify-between pb-1 border-b border-[var(--discord-border)]">
+                  <span className="text-[11px] text-[var(--accents-5)]">
                     Crie regras personalizadas para colorir notas
                   </span>
                   <button
@@ -565,7 +565,7 @@ export default function GraphView({
                 {groups.length === 0 ? (
                   <div className="py-6 px-3 text-center">
                     <p className="text-white font-medium mb-1">Nenhum grupo ativo</p>
-                    <p className="text-[11px] text-[#949ba4] mb-3 leading-relaxed">
+                    <p className="text-[11px] text-[var(--accents-5)] mb-3 leading-relaxed">
                       Notas sem grupo utilizam a cor neutra do Discord. Adicione regras para destacar pastas, tags ou termos.
                     </p>
                     <button
@@ -586,8 +586,8 @@ export default function GraphView({
                         key={group.id}
                         className={`p-2 rounded-[6px] border transition-all ${
                           group.enabled
-                            ? 'bg-[#1e1f22] border-[#383a40]'
-                            : 'bg-[#1e1f22]/50 border-[#2b2d31] opacity-50'
+                            ? 'bg-[var(--background)] border-[var(--discord-border)]'
+                            : 'bg-[var(--background)]/50 border-[var(--accents-1)] opacity-50'
                         }`}
                       >
                         {/* Top row: reorder, checkbox, color swatch, type, match count, delete */}
@@ -597,7 +597,7 @@ export default function GraphView({
                               type="button"
                               disabled={index === 0}
                               onClick={() => handleMoveGroup(index, 'up')}
-                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[#949ba4] hover:text-white disabled:opacity-20 cursor-pointer"
+                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-5)] hover:text-white disabled:opacity-20 cursor-pointer"
                             >
                               ▲
                             </button>
@@ -605,7 +605,7 @@ export default function GraphView({
                               type="button"
                               disabled={index === groups.length - 1}
                               onClick={() => handleMoveGroup(index, 'down')}
-                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[#949ba4] hover:text-white disabled:opacity-20 cursor-pointer"
+                              className="w-3.5 h-3 flex items-center justify-center text-[9px] text-[var(--accents-5)] hover:text-white disabled:opacity-20 cursor-pointer"
                             >
                               ▼
                             </button>
@@ -631,7 +631,7 @@ export default function GraphView({
 
                             {/* Color popover */}
                             {isColorPickerOpen && (
-                              <div className="absolute top-7 left-0 z-50 p-2 bg-[#1e1f22] border border-[#383a40] rounded-[6px] shadow-2xl w-44">
+                              <div className="absolute top-7 left-0 z-50 p-2 bg-[var(--background)] border border-[var(--discord-border)] rounded-[6px] shadow-2xl w-44">
                                 <div className="grid grid-cols-6 gap-1.5">
                                   {PRESET_GROUP_COLORS.map((c) => (
                                     <button
@@ -666,7 +666,7 @@ export default function GraphView({
                                     : '',
                               })
                             }
-                            className="bg-[#2b2d31] text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-0.5 text-xs outline-none"
+                            className="bg-[var(--accents-1)] text-[var(--accents-6)] border border-[var(--discord-border)] rounded-[4px] px-2 py-0.5 text-xs outline-none"
                           >
                             <option value="pasta">Pasta</option>
                             <option value="tag">Tag (#)</option>
@@ -676,7 +676,7 @@ export default function GraphView({
                           </select>
 
                           {/* Match count */}
-                          <span className="font-mono text-[10px] text-[#949ba4] shrink-0">
+                          <span className="font-mono text-[10px] text-[var(--accents-5)] shrink-0">
                             {matchCount} {matchCount === 1 ? 'nota' : 'notas'}
                           </span>
 
@@ -684,7 +684,7 @@ export default function GraphView({
                           <button
                             type="button"
                             onClick={() => handleDeleteGroup(group.id)}
-                            className="w-4 h-4 ml-auto text-[#949ba4] hover:text-[#f23f43] text-xs cursor-pointer"
+                            className="w-4 h-4 ml-auto text-[var(--accents-5)] hover:text-[var(--error)] text-xs cursor-pointer"
                           >
                             ✕
                           </button>
@@ -696,7 +696,7 @@ export default function GraphView({
                             <select
                               value={group.ruleValue || 'root'}
                               onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none"
+                              className="w-full bg-[var(--accents-1)] text-xs text-[var(--accents-6)] border border-[var(--discord-border)] rounded-[4px] px-2 py-1 outline-none"
                             >
                               <option value="root">Sem Pasta (Raiz)</option>
                               {pastas.map((p) => (
@@ -711,7 +711,7 @@ export default function GraphView({
                               placeholder="ex: historia, matematica"
                               value={group.ruleValue || ''}
                               onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] placeholder-[#80848e] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
+                              className="w-full bg-[var(--accents-1)] text-xs text-[var(--accents-6)] placeholder-[#80848e] border border-[var(--discord-border)] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
                             />
                           ) : (
                             <input
@@ -719,7 +719,7 @@ export default function GraphView({
                               placeholder="Digite termo de busca..."
                               value={group.ruleValue || ''}
                               onChange={(e) => handleUpdateGroup(group.id, { ruleValue: e.target.value })}
-                              className="w-full bg-[#2b2d31] text-xs text-[#dbdee1] placeholder-[#80848e] border border-[#383a40] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
+                              className="w-full bg-[var(--accents-1)] text-xs text-[var(--accents-6)] placeholder-[#80848e] border border-[var(--discord-border)] rounded-[4px] px-2 py-1 outline-none focus:border-[#20b8cd]"
                             />
                           )}
                         </div>
@@ -734,11 +734,11 @@ export default function GraphView({
             {settingsTab === 'filtros' && (
               <div className="space-y-3">
                 <div>
-                  <label className="text-[11px] text-[#949ba4] block mb-1">Filtrar por Pasta</label>
+                  <label className="text-[11px] text-[var(--accents-5)] block mb-1">Filtrar por Pasta</label>
                   <select
                     value={selectedFolderFilter}
                     onChange={(e) => setSelectedFolderFilter(e.target.value)}
-                    className="w-full bg-[#1e1f22] text-[#dbdee1] border border-[#383a40] rounded-[4px] px-2 py-1 text-xs outline-none"
+                    className="w-full bg-[var(--background)] text-[var(--accents-6)] border border-[var(--discord-border)] rounded-[4px] px-2 py-1 text-xs outline-none"
                   >
                     <option value="all">Todas as Pastas</option>
                     <option value="root">Sem Pasta (Raiz)</option>
@@ -750,8 +750,8 @@ export default function GraphView({
                   </select>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-[6px] bg-[#1e1f22] border border-[#383a40]">
-                  <span className="text-xs text-[#dbdee1]">Ocultar notas órfãs (isoladas)</span>
+                <div className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--background)] border border-[var(--discord-border)]">
+                  <span className="text-xs text-[var(--accents-6)]">Ocultar notas órfãs (isoladas)</span>
                   <input
                     type="checkbox"
                     checked={hideOrphans}
@@ -761,8 +761,8 @@ export default function GraphView({
                 </div>
 
                 {graphMode === 'obsidian' && (
-                  <div className="flex items-center justify-between p-2 rounded-[6px] bg-[#1e1f22] border border-[#383a40]">
-                    <span className="text-xs text-[#dbdee1]">Partículas de Sinapse</span>
+                  <div className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--background)] border border-[var(--discord-border)]">
+                    <span className="text-xs text-[var(--accents-6)]">Partículas de Sinapse</span>
                     <input
                       type="checkbox"
                       checked={synapseParticlesEnabled}
@@ -778,7 +778,7 @@ export default function GraphView({
             {settingsTab === 'fisica' && graphMode === 'obsidian' && (
               <div className="space-y-3.5">
                 <div>
-                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                  <div className="flex justify-between text-[11px] text-[var(--accents-5)] mb-1">
                     <span>Força de Repulsão (Espaçamento)</span>
                     <span className="font-mono text-white">{repulsionForce}</span>
                   </div>
@@ -793,7 +793,7 @@ export default function GraphView({
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                  <div className="flex justify-between text-[11px] text-[var(--accents-5)] mb-1">
                     <span>Distância dos Links</span>
                     <span className="font-mono text-white">{linkDistance}px</span>
                   </div>
@@ -808,7 +808,7 @@ export default function GraphView({
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                  <div className="flex justify-between text-[11px] text-[var(--accents-5)] mb-1">
                     <span>Gravidade Central</span>
                     <span className="font-mono text-white">{(centerForce * 100).toFixed(0)}%</span>
                   </div>
@@ -824,7 +824,7 @@ export default function GraphView({
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-[11px] text-[#949ba4] mb-1">
+                  <div className="flex justify-between text-[11px] text-[var(--accents-5)] mb-1">
                     <span>Escala do Tamanho dos Nós</span>
                     <span className="font-mono text-white">{nodeScale.toFixed(1)}x</span>
                   </div>
@@ -843,10 +843,10 @@ export default function GraphView({
           </div>
 
           {/* Footer Save indicator */}
-          <div className="p-2 px-3 bg-[#1e1f22]/60 border-t border-[#383a40] flex items-center justify-between text-[11px] text-[#949ba4]">
+          <div className="p-2 px-3 bg-[var(--background)]/60 border-t border-[var(--discord-border)] flex items-center justify-between text-[11px] text-[var(--accents-5)]">
             <span>Notas sem grupo: <strong className="text-white font-normal">Cinza Neutro</strong></span>
-            {saveStatus === 'saving' && <span className="text-[#f0b232]">Salvando...</span>}
-            {saveStatus === 'saved' && <span className="text-[#23a55a]">✓ Salvo</span>}
+            {saveStatus === 'saving' && <span className="text-[var(--warning)]">Salvando...</span>}
+            {saveStatus === 'saved' && <span className="text-[var(--success)]">✓ Salvo</span>}
           </div>
         </div>
       )}
@@ -890,7 +890,7 @@ export default function GraphView({
       {/* Discord Embed-style Side Preview Card on Hover */}
       {hoveredNota && (
         <div
-          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none"
+          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none"
         >
           {/* Top color accent strip */}
           <div
@@ -899,12 +899,12 @@ export default function GraphView({
           />
 
           {/* Header */}
-          <div className="p-3 bg-[#1e1f22]/50 border-b border-[#383a40]">
+          <div className="p-3 bg-[var(--background)]/50 border-b border-[var(--discord-border)]">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-[#949ba4]">
+              <span className="text-[11px] text-[var(--accents-5)]">
                 {pastas.find((p) => p.id === hoveredNota.pastaId)?.nome || 'Sem pasta'}
               </span>
-              <span className="text-[10px] font-mono text-[#949ba4]">
+              <span className="text-[10px] font-mono text-[var(--accents-5)]">
                 {connectionCounts[hoveredNota.id] || 0}{' '}
                 {(connectionCounts[hoveredNota.id] || 0) === 1 ? 'conexão' : 'conexões'}
               </span>
@@ -915,17 +915,17 @@ export default function GraphView({
           </div>
 
           {/* Preview Content */}
-          <div className="p-3 overflow-y-auto max-h-48 text-xs text-[#dbdee1] leading-relaxed no-scrollbar">
+          <div className="p-3 overflow-y-auto max-h-48 text-xs text-[var(--accents-6)] leading-relaxed no-scrollbar">
             {hoveredNota.tipo === 'desenho' ? (
               <div>
                 <GraphDrawingPreview conteudoJson={hoveredNota.conteudo} />
-                <p className="text-[10px] text-[#949ba4] text-center mt-2">
+                <p className="text-[10px] text-[var(--accents-5)] text-center mt-2">
                   Canvas de Desenho / Diagrama
                 </p>
               </div>
             ) : hoveredNota.conteudo && hoveredNota.conteudo.trim() ? (
               <div
-                className="notion-editor text-[12px] leading-[1.5] text-[#dbdee1]"
+                className="notion-editor text-[12px] leading-[1.5] text-[var(--accents-6)]"
                 dangerouslySetInnerHTML={{ __html: hoveredNota.conteudo }}
                 style={{ wordBreak: 'break-word' }}
               />
@@ -935,7 +935,7 @@ export default function GraphView({
           </div>
 
           {/* Footer */}
-          <div className="p-2 px-3 bg-[#1e1f22]/60 border-t border-[#383a40] flex items-center justify-between text-[10px] text-[#949ba4]">
+          <div className="p-2 px-3 bg-[var(--background)]/60 border-t border-[var(--discord-border)] flex items-center justify-between text-[10px] text-[var(--accents-5)]">
             <span>Pré-visualização</span>
             <span className="text-[#20b8cd] font-medium">Clique no nó para abrir ↗</span>
           </div>

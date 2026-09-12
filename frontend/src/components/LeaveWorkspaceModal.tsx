@@ -42,10 +42,10 @@ export default function LeaveWorkspaceModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
-      <div className="bg-[#2b2d31] border border-[#383a40] rounded-xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-smooth-pop">
+      <div className="bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-smooth-pop">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#383a40] flex justify-between items-center bg-[#1e1f22]">
-          <div className="flex items-center gap-2.5 text-[#f23f43]">
+        <div className="px-5 py-4 border-b border-[var(--discord-border)] flex justify-between items-center bg-[var(--background)]">
+          <div className="flex items-center gap-2.5 text-[var(--error)]">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
               <polyline points="16 17 21 12 16 7" />
@@ -57,7 +57,7 @@ export default function LeaveWorkspaceModal({
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
             aria-label="Fechar"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -69,27 +69,27 @@ export default function LeaveWorkspaceModal({
 
         {/* Body */}
         <div className="p-5 flex flex-col gap-4">
-          <p className="text-xs text-[#dbdee1] leading-relaxed">
+          <p className="text-xs text-[var(--accents-6)] leading-relaxed">
             Tem certeza de que deseja sair de <strong className="text-white">"{workspaceNome}"</strong>?
           </p>
-          <div className="p-3 rounded-lg bg-[#1e1f22] border border-[#383a40] text-xs text-[#949ba4] leading-relaxed">
+          <div className="p-3 rounded-lg bg-[var(--background)] border border-[var(--discord-border)] text-xs text-[var(--accents-5)] leading-relaxed">
             Você perderá o acesso às notas, pastas e conversas deste workspace até ser convidado novamente pelo proprietário.
           </div>
 
           {error && (
-            <div className="p-2.5 rounded-[6px] bg-[#f23f43]/10 border border-[#f23f43]/30 text-[#f23f43] text-xs font-medium">
+            <div className="p-2.5 rounded-[6px] bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-xs font-medium">
               {error}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-[#1e1f22] border-t border-[#383a40] flex items-center justify-end gap-2">
+        <div className="px-5 py-3.5 bg-[var(--background)] border-t border-[var(--discord-border)] flex items-center justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={isLeaving}
-            className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+            className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -97,7 +97,7 @@ export default function LeaveWorkspaceModal({
             type="button"
             onClick={handleLeave}
             disabled={isLeaving}
-            className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+            className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[var(--error)] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
           >
             {isLeaving ? (
               <>

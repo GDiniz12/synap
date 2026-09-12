@@ -33,11 +33,11 @@ export default function CardModal({ card, onClose }: CardModalProps) {
       onClick={onClose}
     >
       <div
-        className="bg-[#313338] border border-[#383a40] rounded-[10px] w-full max-w-[480px] p-5 sm:p-6 shadow-2xl flex flex-col text-[#dbdee1] transition-all"
+        className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[10px] w-full max-w-[480px] p-5 sm:p-6 shadow-2xl flex flex-col text-[var(--accents-6)] transition-all"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header (Discord style) */}
-        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[#383a40]">
+        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-[var(--discord-border)]">
           <div className="flex items-center gap-2 overflow-hidden">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd] shrink-0">
               <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -50,7 +50,7 @@ export default function CardModal({ card, onClose }: CardModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+            className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
             title="Fechar"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -63,13 +63,13 @@ export default function CardModal({ card, onClose }: CardModalProps) {
         {/* Card interactive flip area */}
         <div
           onClick={() => setIsFlipped((prev) => !prev)}
-          className="min-h-[200px] bg-[#2b2d31] hover:border-[#4e5058] border border-[#383a40] rounded-[8px] p-5 flex flex-col justify-between cursor-pointer text-center transition-all shadow-md"
+          className="min-h-[200px] bg-[var(--accents-1)] hover:border-[var(--accents-3)] border border-[var(--discord-border)] rounded-[8px] p-5 flex flex-col justify-between cursor-pointer text-center transition-all shadow-md"
         >
           <div className="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider">
-            <span className="px-2 py-0.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40] text-[#949ba4]">
+            <span className="px-2 py-0.5 rounded-[4px] bg-[var(--background)] border border-[var(--discord-border)] text-[var(--accents-5)]">
               {card.tipo === 'nota' ? 'Nota' : 'Card'}
             </span>
-            <span className={isFlipped ? 'text-[#23a55a] font-semibold' : 'text-[#20b8cd] font-semibold'}>
+            <span className={isFlipped ? 'text-[var(--success)] font-semibold' : 'text-[#20b8cd] font-semibold'}>
               {isFlipped ? 'Verso (Resposta)' : 'Frente (Pergunta)'}
             </span>
           </div>
@@ -80,8 +80,8 @@ export default function CardModal({ card, onClose }: CardModalProps) {
             </p>
 
             {isFlipped && (
-              <div className="mt-4 pt-4 border-t border-[#383a40] animate-in fade-in duration-150">
-                <p className="text-sm text-[#dbdee1] leading-relaxed m-0 whitespace-pre-wrap">
+              <div className="mt-4 pt-4 border-t border-[var(--discord-border)] animate-in fade-in duration-150">
+                <p className="text-sm text-[var(--accents-6)] leading-relaxed m-0 whitespace-pre-wrap">
                   {card.verso}
                 </p>
               </div>
@@ -94,10 +94,10 @@ export default function CardModal({ card, onClose }: CardModalProps) {
         </div>
 
         {/* Card SRS Metadata Stats */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#383a40] text-[11px] text-[#949ba4] font-mono">
-          <span>Intervalo: <strong className="text-[#dbdee1] font-semibold">{card.interval}d</strong></span>
-          <span>Facilidade: <strong className="text-[#dbdee1] font-semibold">{card.easeFactor}x</strong></span>
-          <span>Repetições: <strong className="text-[#dbdee1] font-semibold">{card.reps}</strong></span>
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--discord-border)] text-[11px] text-[var(--accents-5)] font-mono">
+          <span>Intervalo: <strong className="text-[var(--accents-6)] font-semibold">{card.interval}d</strong></span>
+          <span>Facilidade: <strong className="text-[var(--accents-6)] font-semibold">{card.easeFactor}x</strong></span>
+          <span>Repetições: <strong className="text-[var(--accents-6)] font-semibold">{card.reps}</strong></span>
         </div>
       </div>
     </div>

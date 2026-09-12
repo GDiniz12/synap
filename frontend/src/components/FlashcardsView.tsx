@@ -528,11 +528,11 @@ export default function FlashcardsView({
   const currentReviewCard = dueCards[currentCardIndex];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#313338] text-[#dbdee1] select-none font-sans overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[var(--accents-2)] text-[var(--accents-6)] select-none font-sans overflow-hidden">
       {/* ─────────────────────────────────────────────────────────
           TOP NAVIGATION & ACTION BAR (DISCORD AESTHETIC)
           ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-3 sm:px-5 h-12 border-b border-[#383a40] bg-[#2b2d31] shrink-0 z-10">
+      <div className="flex items-center justify-between px-3 sm:px-5 h-12 border-b border-[var(--discord-border)] bg-[var(--accents-1)] shrink-0 z-10">
         {/* Left: Breadcrumbs / Title */}
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-hidden">
           <button
@@ -542,7 +542,7 @@ export default function FlashcardsView({
               setActiveDeck(null);
             }}
             className={`flex items-center gap-1.5 sm:gap-2 px-2 py-1 rounded-[4px] font-semibold text-xs transition-colors cursor-pointer shrink-0 ${
-              viewMode === "decks" ? "text-white bg-[#35373c]" : "text-[#949ba4] hover:text-white hover:bg-[#35373c]"
+              viewMode === "decks" ? "text-white bg-[var(--accents-2)]" : "text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)]"
             }`}
             title="Ver todos os cadernos"
           >
@@ -555,12 +555,12 @@ export default function FlashcardsView({
 
           {activeDeck && viewMode !== "decks" && (
             <>
-              <span className="text-[#4e5058] text-xs">/</span>
+              <span className="text-[var(--accents-3)] text-xs">/</span>
               <button
                 type="button"
                 onClick={() => openDeckHub(activeDeck)}
                 className={`text-xs font-medium px-1.5 sm:px-2 py-1 rounded-[4px] truncate max-w-[100px] sm:max-w-[180px] transition-colors cursor-pointer ${
-                  viewMode === "deck-hub" ? "text-white bg-[#35373c]" : "text-[#949ba4] hover:text-white hover:bg-[#35373c]"
+                  viewMode === "deck-hub" ? "text-white bg-[var(--accents-2)]" : "text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)]"
                 }`}
               >
                 {activeDeck.nome}
@@ -570,8 +570,8 @@ export default function FlashcardsView({
 
           {viewMode === "review" && (
             <>
-              <span className="text-[#4e5058] text-xs">/</span>
-              <span className="text-xs text-white font-medium bg-[#35373c] px-1.5 sm:px-2 py-1 rounded-[4px] shrink-0">
+              <span className="text-[var(--accents-3)] text-xs">/</span>
+              <span className="text-xs text-white font-medium bg-[var(--accents-2)] px-1.5 sm:px-2 py-1 rounded-[4px] shrink-0">
                 <span className="hidden sm:inline">Estudo </span>({currentCardIndex + 1}/{dueCards.length})
               </span>
             </>
@@ -579,8 +579,8 @@ export default function FlashcardsView({
 
           {viewMode === "browser" && (
             <>
-              <span className="text-[#4e5058] text-xs">/</span>
-              <span className="text-xs text-white font-medium bg-[#35373c] px-1.5 sm:px-2 py-1 rounded-[4px] truncate max-w-[120px] sm:max-w-none">
+              <span className="text-[var(--accents-3)] text-xs">/</span>
+              <span className="text-xs text-white font-medium bg-[var(--accents-2)] px-1.5 sm:px-2 py-1 rounded-[4px] truncate max-w-[120px] sm:max-w-none">
                 Painel
               </span>
             </>
@@ -614,7 +614,7 @@ export default function FlashcardsView({
             className={`h-7 px-2.5 sm:px-3 rounded-[4px] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer border ${
               viewMode === "browser"
                 ? "bg-[#20b8cd] text-white border-[#20b8cd]"
-                : "bg-[#35373c] hover:bg-[#3f4147] text-[#dbdee1] border-[#383a40]"
+                : "bg-[var(--accents-2)] hover:bg-[#3f4147] text-[var(--accents-6)] border-[var(--discord-border)]"
             }`}
             title="Navegar e gerenciar todos os flashcards"
           >
@@ -632,7 +632,7 @@ export default function FlashcardsView({
               setDeckParentIdForCreate(null);
               setIsCreateDeckOpen(true);
             }}
-            className="h-7 px-2.5 sm:px-3 bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-[#dbdee1] hover:text-white rounded-[4px] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="h-7 px-2.5 sm:px-3 bg-[var(--accents-2)] hover:bg-[#3f4147] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white rounded-[4px] text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Novo Caderno"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -643,13 +643,13 @@ export default function FlashcardsView({
             <span className="hidden md:inline">Novo Caderno</span>
           </button>
 
-          <div className="w-[1px] h-4 bg-[#383a40] mx-0.5 sm:mx-1" />
+          <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-0.5 sm:mx-1" />
 
           {/* Close Flashcards Panel */}
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
             title="Fechar Flashcards"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -669,12 +669,12 @@ export default function FlashcardsView({
           <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 md:p-7 flex justify-center">
             <div className="w-full max-w-[840px] flex flex-col gap-4">
               {/* Header Summary Cards */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#383a40]">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[var(--discord-border)]">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight m-0 mb-1">
                     Meus Cadernos
                   </h1>
-                  <p className="text-xs text-[#949ba4] m-0">
+                  <p className="text-xs text-[var(--accents-5)] m-0">
                     Selecione um caderno para iniciar o estudo ou expanda para gerenciar subcadernos.
                   </p>
                 </div>
@@ -683,29 +683,29 @@ export default function FlashcardsView({
                   {/* Novos */}
                   <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-[6px] bg-[#20b8cd]/10 border border-[#20b8cd]/20">
                     <span className="w-2 h-2 rounded-full bg-[#20b8cd]" />
-                    <span className="text-[#949ba4]">Novos:</span>
+                    <span className="text-[var(--accents-5)]">Novos:</span>
                     <strong className="text-[#20b8cd] font-semibold">{overallTotals.novos}</strong>
                   </div>
 
                   {/* A Revisar */}
-                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-[6px] bg-[#23a55a]/10 border border-[#23a55a]/20">
-                    <span className="w-2 h-2 rounded-full bg-[#23a55a]" />
-                    <span className="text-[#949ba4]">A Revisar:</span>
-                    <strong className="text-[#23a55a] font-semibold">{overallTotals.aRevisar}</strong>
+                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-[6px] bg-[var(--success)]/10 border border-[var(--success)]/20">
+                    <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
+                    <span className="text-[var(--accents-5)]">A Revisar:</span>
+                    <strong className="text-[var(--success)] font-semibold">{overallTotals.aRevisar}</strong>
                   </div>
 
                   {/* Total */}
-                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-[6px] bg-[#2b2d31] border border-[#383a40]">
-                    <span className="text-[#949ba4]">Total:</span>
+                  <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-[6px] bg-[var(--accents-1)] border border-[var(--discord-border)]">
+                    <span className="text-[var(--accents-5)]">Total:</span>
                     <strong className="text-white font-semibold">{overallTotals.total}</strong>
                   </div>
                 </div>
               </div>
 
               {/* Anki Tree Table (Discord Dark Card) */}
-              <div className="bg-[#2b2d31] border border-[#383a40] rounded-[8px] overflow-hidden shadow-lg">
+              <div className="bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-[8px] overflow-hidden shadow-lg">
                 {/* Table Header */}
-                <div className="grid grid-cols-[1fr_60px_60px_36px] sm:grid-cols-[1fr_80px_80px_70px_44px] px-3 sm:px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[#949ba4] border-b border-[#383a40] bg-[#1e1f22]">
+                <div className="grid grid-cols-[1fr_60px_60px_36px] sm:grid-cols-[1fr_80px_80px_70px_44px] px-3 sm:px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--accents-5)] border-b border-[var(--discord-border)] bg-[var(--background)]">
                   <div>Caderno</div>
                   <div className="text-right">Novos</div>
                   <div className="text-right">Revisar</div>
@@ -715,12 +715,12 @@ export default function FlashcardsView({
 
                 {/* Table Rows */}
                 {loading ? (
-                  <div className="p-10 text-center text-xs text-[#949ba4]">
+                  <div className="p-10 text-center text-xs text-[var(--accents-5)]">
                     Carregando cadernos...
                   </div>
                 ) : flattenedDeckNodes.length === 0 ? (
                   <div className="p-12 text-center flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-[10px] bg-[#1e1f22] border border-[#383a40] flex items-center justify-center text-[#949ba4]">
+                    <div className="w-12 h-12 rounded-[10px] bg-[var(--background)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--accents-5)]">
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <rect width="18" height="18" x="3" y="3" rx="2" />
                         <line x1="12" y1="8" x2="12" y2="16" />
@@ -730,7 +730,7 @@ export default function FlashcardsView({
                     <p className="m-0 text-sm font-semibold text-white">
                       Nenhum caderno criado
                     </p>
-                    <p className="m-0 text-xs text-[#949ba4] max-w-[320px]">
+                    <p className="m-0 text-xs text-[var(--accents-5)] max-w-[320px]">
                       Crie seu primeiro caderno para começar a adicionar flashcards com repetição espaçada.
                     </p>
                     <button
@@ -751,7 +751,7 @@ export default function FlashcardsView({
                       <div
                         key={deck.id}
                         onClick={() => openDeckHub(deck)}
-                        className="grid grid-cols-[1fr_60px_60px_36px] sm:grid-cols-[1fr_80px_80px_70px_44px] items-center px-3 sm:px-4 py-2.5 border-b border-[#383a40]/60 hover:bg-[#35373c] transition-colors cursor-pointer text-xs"
+                        className="grid grid-cols-[1fr_60px_60px_36px] sm:grid-cols-[1fr_80px_80px_70px_44px] items-center px-3 sm:px-4 py-2.5 border-b border-[var(--discord-border)]/60 hover:bg-[var(--accents-2)] transition-colors cursor-pointer text-xs"
                       >
                         {/* Deck Name & Hierarchy Tree Chevron */}
                         <div className="flex items-center overflow-hidden" style={{ paddingLeft: `${Math.min(node.depth * 14, 28)}px` }}>
@@ -759,7 +759,7 @@ export default function FlashcardsView({
                             <button
                               type="button"
                               onClick={(e) => toggleExpand(deck.id, e)}
-                              className="w-5 h-5 flex items-center justify-center rounded-[3px] hover:bg-[#3f4147] text-[#949ba4] hover:text-white mr-1.5 cursor-pointer shrink-0"
+                              className="w-5 h-5 flex items-center justify-center rounded-[3px] hover:bg-[#3f4147] text-[var(--accents-5)] hover:text-white mr-1.5 cursor-pointer shrink-0"
                               title={isExpanded ? "Recolher subcadernos" : "Expandir subcadernos"}
                             >
                               <svg
@@ -779,7 +779,7 @@ export default function FlashcardsView({
                             </button>
                           ) : (
                             <div className="w-5 mr-1.5 flex items-center justify-center shrink-0">
-                              <span className="w-1 h-1 rounded-full bg-[#4e5058]" />
+                              <span className="w-1 h-1 rounded-full bg-[var(--accents-3)]" />
                             </div>
                           )}
 
@@ -801,12 +801,12 @@ export default function FlashcardsView({
                         </div>
 
                         {/* A Revisar */}
-                        <div className={`text-right font-mono font-semibold ${deck.stats.aRevisar > 0 ? "text-[#23a55a]" : "text-[#80848e]"}`}>
+                        <div className={`text-right font-mono font-semibold ${deck.stats.aRevisar > 0 ? "text-[var(--success)]" : "text-[#80848e]"}`}>
                           {deck.stats.aRevisar}
                         </div>
 
                         {/* Total */}
-                        <div className="hidden sm:block text-right font-mono text-[#949ba4]">
+                        <div className="hidden sm:block text-right font-mono text-[var(--accents-5)]">
                           {deck.stats.total}
                         </div>
 
@@ -818,7 +818,7 @@ export default function FlashcardsView({
                               e.stopPropagation();
                               setOpenMenuDeckId(openMenuDeckId === deck.id ? null : deck.id);
                             }}
-                            className="w-6 h-6 inline-flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#3f4147] transition-colors cursor-pointer"
+                            className="w-6 h-6 inline-flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[#3f4147] transition-colors cursor-pointer"
                             title="Opções do Caderno"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -830,16 +830,16 @@ export default function FlashcardsView({
 
                           {/* Dropdown Menu (Discord Dark) */}
                           {openMenuDeckId === deck.id && (
-                            <div className="absolute right-0 top-7 z-50 w-44 bg-[#1e1f22] border border-[#383a40] rounded-[6px] p-1 shadow-2xl text-left text-xs">
+                            <div className="absolute right-0 top-7 z-50 w-44 bg-[var(--background)] border border-[var(--discord-border)] rounded-[6px] p-1 shadow-2xl text-left text-xs">
                               <button
                                 type="button"
                                 onClick={() => {
                                   setOpenMenuDeckId(null);
                                   openDeckHub(deck);
                                 }}
-                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#dbdee1] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[var(--accents-6)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
                               >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#23a55a]">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--success)]">
                                   <polygon points="5 3 19 12 5 21 5 3" />
                                 </svg>
                                 <span>Estudar</span>
@@ -852,7 +852,7 @@ export default function FlashcardsView({
                                   setDeckParentIdForCreate(deck.id);
                                   setIsCreateDeckOpen(true);
                                 }}
-                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#dbdee1] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[var(--accents-6)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
                               >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd]">
                                   <line x1="12" y1="5" x2="12" y2="19" />
@@ -871,16 +871,16 @@ export default function FlashcardsView({
                                   setEditDeckParentId(deck.parentId || null);
                                   setIsEditDeckOpen(true);
                                 }}
-                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#dbdee1] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[var(--accents-6)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
                               >
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f0b232]">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--warning)]">
                                   <path d="M12 20h9" />
                                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                                 </svg>
                                 <span>Renomear</span>
                               </button>
 
-                              <div className="h-[1px] bg-[#383a40] my-1" />
+                              <div className="h-[1px] bg-[var(--discord-border)] my-1" />
 
                               <button
                                 type="button"
@@ -888,7 +888,7 @@ export default function FlashcardsView({
                                   setOpenMenuDeckId(null);
                                   setDeletingDeck(deck);
                                 }}
-                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[#f23f43] hover:bg-[#f23f43]/15 transition-colors cursor-pointer"
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] text-[var(--error)] hover:bg-[var(--error)]/15 transition-colors cursor-pointer"
                               >
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M3 6h18" />
@@ -919,7 +919,7 @@ export default function FlashcardsView({
                   setViewMode("decks");
                   loadDecks();
                 }}
-                className="self-start flex items-center gap-1.5 text-xs text-[#949ba4] hover:text-white transition-colors cursor-pointer mb-6"
+                className="self-start flex items-center gap-1.5 text-xs text-[var(--accents-5)] hover:text-white transition-colors cursor-pointer mb-6"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="19" y1="12" x2="5" y2="12" />
@@ -929,7 +929,7 @@ export default function FlashcardsView({
               </button>
 
               {/* Deck Icon Box */}
-              <div className="w-14 h-14 rounded-[12px] border border-[#383a40] bg-[#1e1f22] flex items-center justify-center text-[#20b8cd] mb-4 shadow-md">
+              <div className="w-14 h-14 rounded-[12px] border border-[var(--discord-border)] bg-[var(--background)] flex items-center justify-center text-[#20b8cd] mb-4 shadow-md">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
                   <path d="M6 6h10" />
@@ -939,7 +939,7 @@ export default function FlashcardsView({
 
               {/* Breadcrumb Hierarchy Path */}
               {deckPaths.get(activeDeck.id) && (
-                <div className="text-[11px] text-[#949ba4] mb-1 uppercase tracking-wider font-semibold">
+                <div className="text-[11px] text-[var(--accents-5)] mb-1 uppercase tracking-wider font-semibold">
                   {deckPaths.get(activeDeck.id)}
                 </div>
               )}
@@ -949,32 +949,32 @@ export default function FlashcardsView({
               </h2>
 
               {activeDeck.descricao && (
-                <p className="text-xs text-[#949ba4] mb-6 leading-relaxed max-w-[420px]">
+                <p className="text-xs text-[var(--accents-5)] mb-6 leading-relaxed max-w-[420px]">
                   {activeDeck.descricao}
                 </p>
               )}
 
               {/* Study Metrics Card */}
-              <div className="w-full bg-[#2b2d31] border border-[#383a40] rounded-[8px] p-4 sm:p-5 my-3 sm:my-4 mb-6 grid grid-cols-3 divide-x divide-[#383a40] text-center shadow-lg">
+              <div className="w-full bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-[8px] p-4 sm:p-5 my-3 sm:my-4 mb-6 grid grid-cols-3 divide-x divide-[var(--discord-border)] text-center shadow-lg">
                 <div className="flex flex-col items-center">
                   <span className="text-xl sm:text-2xl font-bold font-mono text-[#20b8cd]">
                     {activeDeck.stats.novos}
                   </span>
-                  <span className="text-[11px] text-[#949ba4] mt-1">Novos</span>
+                  <span className="text-[11px] text-[var(--accents-5)] mt-1">Novos</span>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <span className="text-xl sm:text-2xl font-bold font-mono text-[#23a55a]">
+                  <span className="text-xl sm:text-2xl font-bold font-mono text-[var(--success)]">
                     {activeDeck.stats.aRevisar}
                   </span>
-                  <span className="text-[11px] text-[#949ba4] mt-1">A Revisar</span>
+                  <span className="text-[11px] text-[var(--accents-5)] mt-1">A Revisar</span>
                 </div>
 
                 <div className="flex flex-col items-center">
                   <span className="text-xl sm:text-2xl font-bold font-mono text-white">
                     {activeDeck.stats.total}
                   </span>
-                  <span className="text-[11px] text-[#949ba4] mt-1">Total Cards</span>
+                  <span className="text-[11px] text-[var(--accents-5)] mt-1">Total Cards</span>
                 </div>
               </div>
 
@@ -986,7 +986,7 @@ export default function FlashcardsView({
                   disabled={dueCards.length === 0}
                   className={`h-11 text-sm font-semibold rounded-[6px] flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-md ${
                     dueCards.length === 0
-                      ? "bg-[#35373c] text-[#80848e] cursor-not-allowed"
+                      ? "bg-[var(--accents-2)] text-[#80848e] cursor-not-allowed"
                       : "bg-[#20b8cd] hover:bg-[#1ba2b4] text-white"
                   }`}
                 >
@@ -1005,7 +1005,7 @@ export default function FlashcardsView({
                       setAddCardDeckId(activeDeck.id);
                       setIsAddCardOpen(true);
                     }}
-                    className="flex-1 h-9 bg-[#2b2d31] hover:bg-[#35373c] border border-[#383a40] text-white rounded-[6px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="flex-1 h-9 bg-[var(--accents-1)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-white rounded-[6px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <line x1="12" y1="5" x2="12" y2="19" />
@@ -1017,7 +1017,7 @@ export default function FlashcardsView({
                   <button
                     type="button"
                     onClick={() => openBrowser(activeDeck.id)}
-                    className="flex-1 h-9 bg-[#2b2d31] hover:bg-[#35373c] border border-[#383a40] text-white rounded-[6px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="flex-1 h-9 bg-[var(--accents-1)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-white rounded-[6px] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="11" cy="11" r="8" />
@@ -1035,14 +1035,14 @@ export default function FlashcardsView({
         {viewMode === "review" && (
           <div className="flex-1 flex flex-col items-center justify-center p-3.5 sm:p-6 relative">
             {reviewSuccessFeedback ? (
-              <div className="max-w-md text-center flex flex-col items-center gap-4 bg-[#2b2d31] border border-[#383a40] p-6 sm:p-8 rounded-[12px] shadow-2xl animate-in fade-in duration-200 mx-4">
-                <div className="w-14 h-14 rounded-full bg-[#23a55a]/15 border border-[#23a55a]/30 flex items-center justify-center text-[#23a55a]">
+              <div className="max-w-md text-center flex flex-col items-center gap-4 bg-[var(--accents-1)] border border-[var(--discord-border)] p-6 sm:p-8 rounded-[12px] shadow-2xl animate-in fade-in duration-200 mx-4">
+                <div className="w-14 h-14 rounded-full bg-[var(--success)]/15 border border-[var(--success)]/30 flex items-center justify-center text-[var(--success)]">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
                 <h3 className="m-0 text-xl font-bold text-white tracking-tight">Sessão Finalizada!</h3>
-                <p className="m-0 text-xs text-[#949ba4] leading-relaxed">
+                <p className="m-0 text-xs text-[var(--accents-5)] leading-relaxed">
                   {reviewSuccessFeedback}
                 </p>
                 <button
@@ -1060,7 +1060,7 @@ export default function FlashcardsView({
               <>
                 {/* Top Progress bar */}
                 <div className="absolute top-2.5 sm:top-4 w-full max-w-[580px] flex flex-col gap-1.5 px-3 sm:px-4">
-                  <div className="flex items-center justify-between text-xs text-[#949ba4]">
+                  <div className="flex items-center justify-between text-xs text-[var(--accents-5)]">
                     <span className="truncate max-w-[200px] sm:max-w-none">
                       Caderno: <strong className="text-white font-medium">{currentReviewCard.deck?.nome || activeDeck?.nome}</strong>
                     </span>
@@ -1068,7 +1068,7 @@ export default function FlashcardsView({
                       {currentCardIndex + 1} de {dueCards.length}
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-[#1e1f22] rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-[var(--background)] rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#20b8cd] transition-all duration-300 rounded-full"
                       style={{
@@ -1082,14 +1082,14 @@ export default function FlashcardsView({
                 <div className="w-full max-w-[600px] min-h-[240px] sm:min-h-[300px] flex flex-col items-center justify-center mt-7 sm:mt-8">
                   <div
                     onClick={() => setIsFlipped((prev) => !prev)}
-                    className="w-full min-h-[230px] sm:min-h-[290px] bg-[#2b2d31] border border-[#383a40] hover:border-[#4e5058] rounded-[10px] sm:rounded-[12px] p-5 sm:p-8 flex flex-col justify-between cursor-pointer transition-all shadow-2xl"
+                    className="w-full min-h-[230px] sm:min-h-[290px] bg-[var(--accents-1)] border border-[var(--discord-border)] hover:border-[var(--accents-3)] rounded-[10px] sm:rounded-[12px] p-5 sm:p-8 flex flex-col justify-between cursor-pointer transition-all shadow-2xl"
                   >
                     {/* Card Header Tag */}
-                    <div className="flex items-center justify-between text-[11px] text-[#949ba4] font-mono uppercase tracking-wider">
-                      <span className="px-2 py-0.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40]">
+                    <div className="flex items-center justify-between text-[11px] text-[var(--accents-5)] font-mono uppercase tracking-wider">
+                      <span className="px-2 py-0.5 rounded-[4px] bg-[var(--background)] border border-[var(--discord-border)]">
                         {currentReviewCard.tipo === "nota" ? "Nota Vinculada" : "Flashcard"}
                       </span>
-                      <span className={isFlipped ? "text-[#23a55a] font-semibold" : "text-[#20b8cd] font-semibold"}>
+                      <span className={isFlipped ? "text-[var(--success)] font-semibold" : "text-[#20b8cd] font-semibold"}>
                         {isFlipped ? "Verso (Resposta)" : "Frente (Pergunta)"}
                       </span>
                     </div>
@@ -1101,7 +1101,7 @@ export default function FlashcardsView({
                       </p>
 
                       {isFlipped && (
-                        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[#383a40] text-center animate-in fade-in duration-150">
+                        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-[var(--discord-border)] text-center animate-in fade-in duration-150">
                           {currentReviewCard.tipo === "nota" ? (
                             <div className="flex flex-col items-center gap-3">
                               <button
@@ -1110,7 +1110,7 @@ export default function FlashcardsView({
                                   e.stopPropagation();
                                   setViewingNote(currentReviewCard.nota);
                                 }}
-                                className="px-3.5 py-2 bg-[#1e1f22] hover:bg-[#35373c] border border-[#383a40] text-white rounded-[6px] text-xs font-medium inline-flex items-center gap-2 cursor-pointer transition-colors"
+                                className="px-3.5 py-2 bg-[var(--background)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-white rounded-[6px] text-xs font-medium inline-flex items-center gap-2 cursor-pointer transition-colors"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd]">
                                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
@@ -1120,7 +1120,7 @@ export default function FlashcardsView({
                               </button>
                             </div>
                           ) : (
-                            <p className="text-sm sm:text-base text-[#dbdee1] leading-relaxed m-0 whitespace-pre-wrap">
+                            <p className="text-sm sm:text-base text-[var(--accents-6)] leading-relaxed m-0 whitespace-pre-wrap">
                               {currentReviewCard.verso}
                             </p>
                           )}
@@ -1154,7 +1154,7 @@ export default function FlashcardsView({
                       <button
                         type="button"
                         onClick={() => handleReviewGrade(1)}
-                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[#f23f43]/15 hover:bg-[#f23f43]/25 border border-[#f23f43]/40 text-[#f23f43] transition-colors cursor-pointer w-full sm:min-w-[84px]"
+                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[var(--error)]/15 hover:bg-[var(--error)]/25 border border-[var(--error)]/40 text-[var(--error)] transition-colors cursor-pointer w-full sm:min-w-[84px]"
                       >
                         <span className="text-xs font-semibold">Errei</span>
                         <span className="text-[10px] opacity-80 mt-0.5">&lt; 1d (1)</span>
@@ -1164,7 +1164,7 @@ export default function FlashcardsView({
                       <button
                         type="button"
                         onClick={() => handleReviewGrade(2)}
-                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[#f0b232]/15 hover:bg-[#f0b232]/25 border border-[#f0b232]/40 text-[#f0b232] transition-colors cursor-pointer w-full sm:min-w-[84px]"
+                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[var(--warning)]/15 hover:bg-[var(--warning)]/25 border border-[var(--warning)]/40 text-[var(--warning)] transition-colors cursor-pointer w-full sm:min-w-[84px]"
                       >
                         <span className="text-xs font-semibold">Difícil</span>
                         <span className="text-[10px] opacity-80 mt-0.5">3d (2)</span>
@@ -1174,7 +1174,7 @@ export default function FlashcardsView({
                       <button
                         type="button"
                         onClick={() => handleReviewGrade(3)}
-                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[#23a55a]/15 hover:bg-[#23a55a]/25 border border-[#23a55a]/40 text-[#23a55a] transition-colors cursor-pointer w-full sm:min-w-[84px]"
+                        className="flex flex-col items-center px-3 sm:px-4 py-2 sm:py-1.5 rounded-[6px] bg-[var(--success)]/15 hover:bg-[var(--success)]/25 border border-[var(--success)]/40 text-[var(--success)] transition-colors cursor-pointer w-full sm:min-w-[84px]"
                       >
                         <span className="text-xs font-semibold">Bom</span>
                         <span className="text-[10px] opacity-80 mt-0.5">6d (3)</span>
@@ -1201,7 +1201,7 @@ export default function FlashcardsView({
         {viewMode === "browser" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Filter & Search Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-3 px-3 sm:px-5 border-b border-[#383a40] bg-[#2b2d31]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-3 px-3 sm:px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)]">
               {/* Search input */}
               <div className="flex-1 relative">
                 <input
@@ -1209,7 +1209,7 @@ export default function FlashcardsView({
                   value={browserSearch}
                   onChange={(e) => setBrowserSearch(e.target.value)}
                   placeholder="Pesquisar cards por pergunta, resposta ou nota..."
-                  className="w-full h-8 pl-8 pr-3 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[6px] text-xs text-[#dbdee1] placeholder-[#80848e] outline-none transition-colors"
+                  className="w-full h-8 pl-8 pr-3 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[6px] text-xs text-[var(--accents-6)] placeholder-[#80848e] outline-none transition-colors"
                 />
                 <svg
                   width="13"
@@ -1230,7 +1230,7 @@ export default function FlashcardsView({
                 <select
                   value={browserDeckFilter}
                   onChange={(e) => setBrowserDeckFilter(e.target.value)}
-                  className="h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] rounded-[6px] text-xs text-[#dbdee1] outline-none cursor-pointer flex-1 sm:flex-none"
+                  className="h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] rounded-[6px] text-xs text-[var(--accents-6)] outline-none cursor-pointer flex-1 sm:flex-none"
                 >
                   <option value="all">Todos os Cadernos ({browserCards.length})</option>
                   {decks.map((d) => (
@@ -1240,7 +1240,7 @@ export default function FlashcardsView({
                   ))}
                 </select>
 
-                <div className="text-xs font-mono text-[#949ba4] shrink-0">
+                <div className="text-xs font-mono text-[var(--accents-5)] shrink-0">
                   {filteredBrowserCards.length} cards
                 </div>
               </div>
@@ -1249,17 +1249,17 @@ export default function FlashcardsView({
             {/* Browser Table */}
             <div className="flex-1 overflow-x-auto overflow-y-auto">
               {loadingBrowser ? (
-                <div className="p-10 text-center text-xs text-[#949ba4]">
+                <div className="p-10 text-center text-xs text-[var(--accents-5)]">
                   Carregando cards do workspace...
                 </div>
               ) : filteredBrowserCards.length === 0 ? (
-                <div className="p-12 text-center text-xs text-[#949ba4]">
+                <div className="p-12 text-center text-xs text-[var(--accents-5)]">
                   Nenhum card encontrado com os filtros atuais.
                 </div>
               ) : (
                 <table className="w-full min-w-[560px] border-collapse text-xs text-left">
                   <thead>
-                    <tr className="border-b border-[#383a40] bg-[#1e1f22] text-[11px] font-semibold uppercase tracking-wider text-[#949ba4]">
+                    <tr className="border-b border-[var(--discord-border)] bg-[var(--background)] text-[11px] font-semibold uppercase tracking-wider text-[var(--accents-5)]">
                       <th className="py-2.5 px-4 w-[35%]">Frente (Pergunta)</th>
                       <th className="py-2.5 px-4 w-[35%]">Verso (Resposta)</th>
                       <th className="py-2.5 px-4 w-[15%]">Caderno</th>
@@ -1268,21 +1268,21 @@ export default function FlashcardsView({
                   </thead>
                   <tbody>
                     {filteredBrowserCards.map((c) => (
-                      <tr key={c.id} className="hover:bg-[#35373c] transition-colors border-b border-[#383a40]/60">
+                      <tr key={c.id} className="hover:bg-[var(--accents-2)] transition-colors border-b border-[var(--discord-border)]/60">
                         <td className="py-3 px-4 align-top">
                           <span className="font-medium text-white">{c.frente}</span>
                           {c.tipo === "nota" && (
-                            <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.2 bg-[#1e1f22] border border-[#383a40] rounded text-[#949ba4]">
+                            <span className="inline-block ml-1.5 text-[10px] px-1.5 py-0.2 bg-[var(--background)] border border-[var(--discord-border)] rounded text-[var(--accents-5)]">
                               Nota
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-4 align-top text-[#949ba4]">
+                        <td className="py-3 px-4 align-top text-[var(--accents-5)]">
                           <div className="line-clamp-2">
                             {c.verso}
                           </div>
                         </td>
-                        <td className="py-3 px-4 align-top text-[#949ba4]">
+                        <td className="py-3 px-4 align-top text-[var(--accents-5)]">
                           {c.deck?.nome || deckMap.get(c.deckId)?.nome || "—"}
                         </td>
                         <td className="py-3 px-4 align-top text-right">
@@ -1294,7 +1294,7 @@ export default function FlashcardsView({
                                 setMovingCard(c);
                                 setTargetMoveDeckId(c.deckId);
                               }}
-                              className="h-6 px-2 text-[11px] bg-[#1e1f22] hover:bg-[#35373c] border border-[#383a40] text-[#dbdee1] hover:text-white rounded-[4px] transition-colors cursor-pointer"
+                              className="h-6 px-2 text-[11px] bg-[var(--background)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white rounded-[4px] transition-colors cursor-pointer"
                               title="Mover card para outro caderno"
                             >
                               Mover
@@ -1304,7 +1304,7 @@ export default function FlashcardsView({
                             <button
                               type="button"
                               onClick={() => setEditingCard(c)}
-                              className="h-6 px-2 text-[11px] bg-[#1e1f22] hover:bg-[#35373c] border border-[#383a40] text-[#dbdee1] hover:text-white rounded-[4px] transition-colors cursor-pointer"
+                              className="h-6 px-2 text-[11px] bg-[var(--background)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white rounded-[4px] transition-colors cursor-pointer"
                               title="Editar conteúdo do card"
                             >
                               Editar
@@ -1314,7 +1314,7 @@ export default function FlashcardsView({
                             <button
                               type="button"
                               onClick={() => handleDeleteCard(c.id)}
-                              className="w-6 h-6 flex items-center justify-center text-[#949ba4] hover:text-[#f23f43] hover:bg-[#f23f43]/15 rounded-[4px] transition-colors cursor-pointer"
+                              className="w-6 h-6 flex items-center justify-center text-[var(--accents-5)] hover:text-[var(--error)] hover:bg-[var(--error)]/15 rounded-[4px] transition-colors cursor-pointer"
                               title="Excluir card"
                             >
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1343,23 +1343,23 @@ export default function FlashcardsView({
           onClick={() => setIsAddCardOpen(false)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-4 px-5 border-b border-[#383a40] bg-[#2b2d31] flex items-center justify-between shrink-0">
+            <div className="p-4 px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)] flex items-center justify-between shrink-0">
               <div>
                 <h3 className="m-0 text-sm font-semibold text-white tracking-tight">
                   Adicionar Flashcard
                 </h3>
-                <p className="m-0 text-xs text-[#949ba4] mt-0.5">
+                <p className="m-0 text-xs text-[var(--accents-5)] mt-0.5">
                   Crie cards de memorização ativa com perguntas e respostas.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsAddCardOpen(false)}
-                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1371,12 +1371,12 @@ export default function FlashcardsView({
 
             <form onSubmit={handleAddCardSubmit} className="p-5 flex flex-col gap-3.5 overflow-y-auto">
               {/* Type Switcher */}
-              <div className="flex items-center gap-2 p-1 bg-[#1e1f22] border border-[#383a40] rounded-[6px]">
+              <div className="flex items-center gap-2 p-1 bg-[var(--background)] border border-[var(--discord-border)] rounded-[6px]">
                 <button
                   type="button"
                   onClick={() => setAddCardType("card")}
                   className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
-                    addCardType === "card" ? "bg-[#20b8cd] text-white" : "text-[#949ba4] hover:text-white"
+                    addCardType === "card" ? "bg-[#20b8cd] text-white" : "text-[var(--accents-5)] hover:text-white"
                   }`}
                 >
                   Card Personalizado
@@ -1385,7 +1385,7 @@ export default function FlashcardsView({
                   type="button"
                   onClick={() => setAddCardType("nota")}
                   className={`flex-1 py-1 text-xs font-medium rounded-[4px] transition-colors cursor-pointer ${
-                    addCardType === "nota" ? "bg-[#20b8cd] text-white" : "text-[#949ba4] hover:text-white"
+                    addCardType === "nota" ? "bg-[#20b8cd] text-white" : "text-[var(--accents-5)] hover:text-white"
                   }`}
                 >
                   Vincular a uma Nota
@@ -1394,13 +1394,13 @@ export default function FlashcardsView({
 
               {/* Target Deck Selection */}
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Caderno de Destino
                 </label>
                 <select
                   value={addCardDeckId}
                   onChange={(e) => setAddCardDeckId(e.target.value)}
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none cursor-pointer"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none cursor-pointer"
                 >
                   {decks.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -1413,7 +1413,7 @@ export default function FlashcardsView({
               {addCardType === "card" ? (
                 <>
                   <div>
-                    <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                    <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                       Frente (Pergunta / Conceito)
                     </label>
                     <input
@@ -1424,12 +1424,12 @@ export default function FlashcardsView({
                       placeholder="Ex: Qual o princípio da conservação da energia?"
                       autoFocus
                       required
-                      className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] placeholder-[#80848e] outline-none"
+                      className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] placeholder-[#80848e] outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                    <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                       Verso (Resposta / Explicação)
                     </label>
                     <textarea
@@ -1438,20 +1438,20 @@ export default function FlashcardsView({
                       placeholder="Ex: A energia não pode ser criada nem destruída, apenas transformada..."
                       rows={3}
                       required
-                      className="w-full p-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] placeholder-[#80848e] outline-none resize-none"
+                      className="w-full p-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] placeholder-[#80848e] outline-none resize-none"
                     />
                   </div>
                 </>
               ) : (
                 <div>
-                  <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                  <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                     Selecione a Nota do Workspace
                   </label>
                   <select
                     value={addCardNotaId}
                     onChange={(e) => setAddCardNotaId(e.target.value)}
                     required
-                    className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none cursor-pointer"
+                    className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none cursor-pointer"
                   >
                     <option value="">-- Escolha uma nota existente --</option>
                     {notas.map((n) => (
@@ -1464,8 +1464,8 @@ export default function FlashcardsView({
               )}
 
               {/* Feedback footer and buttons */}
-              <div className="flex items-center justify-between pt-2 border-t border-[#383a40] mt-1">
-                <span className="text-[11px] text-[#23a55a] font-medium">
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--discord-border)] mt-1">
+                <span className="text-[11px] text-[var(--success)] font-medium">
                   {addCardSuccessCount > 0 ? `✓ ${addCardSuccessCount} card(s) adicionados nesta sessão` : ""}
                 </span>
 
@@ -1473,7 +1473,7 @@ export default function FlashcardsView({
                   <button
                     type="button"
                     onClick={() => setIsAddCardOpen(false)}
-                    className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                    className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
                   >
                     Concluir
                   </button>
@@ -1499,16 +1499,16 @@ export default function FlashcardsView({
           onClick={() => setIsCreateDeckOpen(false)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-4 px-5 border-b border-[#383a40] bg-[#2b2d31] flex items-center justify-between shrink-0">
+            <div className="p-4 px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)] flex items-center justify-between shrink-0">
               <div>
                 <h3 className="m-0 text-sm font-semibold text-white tracking-tight">
                   {deckParentIdForCreate ? "Novo Subcaderno" : "Novo Caderno"}
                 </h3>
-                <p className="m-0 text-xs text-[#949ba4] mt-0.5">
+                <p className="m-0 text-xs text-[var(--accents-5)] mt-0.5">
                   {deckParentIdForCreate
                     ? `Criando subcaderno dentro de "${deckMap.get(deckParentIdForCreate)?.nome || "Caderno Pai"}"`
                     : "Crie um novo caderno para agrupar seus flashcards."}
@@ -1517,7 +1517,7 @@ export default function FlashcardsView({
               <button
                 type="button"
                 onClick={() => setIsCreateDeckOpen(false)}
-                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1529,7 +1529,7 @@ export default function FlashcardsView({
 
             <form onSubmit={handleCreateDeckSubmit} className="p-5 flex flex-col gap-3.5 overflow-y-auto">
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Nome do Caderno
                 </label>
                 <input
@@ -1539,18 +1539,18 @@ export default function FlashcardsView({
                   placeholder="Ex: Anatomia, Fisiologia, Vocabulário..."
                   autoFocus
                   required
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] placeholder-[#80848e] outline-none"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] placeholder-[#80848e] outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Caderno Pai (Opcional)
                 </label>
                 <select
                   value={deckParentIdForCreate || ""}
                   onChange={(e) => setDeckParentIdForCreate(e.target.value || null)}
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none cursor-pointer"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none cursor-pointer"
                 >
                   <option value="">-- Raiz (Nenhum / Nível Principal) --</option>
                   {decks.map((d) => (
@@ -1562,7 +1562,7 @@ export default function FlashcardsView({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Descrição (opcional)
                 </label>
                 <textarea
@@ -1570,15 +1570,15 @@ export default function FlashcardsView({
                   onChange={(e) => setNewDeckDesc(e.target.value)}
                   placeholder="Objetivo ou tópicos abordados..."
                   rows={2}
-                  className="w-full p-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] placeholder-[#80848e] outline-none resize-none"
+                  className="w-full p-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] placeholder-[#80848e] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40] mt-1">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)] mt-1">
                 <button
                   type="button"
                   onClick={() => setIsCreateDeckOpen(false)}
-                  className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                  className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1603,11 +1603,11 @@ export default function FlashcardsView({
           onClick={() => setIsEditDeckOpen(false)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-4 px-5 border-b border-[#383a40] bg-[#2b2d31] flex items-center justify-between shrink-0">
+            <div className="p-4 px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)] flex items-center justify-between shrink-0">
               <div>
                 <h3 className="m-0 text-sm font-semibold text-white tracking-tight">
                   Editar Caderno
@@ -1616,7 +1616,7 @@ export default function FlashcardsView({
               <button
                 type="button"
                 onClick={() => setIsEditDeckOpen(false)}
-                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1628,7 +1628,7 @@ export default function FlashcardsView({
 
             <form onSubmit={handleEditDeckSubmit} className="p-5 flex flex-col gap-3.5 overflow-y-auto">
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Nome do Caderno
                 </label>
                 <input
@@ -1637,18 +1637,18 @@ export default function FlashcardsView({
                   onChange={(e) => setEditDeckName(e.target.value)}
                   autoFocus
                   required
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Caderno Pai
                 </label>
                 <select
                   value={editDeckParentId || ""}
                   onChange={(e) => setEditDeckParentId(e.target.value || null)}
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none cursor-pointer"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none cursor-pointer"
                 >
                   <option value="">-- Raiz (Nenhum) --</option>
                   {decks
@@ -1662,22 +1662,22 @@ export default function FlashcardsView({
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Descrição (opcional)
                 </label>
                 <textarea
                   value={editDeckDesc}
                   onChange={(e) => setEditDeckDesc(e.target.value)}
                   rows={2}
-                  className="w-full p-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none resize-none"
+                  className="w-full p-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40] mt-1">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)] mt-1">
                 <button
                   type="button"
                   onClick={() => setIsEditDeckOpen(false)}
-                  className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                  className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1702,13 +1702,13 @@ export default function FlashcardsView({
           onClick={() => setDeletingDeck(null)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-sm w-full shadow-2xl p-5 text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-sm w-full shadow-2xl p-5 text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="m-0 mb-2 text-base font-semibold text-[#f23f43]">
+            <h3 className="m-0 mb-2 text-base font-semibold text-[var(--error)]">
               Excluir Caderno
             </h3>
-            <p className="m-0 mb-4 text-xs text-[#949ba4] leading-relaxed">
+            <p className="m-0 mb-4 text-xs text-[var(--accents-5)] leading-relaxed">
               Tem certeza que deseja excluir o caderno <strong className="text-white">"{deletingDeck.nome}"</strong>? Esta ação excluirá todos os subcadernos e flashcards associados em cascata.
             </p>
 
@@ -1716,14 +1716,14 @@ export default function FlashcardsView({
               <button
                 type="button"
                 onClick={() => setDeletingDeck(null)}
-                className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={confirmDeleteDeck}
-                className="h-8 px-4 bg-[#f23f43] hover:bg-[#da373c] text-white text-xs font-medium rounded-[4px] transition-colors cursor-pointer"
+                className="h-8 px-4 bg-[var(--error)] hover:bg-[#da373c] text-white text-xs font-medium rounded-[4px] transition-colors cursor-pointer"
               >
                 Excluir Definitivamente
               </button>
@@ -1741,15 +1741,15 @@ export default function FlashcardsView({
           onClick={() => setEditingCard(null)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-md w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 px-5 border-b border-[#383a40] bg-[#2b2d31] flex items-center justify-between shrink-0">
+            <div className="p-4 px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)] flex items-center justify-between shrink-0">
               <h3 className="m-0 text-sm font-semibold text-white tracking-tight">Editar Flashcard</h3>
               <button
                 type="button"
                 onClick={() => setEditingCard(null)}
-                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1761,7 +1761,7 @@ export default function FlashcardsView({
 
             <form onSubmit={handleUpdateCard} className="p-5 flex flex-col gap-3.5 overflow-y-auto">
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Frente (Pergunta)
                 </label>
                 <input
@@ -1769,12 +1769,12 @@ export default function FlashcardsView({
                   value={editingCard.frente}
                   onChange={(e) => setEditingCard({ ...editingCard, frente: e.target.value })}
                   required
-                  className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none"
+                  className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-[#949ba4] block mb-1">
+                <label className="text-xs font-medium text-[var(--accents-5)] block mb-1">
                   Verso (Resposta)
                 </label>
                 <textarea
@@ -1782,15 +1782,15 @@ export default function FlashcardsView({
                   onChange={(e) => setEditingCard({ ...editingCard, verso: e.target.value })}
                   rows={3}
                   required
-                  className="w-full p-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none resize-none"
+                  className="w-full p-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40] mt-1">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)] mt-1">
                 <button
                   type="button"
                   onClick={() => setEditingCard(null)}
-                  className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                  className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1815,11 +1815,11 @@ export default function FlashcardsView({
           onClick={() => setMovingCard(null)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-sm w-full shadow-2xl p-5 text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-sm w-full shadow-2xl p-5 text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="m-0 mb-1.5 text-base font-semibold text-white">Mover Flashcard</h3>
-            <p className="m-0 mb-4 text-xs text-[#949ba4] leading-relaxed">
+            <p className="m-0 mb-4 text-xs text-[var(--accents-5)] leading-relaxed">
               Selecione o novo caderno para o card "<strong className="text-white">{movingCard.frente}</strong>".
             </p>
 
@@ -1828,7 +1828,7 @@ export default function FlashcardsView({
                 value={targetMoveDeckId}
                 onChange={(e) => setTargetMoveDeckId(e.target.value)}
                 required
-                className="w-full h-8 px-2.5 bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] text-xs text-[#dbdee1] outline-none cursor-pointer"
+                className="w-full h-8 px-2.5 bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] text-xs text-[var(--accents-6)] outline-none cursor-pointer"
               >
                 {decks.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -1837,11 +1837,11 @@ export default function FlashcardsView({
                 ))}
               </select>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40]">
+              <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
                 <button
                   type="button"
                   onClick={() => setMovingCard(null)}
-                  className="h-8 px-3 text-xs text-[#949ba4] hover:text-white hover:bg-[#35373c] rounded-[4px] transition-colors cursor-pointer"
+                  className="h-8 px-3 text-xs text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] rounded-[4px] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -1866,10 +1866,10 @@ export default function FlashcardsView({
           onClick={() => setViewingNote(null)}
         >
           <div
-            className="bg-[#313338] border border-[#383a40] rounded-[8px] max-w-xl w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden text-[#dbdee1]"
+            className="bg-[var(--accents-2)] border border-[var(--discord-border)] rounded-[8px] max-w-xl w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden text-[var(--accents-6)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 px-5 border-b border-[#383a40] bg-[#2b2d31] flex items-center justify-between">
+            <div className="p-4 px-5 border-b border-[var(--discord-border)] bg-[var(--accents-1)] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#20b8cd]">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -1882,7 +1882,7 @@ export default function FlashcardsView({
               <button
                 type="button"
                 onClick={() => setViewingNote(null)}
-                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer shrink-0"
+                className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer shrink-0"
                 title="Fechar"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1893,11 +1893,11 @@ export default function FlashcardsView({
             </div>
 
             <div
-              className="p-5 overflow-y-auto text-xs leading-relaxed text-[#dbdee1] prose dark:prose-invert max-w-none"
+              className="p-5 overflow-y-auto text-xs leading-relaxed text-[var(--accents-6)] prose dark:prose-invert max-w-none"
               dangerouslySetInnerHTML={{ __html: viewingNote.conteudo || '<p class="text-[#80848e]">Esta nota está vazia.</p>' }}
             />
 
-            <div className="p-3.5 px-5 border-t border-[#383a40] bg-[#2b2d31] flex justify-end gap-2">
+            <div className="p-3.5 px-5 border-t border-[var(--discord-border)] bg-[var(--accents-1)] flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
@@ -1905,7 +1905,7 @@ export default function FlashcardsView({
                   setViewingNote(null);
                   onClose();
                 }}
-                className="h-8 px-3 text-xs bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-white rounded-[4px] transition-colors cursor-pointer"
+                className="h-8 px-3 text-xs bg-[var(--accents-2)] hover:bg-[#3f4147] border border-[var(--discord-border)] text-white rounded-[4px] transition-colors cursor-pointer"
               >
                 Abrir no Editor
               </button>

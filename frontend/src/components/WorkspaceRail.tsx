@@ -62,52 +62,37 @@ export default function WorkspaceRail({
 
   return (
     <aside
-      className="w-[72px] min-w-[72px] h-full flex flex-col items-center py-3 select-none z-40 shrink-0 border-r relative"
-      style={{ background: 'var(--discord-rail)', borderColor: 'var(--discord-border)' }}
+      className="w-[52px] min-w-[52px] h-full flex flex-col items-center py-3 select-none z-40 shrink-0 border-r relative"
+      style={{ background: 'var(--background)', borderColor: 'var(--discord-border)' }}
       aria-label="Workspaces Rail"
     >
-      {/* 1. TOP DIRECT / HOME LOGO BUTTON */}
+      {/* 1. HOME LOGO BUTTON */}
       <div
         className="relative flex items-center justify-center w-full py-1"
         onMouseEnter={(e) => handleMouseEnter('home', 'Painel Principal', e)}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Left Indicator Pill */}
-        <div
-          className={`absolute left-0 w-1 bg-[var(--foreground)] rounded-r-full transition-all duration-200 ${
-            isHomeActive
-              ? 'h-10'
-              : hoveredTooltip?.id === 'home'
-              ? 'h-5'
-              : 'h-0'
-          }`}
-        />
-
-        {/* Squircle Button */}
         <button
           type="button"
-          onClick={() => {
-            if (onGoHome) onGoHome();
-          }}
-          className={`w-12 h-12 flex items-center justify-center transition-all duration-200 cursor-pointer overflow-hidden border-none ${
+          onClick={() => { if (onGoHome) onGoHome(); }}
+          className={`w-9 h-9 flex items-center justify-center transition-colors cursor-pointer overflow-hidden border-none ${
             isHomeActive
-              ? 'rounded-[16px] bg-[var(--discord-sidebar)] ring-2 ring-[var(--brand)] shadow-lg'
-              : 'rounded-[24px] bg-[var(--discord-sidebar)] hover:rounded-[16px] hover:bg-[#35373c]'
+              ? 'rounded-[8px] bg-[var(--accents-2)]'
+              : 'rounded-[8px] hover:bg-[var(--accents-1)]'
           }`}
           aria-label="Painel Principal"
         >
-          <SynapLogo size={36} priority />
+          <SynapLogo size={28} priority />
         </button>
       </div>
 
       {/* Separator */}
-      <div className="w-8 h-[2px] rounded-full mx-auto my-2 shrink-0" style={{ background: 'var(--discord-border)' }} />
+      <div className="w-7 h-[1px] mx-auto my-2 shrink-0" style={{ background: 'var(--discord-border)' }} />
 
       {/* 2. SCROLLABLE WORKSPACE ICONS LIST */}
-      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col items-center gap-2 py-1">
+      <div className="flex-1 w-full overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col items-center gap-1 py-1">
         {workspaces.map((ws) => {
           const isActive = ws.id === activeWorkspaceId && !isHomeActive;
-          const isHovered = hoveredTooltip?.id === ws.id;
 
           return (
             <div
@@ -116,35 +101,23 @@ export default function WorkspaceRail({
               onMouseEnter={(e) => handleMouseEnter(ws.id, ws.nome, e, ws.isCollaborative ? 'Colab' : undefined)}
               onMouseLeave={handleMouseLeave}
             >
-              {/* Left Indicator Pill */}
-              <div
-                className={`absolute left-0 w-1 bg-[var(--foreground)] rounded-r-full transition-all duration-200 ${
-                  isActive
-                    ? 'h-10'
-                    : isHovered
-                    ? 'h-5'
-                    : 'h-0'
-                }`}
-              />
-
-              {/* Workspace Squircle Button */}
               <button
                 type="button"
                 onClick={() => onSelectWorkspace(ws.id)}
-                className={`w-12 h-12 flex items-center justify-center font-bold text-sm tracking-wide select-none transition-all duration-200 cursor-pointer overflow-hidden border-none ${
+                className={`w-9 h-9 flex items-center justify-center font-bold text-xs tracking-wide select-none transition-colors cursor-pointer overflow-hidden border-none ${
                   isActive
-                    ? 'rounded-[16px] bg-[var(--brand)] text-white shadow-md'
-                    : 'rounded-[24px] bg-[var(--discord-sidebar)] text-[var(--discord-text-muted)] hover:rounded-[16px] hover:bg-[var(--brand)] hover:text-white'
+                    ? 'rounded-[8px] bg-[var(--accents-2)] text-[var(--foreground)]'
+                    : 'rounded-[8px] bg-transparent text-[var(--accents-5)] hover:bg-[var(--accents-1)] hover:text-[var(--foreground)]'
                 }`}
                 aria-label={ws.nome}
               >
                 <WorkspaceIcon
                   icone={ws.icone}
                   nome={ws.nome}
-                  size={24}
+                  size={20}
                   className="w-full h-full"
-                  emojiClassName="text-xl"
-                  fallbackClassName="text-xs"
+                  emojiClassName="text-base"
+                  fallbackClassName="text-[10px]"
                 />
               </button>
             </div>
@@ -157,20 +130,13 @@ export default function WorkspaceRail({
           onMouseEnter={(e) => handleMouseEnter('add', 'Adicionar Workspace', e)}
           onMouseLeave={handleMouseLeave}
         >
-          {/* Left Pill on Hover */}
-          <div
-            className={`absolute left-0 w-1 bg-[var(--foreground)] rounded-r-full transition-all duration-200 ${
-              hoveredTooltip?.id === 'add' ? 'h-5' : 'h-0'
-            }`}
-          />
-
           <button
             type="button"
             onClick={onOpenCreateModal}
-            className="w-12 h-12 flex items-center justify-center text-emerald-400 rounded-[24px] bg-[var(--discord-sidebar)] hover:rounded-[16px] hover:bg-[#23a55a] hover:text-white transition-all duration-200 cursor-pointer border-none shadow-sm"
+            className="w-9 h-9 flex items-center justify-center text-[var(--accents-5)] rounded-[8px] hover:bg-[var(--accents-1)] hover:text-[var(--foreground)] transition-colors cursor-pointer border-none"
             aria-label="Criar Workspace"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
@@ -178,7 +144,7 @@ export default function WorkspaceRail({
         </div>
       </div>
 
-      {/* 4. BOTTOM AREA: WHEN SIDEBAR IS CLOSED, SHOW ONLY USER PHOTO */}
+      {/* 4. BOTTOM AREA: USER AVATAR (when sidebar closed) */}
       {!isSidebarOpen && (
         <div
           className="relative flex items-center justify-center w-full pt-2 shrink-0 border-t"
@@ -188,10 +154,8 @@ export default function WorkspaceRail({
         >
           <button
             type="button"
-            onClick={() => {
-              if (onOpenSettingsModal) onOpenSettingsModal();
-            }}
-            className="w-10 h-10 rounded-full bg-[var(--discord-sidebar)] text-[var(--discord-text-primary)] font-bold text-xs flex items-center justify-center select-none shadow-sm cursor-pointer hover:ring-2 hover:ring-[var(--brand)] transition-all border border-[var(--discord-border)] overflow-hidden"
+            onClick={() => { if (onOpenSettingsModal) onOpenSettingsModal(); }}
+            className="w-8 h-8 rounded-[6px] bg-[var(--accents-1)] text-[var(--foreground)] font-bold text-xs flex items-center justify-center select-none cursor-pointer hover:bg-[var(--accents-2)] transition-colors overflow-hidden"
             aria-label="Configurações do Usuário"
           >
             {currentUser?.avatarUrl ? (
@@ -210,19 +174,18 @@ export default function WorkspaceRail({
         </div>
       )}
 
-      {/* 5. GLOBAL FIXED FLOATING DISCORD TOOLTIP (NEVER CLIPPED) */}
+      {/* 5. FLOATING TOOLTIP (clean, no arrow) */}
       {hoveredTooltip && (
         <div
           style={{
             top: `${hoveredTooltip.top}px`,
             transform: 'translateY(-50%)',
           }}
-          className="fixed left-[80px] z-[9999] px-3 py-1.5 rounded-[6px] text-xs font-semibold whitespace-nowrap bg-[#111114] text-[#ededed] border border-[var(--accents-3)] shadow-2xl pointer-events-none flex items-center gap-2 animate-smooth-pop select-none"
+          className="fixed left-[60px] z-[9999] px-2.5 py-1 rounded-[4px] text-xs font-medium whitespace-nowrap bg-[var(--accents-3)] text-[var(--foreground)] shadow-lg pointer-events-none flex items-center gap-2 select-none"
         >
-          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-[#111114] border-l border-b border-[var(--accents-3)] rotate-45" />
           <span className="max-w-[220px] truncate">{hoveredTooltip.label}</span>
           {hoveredTooltip.badge && (
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-[var(--accents-3)] text-emerald-400">
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-[var(--accents-1)] text-[var(--brand)]">
               {hoveredTooltip.badge}
             </span>
           )}

@@ -10,46 +10,47 @@
 :root,
 .dark,
 [data-theme="dark"] {
-  --background: #111113;
-  --foreground: #ededed;
-  
-  --accents-1: #1a1a1e;
-  --accents-2: #28282e;
-  --accents-3: #383840;
-  --accents-4: #60606a;
-  --accents-5: #8c8c96;
-  --accents-6: #b4b4be;
-  --accents-7: #dcdce2;
-  --accents-8: #f4f4f6;
+  --background: #191919;
+  --foreground: #e8e8e8;
 
-  --success: #10b981;
-  --error: #e00;
-  --warning: #f5a623;
+  --accents-1: #202020;
+  --accents-2: #2a2a2a;
+  --accents-3: #3a3a3a;
+  --accents-4: #5a5a5a;
+  --accents-5: #8a8a8a;
+  --accents-6: #b0b0b0;
+  --accents-7: #d0d0d0;
+  --accents-8: #f0f0f0;
+
+  --success: #4e9c6a;
+  --error: #e0533d;
+  --warning: #d99a44;
   --brand: #20B8CD;
   --brand-strong: #26c7de;
-  --brand-dim: rgba(32, 184, 205, 0.12);
+  --brand-dim: rgba(32, 184, 205, 0.10);
 
-  /* Discord 3-Layer Depth System */
-  --discord-rail: #1e1f22;
-  --discord-sidebar: #2b2d31;
-  --discord-canvas: #313338;
-  --discord-user-bar: #232428;
-  --discord-header: #313338;
-  --discord-border: #1f2023;
-  --discord-input: #1e1f22;
-  --discord-hover: rgba(255, 255, 255, 0.05);
-  --discord-active: rgba(255, 255, 255, 0.08);
-  --discord-text-primary: #dbdee1;
-  --discord-text-muted: #949ba4;
-  --discord-text-channel: #949ba4;
+  /* Flat surface system (Notion-inspired) */
+  --discord-rail: var(--background);
+  --discord-sidebar: var(--background);
+  --discord-canvas: var(--background);
+  --discord-user-bar: var(--background);
+  --discord-header: var(--background);
+  --discord-border: rgba(255, 255, 255, 0.06);
+  --discord-input: var(--accents-1);
+  --discord-hover: rgba(255, 255, 255, 0.045);
+  --discord-active: rgba(255, 255, 255, 0.07);
+  --discord-text-primary: var(--foreground);
+  --discord-text-muted: var(--accents-5);
+  --discord-text-channel: var(--accents-5);
 
-  --radius: 6px;
+  --radius: 4px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --duration-smooth: 220ms;
+  --duration-smooth: 180ms;
 
   color-scheme: dark;
 }
 
+/* Light mode disabled — Notion redesign focuses on dark mode only.
 .light,
 [data-theme="light"] {
   --background: #ffffff;
@@ -71,7 +72,6 @@
   --brand-strong: #0f6b78;
   --brand-dim: rgba(22, 128, 143, 0.08);
 
-  /* Discord 3-Layer Depth System (Light Mode) */
   --discord-rail: #e3e5e8;
   --discord-sidebar: #f2f3f5;
   --discord-canvas: #ffffff;
@@ -91,6 +91,7 @@
 
   color-scheme: light;
 }
+*/
 
 
 body {
@@ -109,17 +110,16 @@ body {
 }
 
 .geist-card {
-  background: var(--background);
+  background: var(--accents-1);
   border: 1px solid var(--accents-2);
   border-radius: var(--radius);
-  transition: border var(--duration-smooth) var(--ease-smooth), 
-              box-shadow var(--duration-smooth) var(--ease-smooth),
-              transform var(--duration-smooth) var(--ease-smooth);
+  transition: border var(--duration-smooth) var(--ease-smooth),
+              background var(--duration-smooth) var(--ease-smooth);
 }
 
 .geist-card:hover {
-  box-shadow: 0 4px 20px 0 rgba(0,0,0,0.3);
   border-color: var(--accents-3);
+  background: var(--accents-1);
 }
 
 .geist-input {
@@ -194,10 +194,10 @@ body {
 
 /* Glass & Velvet Surfaces */
 .glass-surface {
-  background: rgba(18, 18, 18, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--accents-2);
+  background: rgba(25, 25, 25, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--discord-border);
 }
 
 .animate-smooth-pop {

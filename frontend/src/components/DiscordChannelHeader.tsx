@@ -75,7 +75,7 @@ export default function DiscordChannelHeader({
             onClick={onToggleSidebar}
             onMouseEnter={(e) => showTooltip(e, 'Expandir Barra Lateral (Ctrl+D)')}
             onMouseLeave={hideTooltip}
-            className="p-1.5 rounded-[4px] hover:bg-[var(--discord-hover)] text-[var(--discord-text-muted)] hover:text-[var(--discord-text-primary)] transition-colors cursor-pointer border-none bg-transparent shrink-0 mr-1"
+            className="p-1.5 rounded-[4px] hover:bg-[var(--discord-hover)] text-[var(--accents-5)] hover:text-[var(--foreground)] transition-colors cursor-pointer border-none bg-transparent shrink-0 mr-1"
             aria-label="Expandir Barra Lateral"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -95,13 +95,13 @@ export default function DiscordChannelHeader({
             <div
               key={tab.id}
               onClick={() => onSelectTab(tab)}
-              className={`group relative flex items-center gap-2 h-7 px-2.5 rounded-[4px] text-xs cursor-pointer select-none transition-all shrink-0 ${
+              className={`group relative flex items-center gap-2 h-7 px-2.5 rounded-[4px] text-xs cursor-pointer select-none transition-colors shrink-0 ${
                 isTabActive
-                  ? 'bg-[var(--discord-active)] text-white font-medium shadow-xs'
-                  : 'bg-transparent text-[var(--discord-text-muted)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+                  ? 'bg-[var(--accents-2)] text-[var(--foreground)] font-medium'
+                  : 'bg-transparent text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
               }`}
             >
-              {/* Tab Icon (NO EMOJIS) */}
+              {/* Tab Icon */}
               {isDrawing ? (
                 <svg
                   width="13"
@@ -109,16 +109,25 @@ export default function DiscordChannelHeader({
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="1.5"
                   className={`shrink-0 ${isTabActive ? 'text-[var(--brand)]' : 'text-[var(--accents-4)]'}`}
                 >
                   <path d="M12 19l7-7 3 3-7 7-3-3z" />
                   <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
                 </svg>
               ) : (
-                <span className={`font-mono text-xs font-bold leading-none shrink-0 ${isTabActive ? 'text-[var(--foreground)]' : 'text-[var(--accents-4)]'}`}>
-                  #
-                </span>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className={`shrink-0 ${isTabActive ? 'text-[var(--foreground)]' : 'text-[var(--accents-4)]'}`}
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
               )}
 
               {/* Tab Title */}
@@ -132,7 +141,7 @@ export default function DiscordChannelHeader({
                 onClick={(e) => onCloseTab(e, tab.id)}
                 onMouseEnter={(e) => showTooltip(e, 'Fechar aba')}
                 onMouseLeave={hideTooltip}
-                className="opacity-0 group-hover:opacity-100 hover:text-red-400 p-0.5 rounded transition-opacity cursor-pointer border-none bg-transparent flex items-center justify-center -mr-0.5"
+                className="opacity-0 group-hover:opacity-100 hover:text-[var(--error)] p-0.5 rounded transition-opacity cursor-pointer border-none bg-transparent flex items-center justify-center -mr-0.5"
                 aria-label="Fechar aba"
               >
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -151,7 +160,7 @@ export default function DiscordChannelHeader({
             onClick={onNewTab}
             onMouseEnter={(e) => showTooltip(e, 'Nova Nota')}
             onMouseLeave={hideTooltip}
-            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--discord-text-muted)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer border-none bg-transparent shrink-0"
+            className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer border-none bg-transparent shrink-0"
             aria-label="Nova Nota"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -172,8 +181,8 @@ export default function DiscordChannelHeader({
             onMouseLeave={hideTooltip}
             className={`flex items-center gap-1.5 h-7 px-2 rounded-[4px] text-xs transition-colors cursor-pointer border-none ${
               isAiChatOpen
-                ? 'text-white bg-[var(--discord-active)] font-medium shadow-xs'
-                : 'text-[var(--discord-text-muted)] hover:text-white hover:bg-[var(--discord-hover)]'
+                ? 'text-[var(--foreground)] bg-[var(--accents-2)] font-medium'
+                : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
             }`}
             aria-label="Synap AI"
           >
@@ -192,8 +201,8 @@ export default function DiscordChannelHeader({
             onMouseLeave={hideTooltip}
             className={`p-1.5 rounded-[4px] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer border-none bg-transparent shrink-0 ${
               isRightSidebarOpen
-                ? 'text-white bg-[var(--discord-active)]'
-                : 'text-[var(--discord-text-muted)] hover:text-[var(--discord-text-primary)]'
+                ? 'text-[var(--foreground)] bg-[var(--accents-2)]'
+                : 'text-[var(--accents-5)] hover:text-[var(--foreground)]'
             }`}
             aria-label="Ferramentas"
           >

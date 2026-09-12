@@ -1120,7 +1120,7 @@ export default function AiChatView({
                     {log.status === 'running' ? (
                       <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
                     ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#23a55a" strokeWidth="2.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
@@ -1281,10 +1281,10 @@ export default function AiChatView({
           )}
 
           {/* Main Discord-style Input Box Wrapper (Enlarged & Faithful to Discord) */}
-          <div className="rounded-[8px] bg-[#383a40] flex flex-col transition-all shadow-md focus-within:ring-1 focus-within:ring-[var(--brand)]/50">
+          <div className="rounded-[8px] bg-[var(--discord-border)] flex flex-col transition-all shadow-md focus-within:ring-1 focus-within:ring-[var(--brand)]/50">
             {/* Attached Context Chips Tray */}
             {(attachedContexts.length > 0 || includeGlobalContext) && (
-              <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-2.5 pb-1.5 border-b border-[#4e5058]/50">
+              <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-2.5 pb-1.5 border-b border-[var(--accents-3)]/50">
                 {includeGlobalContext && (
                   <span className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-[var(--brand)] bg-[var(--brand)]/15 border border-[var(--brand)]/30 px-2 py-0.5 rounded-[4px]">
                     <span>🌐 Workspace Completo</span>
@@ -1304,7 +1304,7 @@ export default function AiChatView({
                 {attachedContexts.map((ctx) => (
                   <span
                     key={`${ctx.type}-${ctx.id}`}
-                    className="flex items-center gap-1.5 text-[11px] font-mono text-[#dbdee1] bg-[#2b2d31] border border-[#1f2023] px-2 py-0.5 rounded-[4px]"
+                    className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--accents-6)] bg-[var(--accents-1)] border border-[#1f2023] px-2 py-0.5 rounded-[4px]"
                   >
                     {ctx.type === 'desenho' ? (
                       <span className="text-[var(--brand)] font-bold">/</span>
@@ -1348,8 +1348,8 @@ export default function AiChatView({
                 onClick={() => setIsPlusMenuOpen((prev) => !prev)}
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                   isPlusMenuOpen
-                    ? 'bg-[#4e5058] text-white'
-                    : 'text-[#b5bac1] hover:text-white hover:bg-[#4e5058]/60'
+                    ? 'bg-[var(--accents-3)] text-white'
+                    : 'text-[#b5bac1] hover:text-white hover:bg-[var(--accents-3)]/60'
                 }`}
                 title="Caixa de ferramentas (+)"
               >
@@ -1403,7 +1403,7 @@ export default function AiChatView({
                   }
                 }}
                 placeholder="Perguntar à Synap AI... (Shift+Enter para nova linha)"
-                className="flex-1 bg-transparent border-none outline-none text-[15px] leading-[22px] text-[#dbdee1] placeholder-[#80848e] resize-none max-h-48 min-h-[26px] py-0.5 font-sans no-scrollbar"
+                className="flex-1 bg-transparent border-none outline-none text-[15px] leading-[22px] text-[var(--accents-6)] placeholder-[#80848e] resize-none max-h-48 min-h-[26px] py-0.5 font-sans no-scrollbar"
               />
 
               {/* Right Side Action Icons */}

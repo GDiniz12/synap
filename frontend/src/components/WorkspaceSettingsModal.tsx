@@ -409,7 +409,7 @@ export default function WorkspaceSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-full text-xs h-8 flex items-center justify-center gap-1.5 rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+            className="w-full text-xs h-8 flex items-center justify-center gap-1.5 rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
           >
             <span>Fechar (ESC)</span>
           </button>
@@ -453,7 +453,7 @@ export default function WorkspaceSettingsModal({
                     <button
                       type="button"
                       onClick={() => setIsPickerOpen(!isPickerOpen)}
-                      className="h-7 px-2.5 text-[11px] font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="h-7 px-2.5 text-[11px] font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" />
@@ -471,7 +471,7 @@ export default function WorkspaceSettingsModal({
                           setIconPreview(null);
                           setIsPickerOpen(false);
                         }}
-                        className="text-[11px] text-[#f23f43] hover:text-red-300 transition-colors cursor-pointer px-2"
+                        className="text-[11px] text-[var(--error)] hover:text-red-300 transition-colors cursor-pointer px-2"
                       >
                         Remover
                       </button>
@@ -519,7 +519,7 @@ export default function WorkspaceSettingsModal({
 
               {/* Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--accents-5)] font-mono">
                   NOME DO WORKSPACE
                 </label>
                 <input
@@ -527,7 +527,7 @@ export default function WorkspaceSettingsModal({
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-full h-9 px-3 text-sm bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                  className="w-full h-9 px-3 text-sm bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] text-[var(--accents-6)] rounded-[4px] outline-none transition-colors"
                 />
               </div>
 
@@ -579,7 +579,7 @@ export default function WorkspaceSettingsModal({
                     <button
                       type="button"
                       onClick={() => setConfirmResetLink(true)}
-                      className="text-[10px] text-[#949ba4] hover:text-[#f23f43] transition-colors cursor-pointer font-mono"
+                      className="text-[10px] text-[var(--accents-5)] hover:text-[var(--error)] transition-colors cursor-pointer font-mono"
                     >
                       Redefinir link
                     </button>
@@ -587,8 +587,8 @@ export default function WorkspaceSettingsModal({
                 </div>
 
                 {confirmResetLink ? (
-                  <div className="p-2.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40] flex items-center justify-between gap-2">
-                    <span className="text-xs text-[#dbdee1]">
+                  <div className="p-2.5 rounded-[4px] bg-[var(--background)] border border-[var(--discord-border)] flex items-center justify-between gap-2">
+                    <span className="text-xs text-[var(--accents-6)]">
                       O link atual deixará de funcionar. Confirmar?
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -596,14 +596,14 @@ export default function WorkspaceSettingsModal({
                         type="button"
                         onClick={handleResetLink}
                         disabled={isResettingLink}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 text-xs font-semibold rounded-[4px] bg-[var(--error)] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {isResettingLink ? 'Redefinindo...' : 'Sim, redefinir'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmResetLink(false)}
-                        className="px-2.5 py-1 text-xs font-medium rounded-[4px] bg-[#313338] text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] text-[var(--accents-5)] hover:text-white transition-colors cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -616,7 +616,7 @@ export default function WorkspaceSettingsModal({
                       readOnly
                       value={loadingLink ? 'Carregando link...' : (inviteCode ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${inviteCode}` : '')}
                       placeholder="Carregando link..."
-                      className="flex-1 h-9 px-3 text-xs font-mono bg-[#1e1f22] border border-[#383a40] text-[#dbdee1] rounded-[4px] outline-none select-all"
+                      className="flex-1 h-9 px-3 text-xs font-mono bg-[var(--background)] border border-[var(--discord-border)] text-[var(--accents-6)] rounded-[4px] outline-none select-all"
                     />
                     <button
                       type="button"
@@ -624,7 +624,7 @@ export default function WorkspaceSettingsModal({
                       disabled={!inviteCode || loadingLink}
                       className={`shrink-0 px-4 h-9 rounded-[4px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
                         isCopied
-                          ? 'bg-[#23a55a] text-white'
+                          ? 'bg-[var(--success)] text-white'
                           : 'bg-[#20b8cd] hover:bg-[#1ba2b4] text-white'
                       }`}
                     >
@@ -652,10 +652,10 @@ export default function WorkspaceSettingsModal({
                         setSearchQuery(e.target.value);
                         setInviteEmail(e.target.value);
                       }}
-                      className="w-full h-9 pl-3 pr-8 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                      className="w-full h-9 pl-3 pr-8 text-xs bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] text-[var(--accents-6)] rounded-[4px] outline-none transition-colors"
                     />
                     {isSearching && (
-                      <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-[#949ba4] border-t-[#20b8cd] rounded-full animate-spin" />
+                      <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-[var(--accents-5)] border-t-[#20b8cd] rounded-full animate-spin" />
                     )}
                   </div>
                   {searchQuery.trim().includes('@') && (
@@ -671,13 +671,13 @@ export default function WorkspaceSettingsModal({
 
                 {/* Dropdown Results */}
                 {searchQuery.trim().length >= 2 && (
-                  <div className="mt-1 p-2 rounded-lg bg-[#1e1f22] border border-[#383a40] shadow-xl flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                  <div className="mt-1 p-2 rounded-lg bg-[var(--background)] border border-[var(--discord-border)] shadow-xl flex flex-col gap-1 max-h-[180px] overflow-y-auto">
                     {isSearching ? (
-                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                      <div className="py-2 text-center text-xs text-[var(--accents-5)]">
                         Buscando usuários...
                       </div>
                     ) : searchResults.length === 0 ? (
-                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                      <div className="py-2 text-center text-xs text-[var(--accents-5)]">
                         Nenhum usuário encontrado para "{searchQuery}".
                       </div>
                     ) : (
@@ -689,10 +689,10 @@ export default function WorkspaceSettingsModal({
                         return (
                           <div
                             key={u.id}
-                            className="flex items-center justify-between p-2 rounded-md hover:bg-[#2b2d31] transition-colors gap-2"
+                            className="flex items-center justify-between p-2 rounded-md hover:bg-[var(--accents-1)] transition-colors gap-2"
                           >
                             <div className="flex items-center gap-2 overflow-hidden">
-                              <div className="w-6 h-6 rounded-full bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
+                              <div className="w-6 h-6 rounded-full bg-[var(--accents-1)] border border-[var(--discord-border)] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
                                 {u.avatarUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img src={u.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
@@ -702,14 +702,14 @@ export default function WorkspaceSettingsModal({
                               </div>
                               <div className="flex flex-col overflow-hidden text-left">
                                 <span className="text-xs font-medium text-white truncate">{u.name || u.username}</span>
-                                <span className="text-[10px] text-[#949ba4] font-mono truncate">
+                                <span className="text-[10px] text-[var(--accents-5)] font-mono truncate">
                                   {u.username ? `@${u.username}` : u.email}
                                 </span>
                               </div>
                             </div>
 
                             {isAlreadyMember ? (
-                              <span className="text-[10px] font-semibold text-[#23a55a] bg-[#23a55a]/10 border border-[#23a55a]/20 px-2 py-0.5 rounded-[4px]">
+                              <span className="text-[10px] font-semibold text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/20 px-2 py-0.5 rounded-[4px]">
                                 Membro
                               </span>
                             ) : (
@@ -777,7 +777,7 @@ export default function WorkspaceSettingsModal({
                             <select
                               value={c.role || 'MEMBER'}
                               onChange={(e) => handleChangeRole(targetUserId, e.target.value as 'MEMBER' | 'VIEWER')}
-                              className="bg-[#1e1f22] text-[10px] text-[#dbdee1] border border-[#383a40] rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-[#20b8cd] transition-colors"
+                              className="bg-[var(--background)] text-[10px] text-[var(--accents-6)] border border-[var(--discord-border)] rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-[#20b8cd] transition-colors"
                               title="Alterar papel do colaborador"
                             >
                               <option value="MEMBER">Membro (Edição)</option>
@@ -789,10 +789,10 @@ export default function WorkspaceSettingsModal({
                               onClick={() => handleRemoveCollaborator(targetUserId)}
                               disabled={isRemoving}
                               title="Remover colaborador"
-                              className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-[#f23f43] hover:bg-[#35373c] transition-colors cursor-pointer disabled:opacity-50"
+                              className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-[var(--error)] hover:bg-[var(--accents-2)] transition-colors cursor-pointer disabled:opacity-50"
                             >
                               {isRemoving ? (
-                                <div className="w-3 h-3 border-2 border-[#949ba4] border-t-[#f23f43] rounded-full animate-spin" />
+                                <div className="w-3 h-3 border-2 border-[var(--accents-5)] border-t-[var(--error)] rounded-full animate-spin" />
                               ) : (
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -830,14 +830,14 @@ export default function WorkspaceSettingsModal({
                   placeholder={workspace.nome}
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
-                  className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#f23f43]/40 focus:border-[#f23f43] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                  className="w-full h-9 px-3 text-xs bg-[var(--background)] border border-[var(--error)]/40 focus:border-[var(--error)] text-[var(--accents-6)] rounded-[4px] outline-none transition-colors"
                 />
 
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteConfirmName !== workspace.nome || isDeleting}
-                  className="h-9 px-4 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer border-none flex items-center justify-center gap-2 self-end mt-1"
+                  className="h-9 px-4 text-xs font-semibold rounded-[4px] bg-[var(--error)] hover:bg-[var(--error)] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer border-none flex items-center justify-center gap-2 self-end mt-1"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18" />

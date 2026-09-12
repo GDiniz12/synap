@@ -774,7 +774,7 @@ export default function DrawingCanvas({
     ctx.scale(dpr, dpr);
 
     // Canvas Background (Discord Canvas tone)
-    ctx.fillStyle = resolvedTheme === 'light' ? '#f2f3f5' : '#313338';
+    ctx.fillStyle = resolvedTheme === 'light' ? '#f2f3f5' : 'var(--accents-2)';
     ctx.fillRect(0, 0, width, height);
 
     // Dot Grid (Excalidraw style)

@@ -98,18 +98,18 @@ export default function IsometricGraph({
 
   if (nodes.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-[#949ba4] font-medium text-sm">
+      <div className="w-full h-full flex items-center justify-center text-[#8a8a8a] font-medium text-sm">
         Nenhuma nota no grafo.
       </div>
     );
   }
 
   const isLight = resolvedTheme === 'light';
-  const gridColor1 = isLight ? '#e2e8f0' : '#2b2d31';
-  const gridColor2 = isLight ? '#f1f5f9' : '#232428';
+  const gridColor1 = isLight ? '#e2e8f0' : '#202020';
+  const gridColor2 = isLight ? '#f1f5f9' : '#202020';
 
   return (
-    <div className="w-full h-full bg-[#1e1f22]">
+    <div className="w-full h-full bg-[#191919]">
       <Canvas>
         <OrthographicCamera makeDefault position={[150, 150, 150]} zoom={6} near={-1000} far={2000} />
         <OrbitControls makeDefault enableDamping dampingFactor={0.1} target={[0, 0, 0]} />
@@ -130,14 +130,14 @@ export default function IsometricGraph({
             pos.color &&
             pos.color !== '#525252' &&
             pos.color !== '#737373' &&
-            pos.color !== '#4e5058' &&
+            pos.color !== '#3a3a3a' &&
             pos.color !== '#80848e';
 
           const baseColor = hasCustomGroupColor
             ? pos.color
             : isLight
             ? '#cbd5e1'
-            : '#4e5058';
+            : '#3a3a3a';
 
           return (
             <mesh
@@ -167,7 +167,7 @@ export default function IsometricGraph({
                     className={`px-2 py-0.5 whitespace-nowrap font-sans text-[11px] pointer-events-none transition-colors rounded-[4px] border ${
                       isHovered
                         ? 'bg-[#20b8cd] text-white border-[#20b8cd] shadow-lg font-medium'
-                        : 'bg-[#111214]/90 text-[#dbdee1] border-[#383a40]'
+                        : 'bg-[#191919]/90 text-[#e8e8e8] border-[#2a2a2a]'
                     }`}
                   >
                     {pos.title}
@@ -190,8 +190,8 @@ export default function IsometricGraph({
           const isDimmed = hoveredNodeId && !isHighlighted;
 
           const highlightColor = '#20b8cd'; // Synap Blue
-          const normalColor = isLight ? '#94a3b8' : '#383a40';
-          const dimmedColor = isLight ? '#e2e8f0' : '#232428';
+          const normalColor = isLight ? '#94a3b8' : '#2a2a2a';
+          const dimmedColor = isLight ? '#e2e8f0' : '#202020';
 
           return (
             <Line

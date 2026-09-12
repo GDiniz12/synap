@@ -347,7 +347,7 @@ export default function SettingsModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="md:hidden w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                  className="md:hidden w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
                   aria-label="Fechar"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -524,7 +524,7 @@ export default function SettingsModal({
             <button
               type="button"
               onClick={onClose}
-              className="hidden md:flex w-7 h-7 items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+              className="hidden md:flex w-7 h-7 items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
               aria-label="Fechar"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -602,7 +602,7 @@ export default function SettingsModal({
                       type="button"
                       disabled={isUploadingAvatar}
                       onClick={() => avatarInputRef.current?.click()}
-                      className="h-7 px-3 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                      className="h-7 px-3 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                     >
                       {isUploadingAvatar ? 'Enviando...' : 'Carregar Foto'}
                     </button>
@@ -611,7 +611,7 @@ export default function SettingsModal({
                         type="button"
                         disabled={isUploadingAvatar}
                         onClick={handleRemoveAvatar}
-                        className="h-7 px-3 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#f23f43]/40 text-[#f23f43] hover:text-[#f23f43] transition-colors cursor-pointer disabled:opacity-50"
+                        className="h-7 px-3 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--error)]/40 text-[var(--error)] hover:text-[var(--error)] transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Remover Foto
                       </button>
@@ -789,7 +789,7 @@ export default function SettingsModal({
                       className={`h-8 px-3.5 text-xs font-semibold rounded-[4px] inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                         theme === tItem.id
                           ? 'bg-[#20b8cd] text-white shadow-xs'
-                          : 'bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white'
+                          : 'bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white'
                       }`}
                     >
                       {tItem.icon === 'moon' && (
@@ -1213,7 +1213,7 @@ export default function SettingsModal({
               </div>
             </div>
 
-            <div className="p-3 bg-[#f23f43]/10 border border-[#f23f43]/30 rounded-lg flex items-start gap-2.5 text-xs text-[#f23f43] leading-relaxed">
+            <div className="p-3 bg-[var(--error)]/10 border border-[var(--error)]/30 rounded-lg flex items-start gap-2.5 text-xs text-[var(--error)] leading-relaxed">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
                 <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
                 <line x1="12" y1="9" x2="12" y2="13" />
@@ -1222,11 +1222,11 @@ export default function SettingsModal({
               <span>Esta ação apagará permanentemente todas as pastas, notas, flashcards e desenhos dentro deste workspace e não poderá ser desfeita.</span>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#383a40]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
               <button
                 type="button"
                 onClick={() => setWorkspaceToDelete(null)}
-                className="h-8 px-3.5 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                className="h-8 px-3.5 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
               >
                 {t('cancel')}
               </button>
@@ -1234,7 +1234,7 @@ export default function SettingsModal({
                 type="button"
                 onClick={() => handleDeleteWorkspace(workspaceToDelete)}
                 disabled={deletingWorkspaceId === workspaceToDelete.id}
-                className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                className="h-8 px-4 text-xs font-semibold rounded-[4px] bg-[var(--error)] hover:bg-[var(--error)] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
               >
                 {deletingWorkspaceId === workspaceToDelete.id ? 'Excluindo...' : 'Sim, Excluir Workspace'}
               </button>

@@ -98,7 +98,7 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
       onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full max-w-[420px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
+        className="w-full max-w-[420px] bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 flex flex-col gap-4">
@@ -123,7 +123,7 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
                 {title}
               </h3>
               {data.parentFolderName && !isRename && (
-                <span className="text-xs text-[#949ba4] block mt-0.5">
+                <span className="text-xs text-[var(--accents-5)] block mt-0.5">
                   Dentro de: <strong className="text-white">{data.parentFolderName}</strong>
                 </span>
               )}
@@ -135,7 +135,7 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
             <div>
               <label
                 htmlFor="folder-name-input"
-                className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[#949ba4] mb-1.5"
+                className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--accents-5)] mb-1.5"
               >
                 Nome da Pasta
               </label>
@@ -150,10 +150,10 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
                 }}
                 placeholder="Ex: Projetos, Estudos, Ideias..."
                 disabled={loading}
-                className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+                className="w-full h-9 px-3 text-xs bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] outline-none text-[var(--accents-6)] placeholder-[var(--accents-5)] transition-colors"
               />
               {error && (
-                <span className="block text-[#f23f43] text-xs mt-1.5 font-medium">
+                <span className="block text-[var(--error)] text-xs mt-1.5 font-medium">
                   {error}
                 </span>
               )}
@@ -162,12 +162,12 @@ export default function FolderModal({ isOpen, data, onClose, onConfirm }: Folder
         </div>
 
         {/* Discord Action Footer */}
-        <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-end gap-2.5">
+        <div className="bg-[var(--background)] border-t border-[var(--discord-border)] px-6 py-3.5 flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
           >
             Cancelar
           </button>

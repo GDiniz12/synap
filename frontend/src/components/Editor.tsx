@@ -2450,11 +2450,11 @@ function Editor({
         >
           <div 
             ref={imagePopoverRef}
-            className="w-full max-w-md bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
+            className="w-full max-w-md bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-5 py-4 border-b border-[#383a40] bg-[#1e1f22] flex items-center justify-between">
+            <div className="px-5 py-4 border-b border-[var(--discord-border)] bg-[var(--background)] flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                 <div className="w-7 h-7 rounded-md bg-[#20b8cd]/15 text-[#20b8cd] border border-[#20b8cd]/30 flex items-center justify-center">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2468,7 +2468,7 @@ function Editor({
               <button 
                 type="button"
                 onClick={() => setImageModal(null)}
-                className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-white hover:bg-[#35373c] transition-colors cursor-pointer"
+                className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--accents-5)] hover:text-white hover:bg-[var(--accents-2)] transition-colors cursor-pointer"
                 aria-label="Fechar"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2480,14 +2480,14 @@ function Editor({
 
             <div className="p-5 flex flex-col gap-4">
               {/* Tabs */}
-              <div className="flex border-b border-[#383a40]">
+              <div className="flex border-b border-[var(--discord-border)]">
                 <button
                   type="button"
                   onClick={() => setImageModal(prev => prev ? { ...prev, tab: 'upload' } : null)}
                   className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
                     imageModal.tab === 'upload'
                       ? 'border-[#20b8cd] text-white font-semibold'
-                      : 'border-transparent text-[#949ba4] hover:text-[#dbdee1]'
+                      : 'border-transparent text-[var(--accents-5)] hover:text-[var(--accents-6)]'
                   }`}
                 >
                   Upload do Dispositivo
@@ -2498,7 +2498,7 @@ function Editor({
                   className={`pb-2 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer ${
                     imageModal.tab === 'url'
                       ? 'border-[#20b8cd] text-white font-semibold'
-                      : 'border-transparent text-[#949ba4] hover:text-[#dbdee1]'
+                      : 'border-transparent text-[var(--accents-5)] hover:text-[var(--accents-6)]'
                   }`}
                 >
                   Link da Web (URL)
@@ -2509,9 +2509,9 @@ function Editor({
                 <div className="flex flex-col gap-3">
                   <div 
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-[#383a40] hover:border-[#20b8cd] bg-[#1e1f22] rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors text-center group"
+                    className="border-2 border-dashed border-[var(--discord-border)] hover:border-[#20b8cd] bg-[var(--background)] rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors text-center group"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[#949ba4] group-hover:text-[#20b8cd] transition-colors">
+                    <div className="w-10 h-10 rounded-full bg-[var(--accents-1)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--accents-5)] group-hover:text-[#20b8cd] transition-colors">
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="17 8 12 3 7 8"/>
@@ -2519,13 +2519,13 @@ function Editor({
                       </svg>
                     </div>
                     <span className="text-xs font-medium text-white">Escolha um arquivo do seu computador</span>
-                    <span className="text-[11px] text-[#949ba4]">ou arraste e solte direto no editor</span>
+                    <span className="text-[11px] text-[var(--accents-5)]">ou arraste e solte direto no editor</span>
                   </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40]">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
                     <button
                       type="button"
                       onClick={() => setImageModal(null)}
-                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -2550,21 +2550,21 @@ function Editor({
                   className="flex flex-col gap-3"
                 >
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[#949ba4]">URL da Imagem</label>
+                    <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--accents-5)]">URL da Imagem</label>
                     <input
                       type="text"
                       autoFocus
                       placeholder="https://exemplo.com/imagem.png"
                       value={imageModal.url}
                       onChange={(e) => setImageModal(prev => prev ? { ...prev, url: e.target.value } : null)}
-                      className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] rounded-[4px] outline-none text-[#dbdee1] placeholder-[#949ba4] transition-colors"
+                      className="w-full h-9 px-3 text-xs bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] rounded-[4px] outline-none text-[var(--accents-6)] placeholder-[var(--accents-5)] transition-colors"
                     />
                   </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t border-[#383a40]">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
                     <button
                       type="button"
                       onClick={() => setImageModal(null)}
-                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                      className="h-8 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
                     >
                       Cancelar
                     </button>
@@ -3084,7 +3084,7 @@ function Editor({
                 <button
                   type="button"
                   onClick={() => setSlashMenu((prev) => ({ ...prev, query: '', selectedIndex: 0 }))}
-                  className="w-4 h-4 flex items-center justify-center text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                  className="w-4 h-4 flex items-center justify-center text-[var(--accents-5)] hover:text-white transition-colors cursor-pointer"
                   aria-label="Limpar busca"
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

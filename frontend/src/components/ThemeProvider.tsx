@@ -23,13 +23,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<'dark' | 'light'>('dark');
 
   const applyTheme = (currentTheme: Theme) => {
-    let resolved: 'dark' | 'light' = 'dark';
-    if (currentTheme === 'system') {
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      resolved = prefersDark ? 'dark' : 'light';
-    } else {
-      resolved = currentTheme;
-    }
+    // Light mode disabled — always resolve to dark
+    const resolved: 'dark' | 'light' = 'dark';
 
     setResolvedTheme(resolved);
     const root = document.documentElement;

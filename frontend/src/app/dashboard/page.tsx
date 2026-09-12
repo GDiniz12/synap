@@ -100,8 +100,8 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <SynapLogo size={26} priority />
             <div className="w-[1px] h-4 bg-[var(--accents-2)]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--accents-5)] font-mono">
-              PAINEL DE CONTROLE
+            <span className="text-xs font-medium text-[var(--accents-5)]">
+              Painel de Controle
             </span>
           </div>
 
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         {/* Scrollable Dashboard Body */}
         <main className="flex-1 overflow-y-auto p-6 md:p-10 max-w-6xl w-full mx-auto flex flex-col gap-8">
           {/* Welcome Banner */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-[var(--accents-1)] via-[var(--accents-2)]/30 to-transparent border border-[var(--accents-2)]">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-lg bg-[var(--accents-1)] border border-[var(--discord-border)]">
             <div className="flex flex-col gap-1.5">
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[var(--foreground)]">
                 Olá, {currentUser?.name?.split(' ')[0] || 'Usuário'}
@@ -167,8 +167,8 @@ export default function DashboardPage() {
           {/* Workspaces Section */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between border-b border-[var(--accents-2)] pb-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--accents-4)] font-mono">
-                SEUS WORKSPACES ({workspaces.length})
+              <h2 className="text-xs font-medium text-[var(--accents-4)]">
+                Seus Workspaces ({workspaces.length})
               </h2>
             </div>
 
@@ -193,11 +193,11 @@ export default function DashboardPage() {
                   <Link
                     key={ws.id}
                     href={`/workspaces/${ws.id}`}
-                    className="group p-4 rounded-xl border border-[var(--accents-2)] bg-[var(--background)] hover:border-[var(--brand)] hover:shadow-lg transition-all duration-200 flex items-center justify-between text-decoration-none"
+                    className="group p-4 rounded-lg border border-[var(--discord-border)] bg-[var(--background)] hover:bg-[var(--accents-1)] hover:border-[var(--accents-3)] transition-colors flex items-center justify-between text-decoration-none"
                   >
                     <div className="flex items-center gap-3.5 overflow-hidden">
                       {/* Avatar */}
-                      <div className="w-12 h-12 rounded-[16px] bg-[var(--accents-2)] text-[var(--foreground)] group-hover:bg-[var(--brand)] group-hover:text-white transition-colors flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+                      <div className="w-12 h-12 rounded-[10px] bg-[var(--accents-2)] text-[var(--foreground)] group-hover:bg-[var(--accents-3)] transition-colors flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
                         <WorkspaceIcon
                           icone={ws.icone}
                           nome={ws.nome}
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                         <span className="text-sm font-semibold text-[var(--foreground)] truncate">
                           {ws.nome}
                         </span>
-                        <span className="text-[11px] text-[var(--accents-5)] font-mono">
+                        <span className="text-[11px] text-[var(--accents-5)]">
                           {ws.isCollaborative ? 'Colaborativo' : 'Pessoal'}
                         </span>
                       </div>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
-                      className="text-[var(--accents-4)] group-hover:text-[var(--brand)] group-hover:translate-x-1 transition-all shrink-0"
+                      className="text-[var(--accents-4)] group-hover:text-[var(--foreground)] group-hover:translate-x-1 transition-all shrink-0"
                     >
                       <polyline points="9 18 15 12 9 6" />
                     </svg>

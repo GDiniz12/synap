@@ -273,10 +273,10 @@ export default function DiscordChannelSidebar({
         onDragStart={(e) => {
           if (onDragStart) onDragStart(e, 'nota', nota.id);
         }}
-        className={`group flex items-center justify-between h-[34px] px-2 mx-1 rounded-[4px] cursor-pointer select-none transition-all duration-150 ${
+        className={`group flex items-center justify-between h-[30px] px-2 mx-0.5 rounded-[4px] cursor-pointer select-none transition-colors duration-150 ${
           isActive
-            ? 'bg-[var(--discord-active)] text-white font-medium'
-            : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+            ? 'bg-[var(--accents-2)] text-[var(--foreground)] font-medium'
+            : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
         }`}
       >
         <div className="flex items-center gap-2 overflow-hidden flex-1 mr-1">
@@ -287,20 +287,25 @@ export default function DiscordChannelSidebar({
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
-              className={`shrink-0 ${isActive ? 'text-[var(--brand)]' : 'text-[var(--discord-text-muted)] group-hover:text-[var(--discord-text-primary)]'}`}
+              strokeWidth="1.5"
+              className={`shrink-0 ${isActive ? 'text-[var(--brand)]' : 'text-[var(--accents-4)] group-hover:text-[var(--foreground)]'}`}
             >
               <path d="M12 19l7-7 3 3-7 7-3-3z" />
               <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
             </svg>
           ) : (
-            <span
-              className={`text-sm font-mono shrink-0 font-bold leading-none ${
-                isActive ? 'text-white' : 'text-[var(--discord-text-muted)] group-hover:text-[var(--discord-text-primary)]'
-              }`}
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              className={`shrink-0 ${isActive ? 'text-[var(--foreground)]' : 'text-[var(--accents-4)] group-hover:text-[var(--foreground)]'}`}
             >
-              #
-            </span>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
           )}
 
           {isInlineEditing ? (
@@ -392,7 +397,7 @@ export default function DiscordChannelSidebar({
                 onClick={onOpenLeaveWorkspace}
                 onMouseEnter={(e) => showTooltip(e, 'Sair do Workspace')}
                 onMouseLeave={hideTooltip}
-                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#f23f43]/15 text-[var(--accents-5)] hover:text-[#f23f43] transition-colors cursor-pointer border-none bg-transparent"
+                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--error)]/15 text-[var(--accents-5)] hover:text-[var(--error)] transition-colors cursor-pointer border-none bg-transparent"
                 aria-label="Sair do Workspace"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -428,7 +433,7 @@ export default function DiscordChannelSidebar({
       <div className="px-2 pt-2.5 pb-1.5 flex flex-col gap-2 shrink-0 border-b border-[var(--accents-2)]/50">
         {/* Action Row: buttons for Editor/Owner or Read-Only banner for Viewer */}
         {currentUserRole === 'VIEWER' ? (
-          <div className="px-2.5 py-1.5 rounded-md bg-[var(--accents-1)] border border-[var(--accents-2)] flex items-center justify-center gap-1.5 text-[11px] text-[var(--accents-5)] font-mono">
+          <div className="px-2.5 py-1.5 rounded-md bg-[var(--accents-1)] border border-[var(--accents-2)] flex items-center justify-center gap-1.5 text-[11px] text-[var(--accents-5)]">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
               <circle cx="12" cy="12" r="3" />
@@ -446,9 +451,12 @@ export default function DiscordChannelSidebar({
               className="flex-1 h-8 flex items-center justify-center rounded-md bg-[var(--accents-1)] hover:bg-[var(--accents-2)] text-[var(--accents-6)] hover:text-[var(--foreground)] border border-[var(--accents-2)] hover:border-[var(--accents-3)] transition-colors cursor-pointer group shadow-2xs"
               aria-label="Criar Nota"
             >
-              <span className="font-mono font-bold text-sm text-[var(--foreground)] group-hover:scale-110 transition-transform">
-                #
-              </span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--foreground)]">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="12" y1="13" x2="8" y2="13" />
+                <line x1="12" y1="17" x2="8" y2="17" />
+              </svg>
             </button>
 
             {/* Criar Pasta */}
@@ -511,13 +519,13 @@ export default function DiscordChannelSidebar({
                 e.currentTarget.blur();
               }
             }}
-            className="w-full h-8 pl-3 pr-8 rounded-[4px] bg-[#1e1f22] hover:bg-[#1e1f22]/90 focus:bg-[#1e1f22] border border-[#232428] hover:border-[#35373c] focus:border-[var(--brand)] text-[13px] font-['gg_sans','Noto_Sans','Helvetica_Neue',Helvetica,Arial,sans-serif] font-normal text-[#dbdee1] placeholder-[#949ba4] transition-colors outline-none antialiased"
+            className="w-full h-8 pl-3 pr-8 rounded-[4px] bg-[var(--accents-1)] border border-[var(--discord-border)] focus:border-[var(--accents-3)] text-[13px] font-normal text-[var(--foreground)] placeholder-[var(--accents-5)] transition-colors outline-none"
           />
           {sidebarSearch ? (
             <button
               type="button"
               onClick={() => setSidebarSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#949ba4] hover:text-[#dbdee1] transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center rounded-sm"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[var(--accents-5)] hover:text-[var(--foreground)] transition-colors cursor-pointer border-none bg-transparent flex items-center justify-center rounded-sm"
               title="Limpar busca"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -526,7 +534,7 @@ export default function DiscordChannelSidebar({
               </svg>
             </button>
           ) : (
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#949ba4] pointer-events-none flex items-center justify-center">
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--accents-5)] pointer-events-none flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="7" />
                 <line x1="16.5" y1="16.5" x2="21" y2="21" />
@@ -550,8 +558,8 @@ export default function DiscordChannelSidebar({
             {/* Pastas encontradas */}
             {filteredPastas.length > 0 && (
               <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accents-4)] px-2 py-0.5 font-mono">
-                  PASTAS ({filteredPastas.length})
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--accents-4)] px-2 py-0.5">
+                  Pastas ({filteredPastas.length})
                 </span>
                 {filteredPastas.map((pasta) => renderFolderItem(pasta, 0))}
               </div>
@@ -559,8 +567,8 @@ export default function DiscordChannelSidebar({
 
             {/* Notas encontradas */}
             <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--accents-4)] px-2 py-0.5 font-mono">
-                NOTAS ({filteredNotas.length})
+              <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--accents-4)] px-2 py-0.5">
+                Notas ({filteredNotas.length})
               </span>
               {filteredNotas.length === 0 && filteredPastas.length === 0 ? (
                 <span className="text-xs text-[var(--accents-4)] px-2 py-3 text-center">Nenhum resultado encontrado</span>
@@ -621,7 +629,7 @@ export default function DiscordChannelSidebar({
           className="flex items-center gap-2 p-1 -ml-0.5 rounded-[4px] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer overflow-hidden flex-1 mr-1"
         >
           {/* Avatar without green dot */}
-          <div className="w-8 h-8 rounded-full bg-[var(--brand)] text-white font-bold text-xs flex items-center justify-center select-none shadow-xs shrink-0 overflow-hidden border border-[var(--discord-border)]">
+          <div className="w-8 h-8 rounded-[6px] bg-[var(--accents-2)] text-[var(--foreground)] font-bold text-xs flex items-center justify-center select-none shrink-0 overflow-hidden">
             {currentUser?.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -669,7 +677,7 @@ export default function DiscordChannelSidebar({
             onClick={onOpenLogoutConfirm}
             onMouseEnter={(e) => showTooltip(e, 'Sair da Conta', 'top')}
             onMouseLeave={hideTooltip}
-            className="w-8 h-8 flex items-center justify-center rounded-[4px] hover:bg-red-500/15 hover:text-red-400 transition-colors cursor-pointer border-none bg-transparent"
+            className="w-8 h-8 flex items-center justify-center rounded-[4px] hover:bg-[var(--error)]/15 hover:text-[var(--error)] transition-colors cursor-pointer border-none bg-transparent"
             aria-label="Sair da Conta"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -226,7 +226,7 @@ export default function CreateWorkspaceModal({
           {/* Form */}
           <form id="create-workspace-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--accents-5)] font-mono">
                 NOME DO WORKSPACE
               </label>
               <input
@@ -235,33 +235,33 @@ export default function CreateWorkspaceModal({
                 placeholder="Ex: Ciência da Computação, Projeto Final..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                className="w-full h-9 px-3 text-xs bg-[var(--background)] border border-[var(--discord-border)] focus:border-[#20b8cd] text-[var(--accents-6)] rounded-[4px] outline-none transition-colors"
                 autoFocus
               />
             </div>
 
             {/* Collaborative Checkbox */}
-            <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-[6px] border border-[#383a40] bg-[#1e1f22] hover:bg-[#35373c] transition-colors">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-[6px] border border-[var(--discord-border)] bg-[var(--background)] hover:bg-[var(--accents-2)] transition-colors">
               <input
                 type="checkbox"
                 checked={isCollaborative}
                 onChange={(e) => setIsCollaborative(e.target.checked)}
-                className="w-4 h-4 rounded border-[#383a40] text-[#20b8cd] focus:ring-0 cursor-pointer"
+                className="w-4 h-4 rounded border-[var(--discord-border)] text-[#20b8cd] focus:ring-0 cursor-pointer"
               />
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-white">Workspace Colaborativo</span>
-                <span className="text-[11px] text-[#949ba4]">Permitir convidar outros membros em tempo real</span>
+                <span className="text-[11px] text-[var(--accents-5)]">Permitir convidar outros membros em tempo real</span>
               </div>
             </label>
           </form>
         </div>
 
         {/* Discord Action Footer Bar */}
-        <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-between rounded-b-lg">
+        <div className="bg-[var(--background)] border-t border-[var(--discord-border)] px-6 py-3.5 flex items-center justify-between rounded-b-lg">
           <button
             type="button"
             onClick={handleClose}
-            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--discord-border)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer"
             disabled={isSubmitting}
           >
             Voltar

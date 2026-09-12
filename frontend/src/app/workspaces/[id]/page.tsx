@@ -1332,12 +1332,12 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           onClick={() => setDeleteModal(null)}
         >
           <div 
-            className="w-full max-w-[420px] bg-[#2b2d31] border border-[#383a40] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-smooth-pop"
+            className="w-full max-w-[420px] bg-[var(--accents-1)] border border-[var(--discord-border)] rounded-lg shadow-lg overflow-hidden flex flex-col animate-smooth-pop"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 flex flex-col gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#f23f43]/15 text-[#f23f43] border border-[#f23f43]/30 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-[var(--error)]/12 text-[var(--error)] border border-[var(--error)]/20 flex items-center justify-center shrink-0">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 6h18"/>
                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -1350,29 +1350,29 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
                   <h3 className="text-base font-semibold text-white leading-tight">
                     Excluir {deleteModal.type === 'pasta' ? 'Pasta' : 'Nota'}
                   </h3>
-                  <span className="text-xs text-[#949ba4]">
+                  <span className="text-xs text-[var(--accents-5)]">
                     Esta ação é irreversível
                   </span>
                 </div>
               </div>
 
-              <p className="text-sm text-[#949ba4] leading-relaxed">
+              <p className="text-sm text-[var(--accents-5)] leading-relaxed">
                 Tem certeza de que deseja excluir <strong className="text-white">"{deleteModal.name}"</strong>? {deleteModal.type === 'pasta' ? 'Todas as subpastas e notas contidas nela também serão excluídas permanentemente.' : 'Esta ação não poderá ser desfeita.'}
               </p>
             </div>
 
-            <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-end gap-2.5">
+            <div className="bg-[var(--background)] border-t border-[var(--discord-border)] px-6 py-3.5 flex items-center justify-end gap-2.5">
               <button
                 type="button"
                 onClick={() => setDeleteModal(null)}
-                className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+                className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[var(--accents-2)] hover:bg-[var(--accents-3)] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-[var(--foreground)] transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white shadow-sm transition-colors cursor-pointer"
+                className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[var(--error)] hover:opacity-90 text-white transition-colors cursor-pointer"
               >
                 Excluir
               </button>
@@ -2217,8 +2217,8 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
             left: 0,
             right: 0,
             height: '64px',
-            background: '#1e1f22',
-            borderTop: '1px solid #383a40',
+            background: 'var(--background)',
+            borderTop: '1px solid var(--discord-border)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-around',
@@ -2228,7 +2228,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
         >
           <button 
             onClick={() => setIsMobileFilesSheetOpen(true)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isMobileFilesSheetOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isMobileFilesSheetOpen ? '#20b8cd' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Arquivos</span>
@@ -2239,7 +2239,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsGraphViewOpen(false);
               setIsFlashcardsOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: !isGraphViewOpen && !isFlashcardsOpen && !isAiChatOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: !isGraphViewOpen && !isFlashcardsOpen && !isAiChatOpen ? '#20b8cd' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Notas</span>
@@ -2251,7 +2251,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsFlashcardsOpen(false);
               setIsAiChatOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isGraphViewOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isGraphViewOpen ? '#20b8cd' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="3" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Grafo</span>
@@ -2263,7 +2263,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsGraphViewOpen(false);
               setIsAiChatOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isFlashcardsOpen ? '#20b8cd' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
             <span style={{ fontSize: '10px', fontWeight: 500 }}>Cards</span>
@@ -2275,7 +2275,7 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               setIsFlashcardsOpen(false);
               setIsGraphViewOpen(false);
             }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isAiChatOpen ? '#20b8cd' : '#949ba4', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: 'none', color: isAiChatOpen ? '#20b8cd' : 'var(--accents-5)', cursor: 'pointer' }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
@@ -2296,11 +2296,11 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
           {/* Sheet */}
           <div style={{ 
             position: 'relative', 
-            background: '#2b2d31', 
+            background: 'var(--accents-1)', 
             height: '75vh', 
             borderTopLeftRadius: '16px', 
             borderTopRightRadius: '16px',
-            borderTop: '1px solid #383a40',
+            borderTop: '1px solid var(--discord-border)',
             display: 'flex',
             flexDirection: 'column',
             boxShadow: '0 -4px 24px rgba(0,0,0,0.4)',
@@ -2311,22 +2311,22 @@ export default function WorkspaceLayout({ params }: { params: Promise<{ id: stri
               onClick={() => setIsMobileFilesSheetOpen(false)}
               style={{ padding: '12px', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
             >
-              <div style={{ width: '40px', height: '4px', background: '#4e5058', borderRadius: '2px' }} />
+              <div style={{ width: '40px', height: '4px', background: 'var(--accents-3)', borderRadius: '2px' }} />
             </div>
             
-            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #383a40' }}>
+            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--discord-border)' }}>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#ffffff' }}>Arquivos</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button 
                   onClick={() => handleTriggerCreatePasta(null)} 
-                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer" 
+                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[var(--accents-2)] hover:bg-[#3f4147] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer" 
                   title="Nova pasta"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.22-1.8A2 2 0 0 0 8.53 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><line x1="12" y1="10" x2="12" y2="16"/><line x1="9" y1="13" x2="15" y2="13"/></svg>
                 </button>
                 <button 
                   onClick={() => handleCreateNota(null)} 
-                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[#35373c] hover:bg-[#3f4147] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer" 
+                  className="w-7 h-7 flex items-center justify-center rounded-[6px] bg-[var(--accents-2)] hover:bg-[#3f4147] border border-[var(--discord-border)] text-[var(--accents-6)] hover:text-white transition-colors cursor-pointer" 
                   title="Nova nota"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

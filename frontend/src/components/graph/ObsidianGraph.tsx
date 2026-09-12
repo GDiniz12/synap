@@ -277,8 +277,8 @@ export default function ObsidianGraph({
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Discord Dark Canvas Background (#1e1f22)
-      const bgColor = isLight ? '#f2f3f5' : '#1e1f22';
+      // Discord Dark Canvas Background (#191919)
+      const bgColor = isLight ? '#f2f3f5' : '#191919';
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, width, height);
 
@@ -338,12 +338,12 @@ export default function ObsidianGraph({
           ctx.globalAlpha = 0.95;
         } else if (isDimmed) {
           // Dimmed background link
-          ctx.strokeStyle = isLight ? '#cbd5e1' : '#2b2d31';
+          ctx.strokeStyle = isLight ? '#cbd5e1' : '#202020';
           ctx.lineWidth = 0.8;
           ctx.globalAlpha = 0.15;
         } else {
           // Normal link
-          ctx.strokeStyle = isLight ? '#94a3b8' : '#383a40';
+          ctx.strokeStyle = isLight ? '#94a3b8' : '#2a2a2a';
           ctx.lineWidth = 1.2;
           ctx.globalAlpha = 0.55;
         }
@@ -368,7 +368,7 @@ export default function ObsidianGraph({
 
           ctx.beginPath();
           ctx.arc(px, py, isConnected ? 2.5 : 1.6, 0, Math.PI * 2);
-          ctx.fillStyle = isConnected ? '#20b8cd' : isLight ? '#64748b' : '#949ba4';
+          ctx.fillStyle = isConnected ? '#20b8cd' : isLight ? '#64748b' : '#8a8a8a';
           ctx.globalAlpha = isConnected ? 0.9 : hoveredId ? 0.15 : 0.6;
           ctx.fill();
         });
@@ -386,15 +386,15 @@ export default function ObsidianGraph({
           node.color &&
           node.color !== '#525252' &&
           node.color !== '#737373' &&
-          node.color !== '#4e5058' &&
+          node.color !== '#3a3a3a' &&
           node.color !== '#80848e';
 
-        // Default neutral color is Discord Dark Surface gray (#4e5058 in dark / #94a3b8 in light)
+        // Default neutral color is Discord Dark Surface gray (#3a3a3a in dark / #94a3b8 in light)
         const baseColor = hasCustomGroupColor
           ? node.color
           : isLight
           ? '#94a3b8'
-          : '#4e5058';
+          : '#3a3a3a';
 
         // Glowing outer halo on hover
         if (isCurrentHovered) {
@@ -436,7 +436,7 @@ export default function ObsidianGraph({
         ctx.fill();
 
         // Node crisp border
-        ctx.strokeStyle = isLight ? '#ffffff' : '#2b2d31';
+        ctx.strokeStyle = isLight ? '#ffffff' : '#202020';
         ctx.lineWidth = 1.2;
         ctx.globalAlpha = isDimmed ? 0.15 : 0.8;
         ctx.stroke();
@@ -491,14 +491,14 @@ export default function ObsidianGraph({
             ctx.globalAlpha = 1;
             ctx.fill();
 
-            ctx.strokeStyle = isCurrentHovered ? '#20b8cd' : isLight ? '#cbd5e1' : '#383a40';
+            ctx.strokeStyle = isCurrentHovered ? '#20b8cd' : isLight ? '#cbd5e1' : '#2a2a2a';
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            ctx.fillStyle = isCurrentHovered ? (isLight ? '#20b8cd' : '#ffffff') : isLight ? '#0f172a' : '#dbdee1';
+            ctx.fillStyle = isCurrentHovered ? (isLight ? '#20b8cd' : '#ffffff') : isLight ? '#0f172a' : '#e8e8e8';
             ctx.fillText(text, node.x, labelY + 1);
           } else {
-            ctx.fillStyle = isLight ? '#475569' : '#949ba4';
+            ctx.fillStyle = isLight ? '#475569' : '#8a8a8a';
             ctx.globalAlpha = isDimmed ? 0.15 : 0.85;
             ctx.fillText(text, node.x, labelY);
           }
@@ -657,7 +657,7 @@ export default function ObsidianGraph({
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#1e1f22] select-none">
+    <div className="w-full h-full relative overflow-hidden bg-[#191919] select-none">
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
