@@ -1,9 +1,15 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, nativeImage } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 import { registerIpcHandlers } from './ipc';
 
 dotenv.config();
+
+// Ensure proper taskbar icon binding and grouping on Windows
+if (process.platform === 'win32') {
+  app.setAppUserModelId('app.synap.desktop');
+}
 
 const isDev = process.env.ELECTRON_IS_DEV === '1' || !app.isPackaged;
 
@@ -16,10 +22,35 @@ const TARGET_URL = `${BASE_URL.replace(/\/$/, '')}/dashboard`;
 
 let mainWindow: BrowserWindow | null = null;
 
+function getAppIcon() {
+  const isWin = process.platform === 'win32';
+  const candidates = [
+    // 1. Packaged resourcesPath candidates
+    path.join(process.resourcesPath, isWin ? 'resources/icon.ico' : 'resources/icon.png'),
+    path.join(process.resourcesPath, isWin ? 'icon.ico' : 'icon.png'),
+    path.join(process.resourcesPath, 'icon.png'),
+    // 2. Relative __dirname candidates (development / asar)
+    path.join(__dirname, isWin ? '../../resources/icon.ico' : '../../resources/icon.png'),
+    path.join(__dirname, '../../resources/icon.png'),
+  ];
+
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        const img = nativeImage.createFromPath(p);
+        if (!img.isEmpty()) {
+          return { img, path: p };
+        }
+      }
+    } catch {
+      // ignore and try next candidate
+    }
+  }
+  return null;
+}
+
 function createWindow() {
-  const iconPath = process.platform === 'win32'
-    ? path.join(__dirname, '../../resources/icon.ico')
-    : path.join(__dirname, '../../resources/icon.png');
+  const appIcon = getAppIcon();
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -29,7 +60,7 @@ function createWindow() {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#000000',
-    icon: iconPath,
+    icon: appIcon ? appIcon.img : undefined,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
