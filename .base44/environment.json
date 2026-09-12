@@ -1,0 +1,17 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "SYNAP_AI_API_KEY",
+      "description": "Optional: API key for the Synap AI / OpenAI-compatible chat endpoint (SYNAP_AI_API_URL). Obtain from your AI provider dashboard.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "OMNIROUTE_API_KEY",
+      "description": "Optional: API key for the Omnipoute AI endpoint (OMNIROUTE_API_URL). Obtain from your Omnipoute dashboard.",
+      "requiredAtBoot": false
+    }
+  ]
+}

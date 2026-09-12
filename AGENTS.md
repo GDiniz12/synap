@@ -112,3 +112,28 @@ Before considering any implementation or refactoring task complete:
   - `/gstack-upgrade`
   - `/learn`
 
+---
+
+## 6. Base44 Dev Environment
+
+The app runs in Docker Compose via `docker-compose.base44.yml` (not the repo's own `backend/docker-compose.yml`, which only starts a bare Postgres).
+
+### Architecture (single-origin)
+- **Frontend** (Next.js 16, Turbopack) on host port **3000** — the preview entry point.
+- **Backend** (Express + Prisma) on internal port **3001** — not exposed publicly.
+- The Next.js `rewrites` in `frontend/next.config.ts` proxy `/api/:path*` and `/uploads/:path*` to the backend via `API_BACKEND_URL=http://backend:3001`.
+- **PostgreSQL 15** runs as a compose service with healthcheck; the backend waits for it via `depends_on: condition: service_healthy`.
+
+### Startup sequence (backend)
+`npm install` → `prisma generate` → `prisma db push` (auto-creates schema) → `tsx watch src/index.ts` (live reload).
+
+### Environment
+- `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` are set inline in compose (local dev values).
+- Optional AI keys (`SYNAP_AI_API_KEY`, `OMNIROUTE_API_KEY`) are wired through `/run/base44/app.env` with placeholders in `.env.base44-defaults`. The app boots without them; AI features just won't work.
+- `BASE44_PUBLIC_HOST_SUFFIX` is passed to the frontend so `allowedDevOrigins` in `next.config.ts` permits the preview origin's dev-asset/HMR requests.
+
+### Verifying the app
+- `curl -s http://localhost:3000/` → 200 with Synap HTML.
+- `curl -s http://localhost:3000/api/auth/register -X POST -H "Content-Type: application/json" -d '{"email":"x@x.com","password":"123456","name":"X","username":"x"}'` → JSON user object (confirms DB + API proxy).
+- `docker compose -f docker-compose.base44.yml logs backend` / `logs frontend` for dev-server output.
+

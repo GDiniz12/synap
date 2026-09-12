@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: synap
+      POSTGRES_PASSWORD: synap
+      POSTGRES_DB: synap
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synap"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: node:22
+    working_dir: /app/backend
+    volumes:
+      - ./:/app
+      - backend_node_modules:/app/backend/node_modules
+    environment:
+      - PORT=3001
+      - DATABASE_URL=postgresql://synap:synap@db:5432/synap
+      - JWT_SECRET=base44-dev-jwt-secret-not-for-production
+      - CORS_ORIGIN=*
+      - PUBLIC_URL=http://localhost:3000
+    env_file:
+      - ./.env.base44-defaults
+      - /run/base44/app.env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "mkdir -p uploads && npm install && npx prisma generate && npx prisma db push && npm run dev"
+
+  frontend:
+    image: node:22
+    working_dir: /app/frontend
+    volumes:
+      - ./:/app
+      - frontend_node_modules:/app/frontend/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - API_BACKEND_URL=http://backend:3001
+      - BASE44_PUBLIC_HOST_SUFFIX
+    depends_on:
+      - backend
+    command: sh -c "npm install && npx next dev -H 0.0.0.0 -p 3000"
+
+volumes:
+  pgdata:
+  backend_node_modules:
+  frontend_node_modules:
