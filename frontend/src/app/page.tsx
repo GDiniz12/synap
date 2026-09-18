@@ -65,7 +65,7 @@ export default function LandingPage() {
       os: 'windows',
       name: 'Windows',
       badge: 'Instalador Executável',
-      filename: 'Synap-Setup.exe',
+      filename: 'Tesseract-Setup.exe',
       format: '.exe (64-bit)',
       size: '~85 MB',
       recommendedFor: 'Windows 10, 11 (x64)',
@@ -76,34 +76,34 @@ export default function LandingPage() {
       os: 'linux',
       name: 'Linux AppImage',
       badge: 'Portátil Universal',
-      filename: 'Synap.AppImage',
+      filename: 'Tesseract.AppImage',
       format: '.AppImage (x64)',
       size: '~90 MB',
       recommendedFor: 'Qualquer distribuição Linux moderna',
       url: '/api/download?os=linux-appimage',
-      instructions: 'Torne o arquivo executável: chmod +x Synap.AppImage && ./Synap.AppImage',
+      instructions: 'Torne o arquivo executável: chmod +x Tesseract.AppImage && ./Tesseract.AppImage',
     },
     {
       os: 'linux',
       name: 'Linux Debian / Ubuntu',
       badge: 'Pacote DEB',
-      filename: 'synap_amd64.deb',
+      filename: 'tesseract_amd64.deb',
       format: '.deb (amd64)',
       size: '~78 MB',
       recommendedFor: 'Debian, Ubuntu, Linux Mint, Pop!_OS',
       url: '/api/download?os=linux-deb',
-      instructions: 'Instale via terminal: sudo dpkg -i synap_amd64.deb ou dê duplo clique.',
+      instructions: 'Instale via terminal: sudo dpkg -i tesseract_amd64.deb ou dê duplo clique.',
     },
     {
       os: 'mac',
       name: 'macOS',
       badge: 'Imagem de Disco',
-      filename: 'Synap.dmg',
+      filename: 'Tesseract.dmg',
       format: '.dmg (Universal)',
       size: '~92 MB',
       recommendedFor: 'macOS 12+ (Apple Silicon & Intel)',
       url: '/api/download?os=mac',
-      instructions: 'Abra a imagem .dmg e arraste o Synap para a pasta Aplicativos.',
+      instructions: 'Abra a imagem .dmg e arraste o Tesseract para a pasta Aplicativos.',
     },
   ];
 
@@ -119,7 +119,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <SynapLogo size={36} className="transition-transform group-hover:scale-105" priority />
-            <span className="font-bold text-lg text-white tracking-tight">Synap</span>
+            <span className="font-bold text-lg text-white tracking-tight">Tesseract</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm text-[#949ba4]">
@@ -201,7 +201,7 @@ export default function LandingPage() {
 
         {/* Subtitle */}
         <p className="mt-6 text-sm sm:text-base md:text-lg text-[#949ba4] max-w-2xl mx-auto leading-relaxed">
-          O Synap une editor markdown bidirecional, grafo neural de conexões, canvas infinito, flashcards com repetição
+          O Tesseract une editor markdown bidirecional, grafo neural de conexões, canvas infinito, flashcards com repetição
           espaçada SM-2 e IA contextual integrada em um ambiente ultra rápido.
         </p>
 
@@ -258,7 +258,7 @@ export default function LandingPage() {
               <div className="w-3 h-3 rounded-full bg-[#f23f43]/80" />
               <div className="w-3 h-3 rounded-full bg-[#f0b232]/80" />
               <div className="w-3 h-3 rounded-full bg-[#23a55a]/80" />
-              <span className="ml-2 text-xs font-mono text-[#949ba4] hidden sm:inline">Synap — Segundo Cérebro</span>
+              <span className="ml-2 text-xs font-mono text-[#949ba4] hidden sm:inline">Tesseract — Segundo Cérebro</span>
             </div>
 
             {/* View Switcher Tabs */}
@@ -330,7 +330,7 @@ export default function LandingPage() {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
-                <span>Synap AI</span>
+                <span>Tesseract AI</span>
               </button>
             </div>
           </div>
@@ -361,8 +361,8 @@ export default function LandingPage() {
 
                   {/* Nodes */}
                   <circle cx="300" cy="150" r="22" fill="#20b8cd" />
-                  <text x="300" y="154" fill="#ffffff" fontSize="10" textAnchor="middle" fontWeight="bold">
-                    Synap
+                  <text x="300" y="154" fill="#ffffff" fontSize="9" textAnchor="middle" fontWeight="bold">
+                    Tesseract
                   </text>
 
                   <circle cx="180" cy="80" r="16" fill="#23a55a" />
@@ -564,7 +564,7 @@ export default function LandingPage() {
               </div>
             )}
 
-            {/* 5. Tab: Synap AI */}
+            {/* 5. Tab: Tesseract AI */}
             {activeTab === 'ai' && (
               <div className="p-6 flex flex-col justify-between min-h-[420px] max-w-3xl mx-auto w-full">
                 {/* Chat Messages Mockup */}
@@ -590,7 +590,7 @@ export default function LandingPage() {
                     <SynapLogo size={32} className="shrink-0 mt-0.5" />
                     <div className="w-full">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white">Synap AI</span>
+                        <span className="text-xs font-semibold text-white">Tesseract AI</span>
                         <span className="text-[10px] text-[#949ba4]">Hoje às 14:20</span>
                       </div>
                       <div className="text-xs text-[#dbdee1] mt-1 bg-[#2b2d31] p-3 rounded-lg border border-[#383a40] space-y-2">
@@ -676,7 +676,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-base font-semibold text-white mb-2">Grafo Neural de Conhecimento</h3>
               <p className="text-xs text-[#949ba4] leading-relaxed">
-                Descubra conexões invisíveis. O grafo do Synap mapeia interdependências, destaca clusters temáticos e
+                Descubra conexões invisíveis. O grafo do Tesseract mapeia interdependências, destaca clusters temáticos e
                 permite navegar visualmente pelo seu repositório de ideias.
               </p>
             </div>
@@ -699,7 +699,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-base font-semibold text-white mb-2">Editor Markdown Bidirecional</h3>
               <p className="text-xs text-[#949ba4] leading-relaxed">
-                Crie referências imediatas com duplo colchete. O Synap calcula automaticamente backlinks cruzados para
+                Crie referências imediatas com duplo colchete. O Tesseract calcula automaticamente backlinks cruzados para
                 que nenhuma anotação fique isolada no sistema.
               </p>
             </div>
@@ -760,7 +760,7 @@ export default function LandingPage() {
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                 </svg>
               </div>
-              <h3 className="text-base font-semibold text-white mb-2">Synap AI — Assistente Contextual</h3>
+              <h3 className="text-base font-semibold text-white mb-2">Tesseract AI — Assistente Contextual</h3>
               <p className="text-xs text-[#949ba4] leading-relaxed">
                 Uma IA integrada ao seu espaço de trabalho. Invoque contextos específicos com /nota e #pasta para
                 gerar resumos, sugerir conexões e criar materiais de estudo.
@@ -809,7 +809,7 @@ export default function LandingPage() {
             <span>Central de Downloads</span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
-            Baixe o Synap para o seu sistema
+            Baixe o Tesseract para o seu sistema
           </h2>
           <p className="mt-3 text-sm text-[#949ba4]">
             Escolha o pacote ideal para seu ambiente ou acesse diretamente pelo navegador.
@@ -876,7 +876,7 @@ export default function LandingPage() {
                     href={opt.url}
                     className={`h-10 px-4 text-xs font-semibold rounded-[4px] w-full flex items-center justify-center gap-2 transition-colors ${
                       isDetected
-                        ? 'bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-md'
+                        ? 'bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-md shadow-[#20b8cd]/20'
                         : 'bg-[#313338] hover:bg-[#383a40] text-[#dbdee1] hover:text-white border border-[#383a40]'
                     }`}
                   >
@@ -885,7 +885,7 @@ export default function LandingPage() {
                       <polyline points="7 10 12 15 17 10" />
                       <line x1="12" y1="15" x2="12" y2="3" />
                     </svg>
-                    <span>Baixar ({opt.format})</span>
+                    <span>Download {opt.format}</span>
                   </a>
                 </div>
               </div>
@@ -893,9 +893,9 @@ export default function LandingPage() {
           })}
         </div>
 
-        {/* Web App Access Callout */}
-        <div className="bg-[#2b2d31] p-6 border border-[#383a40] rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
+        {/* Web Alternative Banner */}
+        <div className="p-6 rounded-xl border border-[#383a40] bg-[#2b2d31]/50 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-lg bg-[#1e1f22] border border-[#383a40] flex items-center justify-center text-[#20b8cd] shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
@@ -904,17 +904,18 @@ export default function LandingPage() {
               </svg>
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white">Não deseja instalar nada agora?</h4>
+              <h4 className="text-sm font-bold text-white">Não quer instalar nada agora?</h4>
               <p className="text-xs text-[#949ba4]">
-                Acesse a versão Web completa com sincronização contínua e colaboração instantânea.
+                Acesse a versão Web completa diretamente pelo seu navegador favorito.
               </p>
             </div>
           </div>
+
           <Link
             href={isAuthenticated ? '/dashboard' : '/login'}
             className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white whitespace-nowrap w-full sm:w-auto flex items-center justify-center gap-1.5 transition-colors"
           >
-            <span>{isAuthenticated ? 'Abrir Synap Web' : 'Acessar no Navegador'}</span>
+            <span>{isAuthenticated ? 'Abrir Tesseract Web' : 'Acessar no Navegador'}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="9 18 15 12 9 6" />
             </svg>
@@ -933,7 +934,7 @@ export default function LandingPage() {
               Construído para velocidade extrema.
             </h3>
             <p className="text-xs text-[#949ba4] leading-relaxed mb-4">
-              O Synap combina o ecossistema moderno do Next.js e Tailwind CSS com a estabilidade do PostgreSQL, Prisma e
+              O Tesseract combina o ecossistema moderno do Next.js e Tailwind CSS com a estabilidade do PostgreSQL, Prisma e
               comunicação contínua via WebSockets.
             </p>
             <div className="flex flex-col gap-2 font-mono text-xs text-[#dbdee1]">
@@ -943,7 +944,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#23a55a]" />
-                <span>Design System Discord minimalista</span>
+                <span>Design System Minimalista Geist</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#23a55a]" />
@@ -994,7 +995,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             <SynapLogo size={24} />
             <span className="text-xs text-[#949ba4]">
-              © {new Date().getFullYear()} Synap Team. Todos os direitos reservados.
+              © {new Date().getFullYear()} Tesseract Team. Todos os direitos reservados.
             </span>
           </div>
 
