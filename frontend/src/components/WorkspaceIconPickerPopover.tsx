@@ -186,7 +186,7 @@ export default function WorkspaceIconPickerPopover({
   return (
     <div
       ref={popoverRef}
-      className={`absolute z-[1100] w-[340px] bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl overflow-hidden flex flex-col animate-smooth-pop select-none ${
+      className={`absolute z-[1100] w-[340px] bg-[#181818] border border-white/10 rounded-none shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 select-none font-sansation ${
         anchorPosition === 'bottom'
           ? 'top-full mt-2 left-1/2 -translate-x-1/2'
           : 'left-full ml-3 top-0'
@@ -194,16 +194,16 @@ export default function WorkspaceIconPickerPopover({
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header Tabs: Emoji | Foto */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1 border-b border-[var(--discord-border)] bg-[var(--discord-sidebar)]">
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1 border-b border-white/10 bg-[#141414]">
         <div className="flex items-center gap-1">
           {/* Emoji Tab Button */}
           <button
             type="button"
             onClick={() => setActiveTab('emoji')}
-            className={`px-3 py-1.5 rounded-[5px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border-none ${
+            className={`px-3 py-1.5 rounded-none text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border-none ${
               activeTab === 'emoji'
-                ? 'bg-[var(--discord-canvas)] text-[var(--foreground)] shadow-xs'
-                : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] bg-transparent'
+                ? 'bg-white text-black font-bold'
+                : 'text-zinc-400 hover:text-white bg-transparent'
             }`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -219,14 +219,14 @@ export default function WorkspaceIconPickerPopover({
           <button
             type="button"
             onClick={() => setActiveTab('foto')}
-            className={`px-3 py-1.5 rounded-[5px] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border-none ${
+            className={`px-3 py-1.5 rounded-none text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border-none ${
               activeTab === 'foto'
-                ? 'bg-[var(--discord-canvas)] text-[var(--foreground)] shadow-xs'
-                : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] bg-transparent'
+                ? 'bg-white text-black font-bold'
+                : 'text-zinc-400 hover:text-white bg-transparent'
             }`}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <rect x="3" y="3" width="18" height="18" rx="0" ry="0" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
@@ -240,7 +240,7 @@ export default function WorkspaceIconPickerPopover({
             type="button"
             onClick={handlePickRandom}
             title="Sortear um emoji aleatório"
-            className="px-2 py-1 text-[11px] font-medium text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)] rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer border-none bg-transparent"
+            className="px-2 py-1 text-[11px] font-medium text-zinc-400 hover:text-white hover:bg-white/5 rounded-none transition-colors flex items-center gap-1 cursor-pointer border-none bg-transparent"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
@@ -256,7 +256,7 @@ export default function WorkspaceIconPickerPopover({
           {/* Search bar */}
           <div className="relative flex items-center">
             <svg
-              className="absolute left-2.5 text-[var(--discord-text-muted)] pointer-events-none"
+              className="absolute left-2.5 text-zinc-500 pointer-events-none"
               width="13"
               height="13"
               viewBox="0 0 24 24"
@@ -272,14 +272,14 @@ export default function WorkspaceIconPickerPopover({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Pesquisar emoji (ex: foguete, livro, código)..."
-              className="w-full h-8 pl-8 pr-3 text-xs bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] text-[var(--foreground)] rounded-[5px] outline-none transition-colors"
+              className="w-full h-8 pl-8 pr-3 text-xs bg-white/5 border border-white/10 focus:border-white/30 text-white rounded-none outline-none transition-colors"
               autoFocus
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2 text-[var(--discord-text-muted)] hover:text-[var(--foreground)] text-xs cursor-pointer border-none bg-transparent p-0.5"
+                className="absolute right-2 text-zinc-500 hover:text-white text-xs cursor-pointer border-none bg-transparent p-0.5"
               >
                 ✕
               </button>
@@ -293,10 +293,10 @@ export default function WorkspaceIconPickerPopover({
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-2 py-0.5 text-[11px] rounded-full shrink-0 transition-colors cursor-pointer border-none ${
+                className={`px-2 py-0.5 text-[11px] rounded-none shrink-0 transition-colors cursor-pointer border-none ${
                   selectedCategory === cat
-                    ? 'bg-[var(--brand)] text-white font-semibold'
-                    : 'bg-[var(--discord-sidebar)] text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--accents-2)]'
+                    ? 'bg-white text-black font-semibold'
+                    : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
                 }`}
               >
                 {cat}
@@ -318,10 +318,10 @@ export default function WorkspaceIconPickerPopover({
                       onClose();
                     }}
                     title={item.name}
-                    className={`h-11 flex items-center justify-center text-xl rounded-[6px] transition-all cursor-pointer border-none ${
+                    className={`h-11 flex items-center justify-center text-xl rounded-none transition-all cursor-pointer border-none ${
                       isSelected
-                        ? 'bg-[var(--brand)]/20 ring-2 ring-[var(--brand)] scale-105'
-                        : 'hover:bg-[var(--accents-2)] hover:scale-110 active:scale-95 bg-transparent'
+                        ? 'bg-white/15 ring-1 ring-white scale-105'
+                        : 'hover:bg-white/10 hover:scale-110 active:scale-95 bg-transparent'
                     }`}
                   >
                     <span>{item.emoji}</span>
@@ -329,9 +329,9 @@ export default function WorkspaceIconPickerPopover({
                 );
               })
             ) : (
-              <div className="col-span-6 flex flex-col items-center justify-center py-8 text-[var(--discord-text-muted)] text-xs">
+              <div className="col-span-6 flex flex-col items-center justify-center py-8 text-zinc-500 text-xs">
                 <span>Nenhum emoji encontrado</span>
-                <span className="text-[10px] mt-1 text-[var(--accents-5)]">Tente outro termo de busca</span>
+                <span className="text-[10px] mt-1 text-zinc-600">Tente outro termo de busca</span>
               </div>
             )}
           </div>
@@ -342,7 +342,7 @@ export default function WorkspaceIconPickerPopover({
       {activeTab === 'foto' && (
         <div className="flex flex-col p-4 gap-4">
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-[var(--foreground)]">Arquivo do Computador</span>
+            <span className="text-xs font-semibold text-white">Arquivo do Computador</span>
             <button
               type="button"
               onClick={() => {
@@ -350,7 +350,7 @@ export default function WorkspaceIconPickerPopover({
                   onTriggerFileUpload();
                 }
               }}
-              className="w-full h-9 px-3 rounded-[5px] bg-[var(--discord-sidebar)] hover:bg-[var(--accents-2)] border border-[var(--discord-border)] text-xs font-medium text-[var(--foreground)] flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full h-8 px-3 rounded-none bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -359,31 +359,31 @@ export default function WorkspaceIconPickerPopover({
               </svg>
               <span>Escolher arquivo de imagem</span>
             </button>
-            <span className="text-[10px] text-[var(--discord-text-muted)] text-center">
+            <span className="text-[10px] text-zinc-500 text-center">
               Formatos suportados: PNG, JPG, WEBP, GIF
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-[1px] bg-[var(--discord-border)]" />
-            <span className="text-[10px] text-[var(--discord-text-muted)] uppercase font-mono">OU</span>
-            <div className="flex-1 h-[1px] bg-[var(--discord-border)]" />
+            <div className="flex-1 h-[1px] bg-white/10" />
+            <span className="text-[10px] text-zinc-500 uppercase font-mono">OU</span>
+            <div className="flex-1 h-[1px] bg-white/10" />
           </div>
 
           <form onSubmit={handleApplyUrl} className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-[var(--foreground)]">URL da Imagem</span>
+            <span className="text-xs font-semibold text-white">URL da Imagem</span>
             <div className="flex gap-2">
               <input
                 type="url"
                 value={customUrl}
                 onChange={(e) => setCustomUrl(e.target.value)}
                 placeholder="https://exemplo.com/icone.png"
-                className="flex-1 h-8 px-2.5 text-xs bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] text-[var(--foreground)] rounded-[5px] outline-none"
+                className="flex-1 h-8 px-2.5 text-xs bg-white/5 border border-white/10 focus:border-white/30 text-white rounded-none outline-none"
               />
               <button
                 type="submit"
                 disabled={!customUrl.trim()}
-                className="h-8 px-3 text-xs font-semibold bg-[var(--brand)] hover:bg-[var(--brand-dark,var(--brand))] text-white rounded-[5px] disabled:opacity-50 transition-colors cursor-pointer border-none shrink-0"
+                className="h-8 px-3 text-xs font-bold bg-white text-black hover:bg-zinc-200 rounded-none disabled:opacity-50 transition-colors cursor-pointer border-none shrink-0"
               >
                 Aplicar
               </button>
@@ -394,7 +394,7 @@ export default function WorkspaceIconPickerPopover({
 
       {/* Footer: Remover Ícone */}
       {currentIcon && (
-        <div className="p-2 border-t border-[var(--discord-border)] bg-[var(--discord-sidebar)] flex justify-end">
+        <div className="p-2 border-t border-white/10 bg-[#141414] flex justify-end">
           <button
             type="button"
             onClick={() => {
@@ -403,7 +403,7 @@ export default function WorkspaceIconPickerPopover({
               }
               onClose();
             }}
-            className="px-2.5 py-1 text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-[4px] transition-colors flex items-center gap-1 cursor-pointer border-none bg-transparent"
+            className="px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-none transition-colors flex items-center gap-1 cursor-pointer border-none bg-transparent"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="3 6 5 6 21 6" />

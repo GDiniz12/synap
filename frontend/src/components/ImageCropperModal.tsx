@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 export interface ImageCropperModalProps {
   isOpen: boolean;
   imageSrc: string | null;
-  cropShape?: 'round' | 'squircle';
+  cropShape?: 'round' | 'squircle' | 'square';
   title?: string;
   outputSize?: number;
   onConfirm: (croppedBlob: Blob, previewUrl: string) => Promise<void> | void;
@@ -15,7 +15,7 @@ export interface ImageCropperModalProps {
 export default function ImageCropperModal({
   isOpen,
   imageSrc,
-  cropShape = 'round',
+  cropShape = 'square',
   title,
   outputSize = 512,
   onConfirm,
@@ -23,7 +23,7 @@ export default function ImageCropperModal({
 }: ImageCropperModalProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [baseSize, setBaseSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  
+
   // Transform state
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1);
@@ -94,10 +94,11 @@ export default function ImageCropperModal({
     ctx.beginPath();
     if (cropShape === 'round') {
       ctx.arc(pSize / 2, pSize / 2, pSize / 2, 0, Math.PI * 2);
-    } else {
-      // Squircle / rounded rect for workspace
+    } else if (cropShape === 'squircle') {
       const r = 16;
       ctx.roundRect(0, 0, pSize, pSize, r);
+    } else {
+      ctx.rect(0, 0, pSize, pSize);
     }
     ctx.clip();
 
@@ -141,31 +142,32 @@ export default function ImageCropperModal({
     setIsDragging(false);
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignored if already released
-    }
+    } catch {}
   };
 
-  // Wheel zoom
+  // Zoom on wheel
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY * -0.002;
-    setZoom((prev) => Math.min(3.5, Math.max(1, +(prev + delta).toFixed(2))));
+    const delta = -e.deltaY * 0.0015;
+    setZoom((prev) => {
+      const next = Math.min(Math.max(1, +(prev + delta).toFixed(3)), 3);
+      return next;
+    });
   };
 
-  // Rotate 90 degrees clockwise
+  // Rotate clockwise by 90 deg
   const handleRotate = () => {
     setRotation((prev) => (prev + 90) % 360);
   };
 
-  // Reset transforms
+  // Reset all adjustments
   const handleReset = () => {
     setPan({ x: 0, y: 0 });
     setZoom(1);
     setRotation(0);
   };
 
-  // Confirm and Export Cropped Image
+  // Confirm and generate export Blob
   const handleConfirm = async () => {
     const img = imageRef.current;
     if (!img || !imageLoaded || isProcessing) return;
@@ -188,6 +190,10 @@ export default function ImageCropperModal({
       } else if (cropShape === 'squircle') {
         ctx.beginPath();
         ctx.roundRect(0, 0, outputSize, outputSize, Math.round(outputSize * 0.2));
+        ctx.clip();
+      } else {
+        ctx.beginPath();
+        ctx.rect(0, 0, outputSize, outputSize);
         ctx.clip();
       }
 
@@ -227,17 +233,17 @@ export default function ImageCropperModal({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-smooth-pop select-none"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 select-none font-sansation"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isProcessing) onClose();
       }}
     >
       <div
-        className="w-full max-w-xl bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl shadow-black/80 overflow-hidden flex flex-col"
+        className="w-full max-w-xl bg-[#181818] border border-white/10 rounded-none shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-3.5 bg-[var(--discord-sidebar)] border-b border-[var(--discord-border)] flex items-center justify-between shrink-0">
+        <div className="px-5 py-3.5 bg-[#141414] border-b border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <svg
               width="16"
@@ -248,12 +254,12 @@ export default function ImageCropperModal({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[var(--brand)]"
+              className="text-white"
             >
               <path d="M6 2v14a2 2 0 0 0 2 2h14" />
               <path d="M18 22V8a2 2 0 0 0-2-2H2" />
             </svg>
-            <h2 className="text-sm font-bold text-[var(--foreground)] tracking-tight">
+            <h2 className="text-sm font-bold text-white tracking-tight">
               {modalTitle}
             </h2>
           </div>
@@ -261,22 +267,22 @@ export default function ImageCropperModal({
             type="button"
             onClick={onClose}
             disabled={isProcessing}
-            className="text-[var(--discord-text-muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer p-1 rounded-[4px] hover:bg-[var(--discord-hover)]"
+            className="text-zinc-400 hover:text-white transition-colors cursor-pointer p-1 rounded-none hover:bg-white/5"
             aria-label="Fechar"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
 
-        {/* Body: Cropper Area + Controls + Preview */}
+        {/* Body */}
         <div className="p-5 flex flex-col md:flex-row gap-6 items-center justify-center">
           {/* Main Interactive Viewport */}
           <div className="flex flex-col items-center gap-3">
             <div
-              className="relative w-[320px] h-[320px] bg-black/90 rounded-[8px] overflow-hidden border border-[var(--discord-border)] touch-none cursor-grab active:cursor-grabbing flex items-center justify-center shadow-inner"
+              className="relative w-[300px] h-[300px] bg-black/90 rounded-none overflow-hidden border border-white/10 touch-none cursor-grab active:cursor-grabbing flex items-center justify-center shadow-inner"
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -306,12 +312,12 @@ export default function ImageCropperModal({
                   style={{
                     width: `${CROP_SIZE}px`,
                     height: `${CROP_SIZE}px`,
-                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.65)',
-                    borderRadius: cropShape === 'round' ? '50%' : '20px',
+                    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+                    borderRadius: cropShape === 'round' ? '50%' : '0px',
                   }}
-                  className="relative border-2 border-white/80 shadow-2xl"
+                  className="relative border border-white/80 shadow-2xl"
                 >
-                  {/* Subtle Grid Guidelines inside crop area */}
+                  {/* Grid Guidelines */}
                   <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none opacity-20">
                     <div className="border-r border-b border-white" />
                     <div className="border-r border-b border-white" />
@@ -319,8 +325,8 @@ export default function ImageCropperModal({
                     <div className="border-r border-b border-white" />
                     <div className="border-r border-b border-white" />
                     <div className="border-b border-white" />
-                    <div className="border-r border-white" />
-                    <div className="border-r border-white" />
+                    <div className="border-r border-b border-white" />
+                    <div className="border-r border-b border-white" />
                     <div />
                   </div>
                 </div>
@@ -328,20 +334,20 @@ export default function ImageCropperModal({
 
               {/* Instructions hint */}
               <div className="absolute bottom-2 inset-x-0 text-center pointer-events-none">
-                <span className="text-[10px] font-mono text-white/60 bg-black/60 px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-mono text-zinc-300 bg-black/80 border border-white/10 px-2 py-0.5 rounded-none">
                   Arraste para posicionar
                 </span>
               </div>
             </div>
 
             {/* Slider & Quick Controls */}
-            <div className="w-[320px] flex flex-col gap-2.5">
+            <div className="w-[300px] flex flex-col gap-2.5">
               {/* Zoom slider */}
-              <div className="flex items-center gap-2.5 px-2">
+              <div className="flex items-center gap-2.5 px-1">
                 <button
                   type="button"
                   onClick={() => setZoom((prev) => Math.max(1, +(prev - 0.1).toFixed(2)))}
-                  className="text-[var(--discord-text-muted)] hover:text-white p-1 rounded-[4px] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+                  className="text-zinc-400 hover:text-white p-1 rounded-none hover:bg-white/5 transition-colors cursor-pointer"
                   title="Diminuir Zoom"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -356,14 +362,14 @@ export default function ImageCropperModal({
                   step="0.01"
                   value={zoom}
                   onChange={(e) => setZoom(parseFloat(e.target.value))}
-                  className="flex-1 accent-[var(--brand)] cursor-pointer h-1.5 bg-[var(--discord-input)] rounded-lg appearance-none"
+                  className="flex-1 accent-white cursor-pointer h-1 bg-white/10 rounded-none appearance-none"
                   aria-label="Controle de Zoom"
                 />
 
                 <button
                   type="button"
                   onClick={() => setZoom((prev) => Math.min(3, +(prev + 0.1).toFixed(2)))}
-                  className="text-[var(--discord-text-muted)] hover:text-white p-1 rounded-[4px] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+                  className="text-zinc-400 hover:text-white p-1 rounded-none hover:bg-white/5 transition-colors cursor-pointer"
                   title="Aumentar Zoom"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -372,7 +378,7 @@ export default function ImageCropperModal({
                   </svg>
                 </button>
 
-                <span className="text-[11px] font-mono text-[var(--discord-text-muted)] w-9 text-right">
+                <span className="text-[11px] font-mono text-zinc-400 w-9 text-right">
                   {zoom.toFixed(1)}x
                 </span>
               </div>
@@ -382,7 +388,7 @@ export default function ImageCropperModal({
                 <button
                   type="button"
                   onClick={handleRotate}
-                  className="flex items-center gap-1.5 text-xs text-[var(--discord-text-muted)] hover:text-[var(--foreground)] px-2.5 py-1 rounded-[4px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs text-zinc-300 hover:text-white px-2.5 py-1 rounded-none bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
@@ -393,7 +399,7 @@ export default function ImageCropperModal({
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="text-xs text-[var(--discord-text-muted)] hover:text-[var(--foreground)] px-2.5 py-1 rounded-[4px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+                  className="text-xs text-zinc-400 hover:text-white px-2.5 py-1 rounded-none bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   Redefinir
                 </button>
@@ -402,37 +408,34 @@ export default function ImageCropperModal({
           </div>
 
           {/* Right Preview Column */}
-          <div className="flex flex-col items-center gap-3 self-center md:self-start md:border-l md:border-[var(--discord-border)] md:pl-6 md:min-w-[160px]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+          <div className="flex flex-col items-center gap-3 self-center md:self-start md:border-l md:border-white/10 md:pl-6 md:min-w-[160px]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
               Pré-visualização
             </span>
 
-            <div className="p-3 bg-[var(--discord-sidebar)] rounded-[8px] border border-[var(--discord-border)] flex flex-col items-center gap-2">
+            <div className="p-3 bg-[#141414] rounded-none border border-white/10 flex flex-col items-center gap-2">
               <canvas
                 ref={previewCanvasRef}
-                className="w-20 h-20 shadow-md"
-                style={{
-                  borderRadius: cropShape === 'round' ? '50%' : '16px',
-                }}
+                className="w-20 h-20 shadow-md rounded-none"
               />
-              <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">
+              <span className="text-[10px] font-mono text-zinc-500">
                 {cropShape === 'round' ? 'Perfil 1:1' : 'Workspace'}
               </span>
             </div>
 
-            <div className="text-[11px] text-[var(--discord-text-muted)] text-center max-w-[150px] leading-relaxed">
-              Arraste a imagem ou use o zoom para enquadrar perfeitamente.
+            <div className="text-[11px] text-zinc-500 text-center max-w-[140px] leading-relaxed">
+              Enquadre a imagem antes de aplicar.
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3.5 bg-[var(--discord-sidebar)] border-t border-[var(--discord-border)] flex items-center justify-end gap-2.5 shrink-0">
+        <div className="px-5 py-3.5 bg-[#141414] border-t border-white/10 flex items-center justify-end gap-2.5 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={isProcessing}
-            className="px-4 py-2 text-xs font-medium rounded-[4px] text-[var(--discord-text-primary)] hover:underline cursor-pointer disabled:opacity-50"
+            className="px-4 py-1.5 text-xs font-semibold rounded-none bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white cursor-pointer disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -441,23 +444,12 @@ export default function ImageCropperModal({
             type="button"
             onClick={handleConfirm}
             disabled={!imageLoaded || isProcessing}
-            className="px-5 py-2 text-xs font-medium rounded-[4px] bg-[var(--brand)] text-white hover:opacity-90 active:opacity-80 transition-opacity cursor-pointer disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+            className="px-5 py-1.5 text-xs font-bold rounded-none bg-white text-black hover:bg-zinc-200 transition-colors cursor-pointer disabled:opacity-40 flex items-center gap-1.5"
           >
             {isProcessing ? (
-              <>
-                <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <span>Processando...</span>
-              </>
+              <span>Processando...</span>
             ) : (
-              <>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span>Aplicar Corte</span>
-              </>
+              <span>Aplicar Corte</span>
             )}
           </button>
         </div>

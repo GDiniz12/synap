@@ -56,27 +56,27 @@ export default function DrawingYouTubeModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2500] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
+      className="fixed inset-0 z-[2500] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150 font-sansation"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[480px] w-full bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl p-6 flex flex-col gap-4 animate-smooth-pop"
+        className="max-w-[460px] w-full bg-[#181818] border border-white/10 rounded-none shadow-2xl p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--discord-text-channel)] shrink-0">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="w-8 h-8 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/>
               <polygon points="10 15 15 12 10 9 10 15"/>
             </svg>
           </div>
           <div>
-            <h3 className="m-0 text-base font-semibold text-[var(--discord-text-primary)] leading-tight">
+            <h3 className="m-0 text-sm font-bold text-white leading-tight">
               Inserir Vídeo do YouTube
             </h3>
-            <span className="text-xs text-[var(--discord-text-muted)] block mt-0.5">
+            <span className="text-[11px] text-zinc-400 block mt-0.5">
               Cole o link de qualquer vídeo ou shorts do YouTube
             </span>
           </div>
@@ -84,7 +84,7 @@ export default function DrawingYouTubeModal({
 
         {/* Live Preview If URL is valid */}
         {videoId && (
-          <div className="w-full aspect-video rounded-[6px] overflow-hidden border border-[var(--discord-border)] bg-[var(--discord-sidebar)]">
+          <div className="w-full aspect-video rounded-none overflow-hidden border border-white/10 bg-[#121212]">
             <iframe
               src={getYouTubeEmbedUrl(videoId)}
               title="YouTube Preview"
@@ -95,11 +95,11 @@ export default function DrawingYouTubeModal({
         )}
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
           <div>
             <label
               htmlFor="youtube-url-input"
-              className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)] mb-1.5"
+              className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500 mb-1"
             >
               Link do Vídeo
             </label>
@@ -113,28 +113,28 @@ export default function DrawingYouTubeModal({
                 if (error) setError('');
               }}
               placeholder="https://www.youtube.com/watch?v=..."
-              className="w-full h-9 px-3 text-xs bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] rounded-[4px] outline-none text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] transition-colors"
+              className="w-full h-8 px-3 text-xs bg-[#121212] border border-white/10 focus:border-white/30 rounded-none outline-none text-white placeholder-zinc-600 transition-colors font-sansation"
             />
             {error && (
-              <span className="block text-[#ed4245] text-xs mt-1">
+              <span className="block text-red-400 text-xs mt-1">
                 {error}
               </span>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-[4px] text-xs font-medium text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+              className="h-8 px-3.5 text-xs font-medium rounded-none bg-transparent hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!url.trim()}
-              className="px-4 py-1.5 rounded-[4px] text-xs font-semibold bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs"
+              className="h-8 px-4 text-xs font-bold rounded-none bg-white text-black hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               Inserir Vídeo
             </button>

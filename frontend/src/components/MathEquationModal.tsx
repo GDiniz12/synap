@@ -119,38 +119,38 @@ export default function MathEquationModal({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150"
+      className="fixed inset-0 z-[2000] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none animate-in fade-in duration-150 font-sansation"
       onClick={onClose}
       onKeyDown={handleKeyDown}
     >
       <div
-        className="mobile-bottom-sheet md:max-w-[540px] w-full bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl p-6 flex flex-col gap-4 animate-smooth-pop"
+        className="max-w-[520px] w-full bg-[#181818] border border-white/10 rounded-none shadow-2xl p-5 flex flex-col gap-4 animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center text-[var(--brand)] font-mono font-bold text-xs shrink-0">
+          <div className="w-8 h-8 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-white font-mono font-bold text-xs shrink-0">
             f(x)
           </div>
           <div>
-            <h3 className="m-0 text-base font-semibold text-[var(--discord-text-primary)] leading-tight">
+            <h3 className="m-0 text-sm font-bold text-white leading-tight">
               {initialLatex ? 'Editar Função Matemática' : 'Inserir Função Matemática'}
             </h3>
-            <span className="text-xs text-[var(--discord-text-muted)] block mt-0.5">
+            <span className="text-[11px] text-zinc-400 block mt-0.5">
               Fórmula em formato LaTeX com renderização KaTeX
             </span>
           </div>
         </div>
 
         {/* Live Preview Box */}
-        <div className="min-h-[80px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[6px] p-4 flex items-center justify-center overflow-x-auto text-[var(--discord-text-primary)]">
+        <div className="min-h-[75px] bg-[#121212] border border-white/10 rounded-none p-3.5 flex items-center justify-center overflow-x-auto text-white">
           {renderedHtml ? (
             <div
               dangerouslySetInnerHTML={{ __html: renderedHtml }}
-              className="text-lg text-center text-[var(--discord-text-primary)]"
+              className="text-base text-center text-white"
             />
           ) : (
-            <span className="text-xs text-[var(--discord-text-muted)]">
+            <span className="text-xs text-zinc-500 italic">
               A pré-visualização da fórmula aparecerá aqui...
             </span>
           )}
@@ -158,16 +158,16 @@ export default function MathEquationModal({
 
         {/* Preset Chips */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)]">
+          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500">
             Atalhos Rápidos
           </span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1">
             {PRESETS.map((p) => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => handleInsertPreset(p.latex)}
-                className="px-2 py-1 rounded-[4px] text-xs font-mono bg-[var(--discord-input)] hover:bg-[var(--discord-hover)] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] border border-[var(--discord-border)] transition-colors cursor-pointer"
+                className="px-2 py-0.5 rounded-none text-xs font-mono bg-[#121212] hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
               >
                 {p.label}
               </button>
@@ -176,11 +176,11 @@ export default function MathEquationModal({
         </div>
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
           <div>
             <label
               htmlFor="math-latex-input"
-              className="block text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)] mb-1.5"
+              className="block text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-500 mb-1"
             >
               Código LaTeX
             </label>
@@ -190,29 +190,29 @@ export default function MathEquationModal({
               rows={3}
               value={latex}
               onChange={(e) => setLatex(e.target.value)}
-              placeholder="Ex: \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"
-              className="w-full h-20 p-2.5 text-xs font-mono bg-[var(--discord-input)] border border-[var(--discord-border)] focus:border-[var(--brand)] rounded-[4px] outline-none text-[var(--discord-text-primary)] placeholder-[var(--discord-text-muted)] resize-none transition-colors"
+              placeholder="Ex: \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}"
+              className="w-full h-20 p-2.5 text-xs font-mono bg-[#121212] border border-white/10 focus:border-white/30 rounded-none outline-none text-white placeholder-zinc-600 resize-none transition-colors"
             />
             {renderError && (
-              <span className="block text-[var(--discord-text-muted)] text-[11px] font-mono mt-1">
+              <span className="block text-red-400 text-[11px] font-mono mt-1">
                 {renderError}
               </span>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2 pt-2 border-t border-[var(--discord-border)]">
+          <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 rounded-[4px] text-xs font-medium text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+              className="h-8 px-3.5 text-xs font-medium rounded-none bg-transparent hover:bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!latex.trim()}
-              className="px-4 py-1.5 rounded-[4px] text-xs font-semibold bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer shadow-xs"
+              className="h-8 px-4 text-xs font-bold rounded-none bg-white text-black hover:bg-zinc-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {initialLatex ? 'Salvar Equação' : 'Inserir Equação'}
             </button>
