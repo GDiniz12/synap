@@ -1,10 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Roboto:wght@400;500;700&family=Short+Stack&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sansation:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Open+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Roboto:wght@400;500;700&family=Short+Stack&family=Source+Sans+3:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Sansation', var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-sansation: 'Sansation', sans-serif;
+}
+
+.font-sansation {
+  font-family: 'Sansation', sans-serif;
+}
+
+*, ::before, ::after {
+  font-family: inherit;
 }
 
 :root,
@@ -28,20 +37,6 @@
   --brand: #20B8CD;
   --brand-strong: #26c7de;
   --brand-dim: rgba(32, 184, 205, 0.12);
-
-  /* Discord 3-Layer Depth System */
-  --discord-rail: #1e1f22;
-  --discord-sidebar: #2b2d31;
-  --discord-canvas: #313338;
-  --discord-user-bar: #232428;
-  --discord-header: #313338;
-  --discord-border: #1f2023;
-  --discord-input: #1e1f22;
-  --discord-hover: rgba(255, 255, 255, 0.05);
-  --discord-active: rgba(255, 255, 255, 0.08);
-  --discord-text-primary: #dbdee1;
-  --discord-text-muted: #949ba4;
-  --discord-text-channel: #949ba4;
 
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -70,20 +65,6 @@
   --brand: #16808f;
   --brand-strong: #0f6b78;
   --brand-dim: rgba(22, 128, 143, 0.08);
-
-  /* Discord 3-Layer Depth System (Light Mode) */
-  --discord-rail: #e3e5e8;
-  --discord-sidebar: #f2f3f5;
-  --discord-canvas: #ffffff;
-  --discord-user-bar: #ebedef;
-  --discord-header: #ffffff;
-  --discord-border: #e3e5e8;
-  --discord-input: #e3e5e8;
-  --discord-hover: rgba(0, 0, 0, 0.04);
-  --discord-active: rgba(0, 0, 0, 0.07);
-  --discord-text-primary: #060607;
-  --discord-text-muted: #4e5058;
-  --discord-text-channel: #5c5e66;
 
   --radius: 6px;
   --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -123,10 +104,10 @@ body {
 }
 
 .geist-input {
-  background: var(--discord-input);
-  border: 1px solid var(--discord-border);
+  background: var(--accents-1);
+  border: 1px solid var(--accents-2);
   border-radius: var(--radius);
-  color: var(--discord-text-primary);
+  color: var(--foreground);
   padding: 0 12px;
   height: 40px;
   font-size: 14px;
@@ -135,8 +116,8 @@ body {
 }
 
 .geist-input:focus {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 1px var(--brand);
+  border-color: var(--accents-5);
+  box-shadow: 0 0 0 1px var(--accents-5);
 }
 
 .geist-button {
@@ -392,24 +373,24 @@ body {
   border-collapse: collapse;
   margin: 1.25rem 0;
   font-size: 0.9em;
-  border-radius: 6px;
+  border-radius: var(--radius);
   overflow: hidden;
-  border: 1px solid var(--discord-border);
+  border: 1px solid var(--accents-2);
 }
 
 .notion-editor th {
-  background: var(--discord-sidebar);
+  background: var(--accents-1);
   color: var(--foreground);
   font-weight: 600;
   text-align: left;
   padding: 8px 12px;
-  border: 1px solid var(--discord-border);
+  border: 1px solid var(--accents-2);
 }
 
 .notion-editor td {
   padding: 8px 12px;
-  border: 1px solid var(--discord-border);
-  color: var(--discord-text-primary);
+  border: 1px solid var(--accents-2);
+  color: var(--foreground);
 }
 
 .notion-editor tr:nth-child(even) {
@@ -417,16 +398,16 @@ body {
 }
 
 .notion-editor blockquote {
-  border-left: 3px solid var(--brand);
+  border-left: 3px solid var(--accents-4);
   padding-left: 1rem;
   margin: 0.875rem 0;
-  color: var(--discord-text-muted);
+  color: var(--accents-5);
   font-style: italic;
 }
 
 .notion-editor hr {
   border: none;
-  border-top: 1px solid var(--discord-border);
+  border-top: 1px solid var(--accents-2);
   margin: 1.5rem 0;
 }
 
