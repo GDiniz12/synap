@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import katex from 'katex';
 import { DrawingElement, Point } from './DrawingCanvas';
@@ -45,56 +47,29 @@ export default function DrawingItemContainer({
     try {
       mathHtml = katex.renderToString(element.latex, { throwOnError: false, displayMode: true });
     } catch (e) {
-      mathHtml = `<span style="color:var(--error);font-family:var(--font-mono);font-size:12px;">${element.latex}</span>`;
+      mathHtml = `<span style="color:#ef4444;font-family:monospace;font-size:12px;">${element.latex}</span>`;
     }
   }
 
-  // Drag moving via header
-  const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelect();
-
-    const startClientX = e.clientX;
-    const startClientY = e.clientY;
-    const startX = element.x;
-    const startY = element.y;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dx = (moveEvent.clientX - startClientX) / zoom;
-      const dy = (moveEvent.clientY - startClientY) / zoom;
-      onUpdateElement({
-        ...element,
-        x: startX + dx,
-        y: startY + dy,
-      });
-    };
-
-    const handleMouseUp = () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  };
-
-  // Resize handler on bottom-right corner
   const handleResizeMouseDown = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect();
+    e.preventDefault();
 
     const startClientX = e.clientX;
     const startClientY = e.clientY;
-    const startWidth = element.width || (isYouTube ? 420 : 300);
-    const startHeight = element.height || (isMath ? 140 : isYouTube ? 260 : 220);
+    const startW = element.width || 300;
+    const startH = element.height || 220;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const dw = (moveEvent.clientX - startClientX) / zoom;
-      const dh = (moveEvent.clientY - startClientY) / zoom;
+      const deltaX = (moveEvent.clientX - startClientX) / zoom;
+      const deltaY = (moveEvent.clientY - startClientY) / zoom;
+      const newWidth = Math.max(160, startW + deltaX);
+      const newHeight = Math.max(90, startH + deltaY);
+
       onUpdateElement({
         ...element,
-        width: Math.max(160, startWidth + dw),
-        height: Math.max(90, startHeight + dh),
+        width: newWidth,
+        height: newHeight,
       });
     };
 
@@ -109,72 +84,53 @@ export default function DrawingItemContainer({
 
   return (
     <div
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect();
+      }}
       style={{
         position: 'absolute',
         left: `${screenX}px`,
         top: `${screenY}px`,
         width: `${screenWidth}px`,
         height: `${screenHeight}px`,
-        zIndex: isSelected ? 40 : 30,
-        background: 'var(--discord-canvas)',
-        border: isSelected ? '2px solid var(--brand)' : '1px solid var(--discord-border)',
-        borderRadius: '8px',
-        boxShadow: isSelected
-          ? '0 0 0 1px var(--brand), 0 12px 30px rgba(0,0,0,0.5)'
-          : '0 8px 24px rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        userSelect: 'none',
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        pointerEvents: 'auto',
       }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
+      className={`flex flex-col bg-[#181818] border transition-all rounded-none shadow-2xl overflow-hidden font-sansation select-none ${
+        isSelected
+          ? 'border-white ring-1 ring-white/50 z-30'
+          : 'border-white/10 hover:border-white/30 z-10'
+      }`}
     >
-      {/* Header Bar (Draggable) */}
-      <div
-        onMouseDown={handleHeaderMouseDown}
-        style={{
-          height: '34px',
-          background: 'var(--discord-user-bar)',
-          borderBottom: '1px solid var(--discord-border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 10px',
-          cursor: 'grab',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', overflow: 'hidden' }}>
+      {/* Top Header Surface */}
+      <div className="h-8 px-3 border-b border-white/10 bg-[#141414] flex items-center justify-between shrink-0 select-none">
+        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
           {isMath ? (
-            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--brand)' }}>
+            <span className="text-[11px] font-mono font-bold text-white shrink-0">
               f(x)
             </span>
           ) : isYouTube ? (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--discord-text-channel)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
               <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/>
               <polygon points="10 15 15 12 10 9 10 15"/>
             </svg>
           ) : isCard ? (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--discord-text-channel)' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
               <rect width="18" height="14" x="3" y="5" rx="2"/>
               <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           ) : (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--discord-text-channel)' }}>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-            </svg>
+            <span className="text-xs font-mono font-bold text-zinc-400 shrink-0 leading-none">
+              #
+            </span>
           )}
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--discord-text-primary)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {isMath ? 'Equação Matemática' : isYouTube ? 'Vídeo do YouTube' : item.titulo || (isCard ? 'Flashcard' : 'Sem Título')}
+          <span className="text-xs font-semibold text-zinc-200 truncate">
+            {isMath ? 'Função Matemática' : isYouTube ? 'Vídeo YouTube' : item.titulo || (isCard ? 'Flashcard' : 'Sem Título')}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Edit / Flip Card / Open Note / Open YouTube Action */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Action Buttons */}
           {isMath ? (
             <button
               type="button"
@@ -182,7 +138,7 @@ export default function DrawingItemContainer({
                 e.stopPropagation();
                 if (onEditMath) onEditMath(element);
               }}
-              className="bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] rounded-[4px] px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer"
+              className="bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 rounded-none px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer"
             >
               Editar
             </button>
@@ -194,7 +150,7 @@ export default function DrawingItemContainer({
                 const ytUrl = element.youtubeUrl || `https://www.youtube.com/watch?v=${element.youtubeId}`;
                 window.open(ytUrl, '_blank', 'noopener,noreferrer');
               }}
-              className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-[4px] px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+              className="bg-white text-black hover:bg-zinc-200 rounded-none px-2 py-0.5 text-[10px] font-bold transition-colors cursor-pointer"
             >
               Abrir ↗
             </button>
@@ -205,7 +161,7 @@ export default function DrawingItemContainer({
                 e.stopPropagation();
                 setIsFlipped((prev) => !prev);
               }}
-              className="bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] rounded-[4px] px-2 py-0.5 text-[11px] font-medium transition-colors cursor-pointer"
+              className="bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 rounded-none px-2 py-0.5 text-[10px] font-medium transition-colors cursor-pointer"
             >
               {isFlipped ? 'Frente' : 'Verso'}
             </button>
@@ -216,7 +172,7 @@ export default function DrawingItemContainer({
                 e.stopPropagation();
                 if (onOpenNota) onOpenNota(item);
               }}
-              className="bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white rounded-[4px] px-2 py-0.5 text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+              className="bg-white text-black hover:bg-zinc-200 rounded-none px-2 py-0.5 text-[10px] font-bold transition-colors cursor-pointer"
             >
               Abrir ↗
             </button>
@@ -229,10 +185,13 @@ export default function DrawingItemContainer({
               e.stopPropagation();
               onDeleteElement();
             }}
-            className="w-[22px] h-[22px] flex items-center justify-center rounded-[4px] text-[var(--discord-text-channel)] hover:text-[#ed4245] hover:bg-[#ed4245]/20 text-[11px] transition-colors cursor-pointer"
+            className="w-5 h-5 flex items-center justify-center rounded-none text-zinc-500 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Remover elemento do desenho"
           >
-            ✕
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
       </div>
@@ -241,12 +200,12 @@ export default function DrawingItemContainer({
       <div
         style={{
           flex: 1,
-          padding: isYouTube ? 0 : '12px 14px',
+          padding: isYouTube ? 0 : '10px 12px',
           overflowY: isYouTube ? 'hidden' : 'auto',
-          fontSize: '13px',
-          color: 'var(--discord-text-primary)',
+          fontSize: '12px',
+          color: '#e4e4e7',
           lineHeight: 1.6,
-          background: 'var(--discord-canvas)',
+          background: '#181818',
           display: isYouTube ? 'flex' : 'block',
         }}
         className="no-scrollbar"
@@ -262,7 +221,6 @@ export default function DrawingItemContainer({
               height: '100%',
               border: 'none',
               display: 'block',
-              pointerEvents: isSelected ? 'auto' : 'auto',
             }}
           />
         ) : isMath ? (
@@ -276,7 +234,7 @@ export default function DrawingItemContainer({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              fontSize: '16px',
+              fontSize: '15px',
               textAlign: 'center',
               cursor: 'pointer',
               overflowX: 'auto',
@@ -286,10 +244,10 @@ export default function DrawingItemContainer({
           />
         ) : isCard ? (
           <div>
-            <div style={{ fontSize: '10.5px', color: 'var(--discord-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', fontWeight: 600 }}>
+            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mb-1 font-semibold">
               {isFlipped ? 'Resposta (Verso)' : 'Pergunta (Frente)'}
             </div>
-            <div style={{ fontWeight: 500, color: 'var(--discord-text-primary)' }}>
+            <div className="font-medium text-zinc-200 text-xs">
               {isFlipped
                 ? item.conteudo || 'Sem resposta cadastrada.'
                 : item.titulo || 'Pergunta do card'}
@@ -297,12 +255,12 @@ export default function DrawingItemContainer({
           </div>
         ) : item.conteudo && item.conteudo.trim() ? (
           <div
-            className="notion-editor text-[12.5px] leading-[1.65] text-[var(--discord-text-primary)]"
+            className="notion-editor text-xs leading-relaxed text-zinc-300"
             dangerouslySetInnerHTML={{ __html: item.conteudo }}
             style={{ wordBreak: 'break-word', userSelect: 'text' }}
           />
         ) : (
-          <div style={{ color: 'var(--discord-text-muted)', fontStyle: 'italic', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+          <div className="text-zinc-500 italic text-xs flex items-center justify-center h-full">
             Nota sem conteúdo.
           </div>
         )}
@@ -315,19 +273,19 @@ export default function DrawingItemContainer({
           position: 'absolute',
           bottom: 0,
           right: 0,
-          width: '16px',
-          height: '16px',
+          width: '14px',
+          height: '14px',
           cursor: 'se-resize',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          opacity: 0.6,
+          opacity: 0.5,
         }}
         className="hover:opacity-100 transition-opacity"
       >
         <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-          <line x1="8" y1="2" x2="2" y2="8" stroke="var(--discord-text-muted)" strokeWidth="1.5"/>
-          <line x1="9" y1="6" x2="6" y2="9" stroke="var(--discord-text-muted)" strokeWidth="1.5"/>
+          <line x1="8" y1="2" x2="2" y2="8" stroke="#71717a" strokeWidth="1.5"/>
+          <line x1="9" y1="6" x2="6" y2="9" stroke="#71717a" strokeWidth="1.5"/>
         </svg>
       </div>
     </div>

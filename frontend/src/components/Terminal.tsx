@@ -36,7 +36,7 @@ export default function Terminal({
     {
       id: 'welcome-1',
       type: 'info',
-      content: `Synap Terminal v1.0.0 (x86_64-pc-linux-gnu)`,
+      content: `Tesseract Terminal v1.0.0 (x86_64-pc-linux-gnu)`,
     },
     {
       id: 'welcome-2',

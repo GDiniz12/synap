@@ -4,9 +4,11 @@ import React, { useEffect, useRef } from 'react';
 
 interface GraphDrawingPreviewProps {
   conteudoJson?: string;
+  className?: string;
+  height?: number | string;
 }
 
-export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPreviewProps) {
+export default function GraphDrawingPreview({ conteudoJson, className, height = 200 }: GraphDrawingPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -22,11 +24,11 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
     }
 
     const dpr = window.devicePixelRatio || 1;
-    const width = 300;
-    const height = 200;
+    const width = 340;
+    const canvasHeight = typeof height === 'number' ? height : 200;
 
     canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.height = canvasHeight * dpr;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -34,13 +36,13 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
     ctx.save();
     ctx.scale(dpr, dpr);
     ctx.fillStyle = '#121212';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, width, canvasHeight);
 
     // Dot grid
     const gridSize = 20;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     for (let x = 0; x < width; x += gridSize) {
-      for (let y = 0; y < height; y += gridSize) {
+      for (let y = 0; y < canvasHeight; y += gridSize) {
         ctx.fillRect(x, y, 1.5, 1.5);
       }
     }
@@ -65,9 +67,9 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
 
       const drawWidth = maxX - minX || 1;
       const drawHeight = maxY - minY || 1;
-      const scale = Math.min(1.2, Math.min((width - 32) / drawWidth, (height - 32) / drawHeight));
+      const scale = Math.min(1.2, Math.min((width - 32) / drawWidth, (canvasHeight - 32) / drawHeight));
       const offsetX = (width - drawWidth * scale) / 2 - minX * scale;
-      const offsetY = (height - drawHeight * scale) / 2 - minY * scale;
+      const offsetY = (canvasHeight - drawHeight * scale) / 2 - minY * scale;
 
       ctx.translate(offsetX, offsetY);
       ctx.scale(scale, scale);
@@ -104,7 +106,9 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
         } else if (el.type === 'line' && el.points && el.points.length >= 2) {
           ctx.beginPath();
           ctx.moveTo(el.points[0].x, el.points[0].y);
-          ctx.lineTo(el.points[1].x, el.points[1].y);
+          for (let i = 1; i < el.points.length; i++) {
+            ctx.lineTo(el.points[i].x, el.points[i].y);
+          }
           ctx.stroke();
         } else if (el.type === 'arrow' && el.points && el.points.length >= 2) {
           const p1 = el.points[0];
@@ -134,10 +138,13 @@ export default function GraphDrawingPreview({ conteudoJson }: GraphDrawingPrevie
     }
 
     ctx.restore();
-  }, [conteudoJson]);
+  }, [conteudoJson, height]);
 
   return (
-    <div style={{ width: '100%', height: '200px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--accents-2)' }}>
+    <div
+      style={{ width: '100%', height: typeof height === 'number' ? `${height}px` : height, overflow: 'hidden' }}
+      className={className || 'rounded-none border border-white/10 bg-[#121212]'}
+    >
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );

@@ -5,7 +5,12 @@ import { deleteUploadedFile } from '../utils/fileStorage';
 
 export class WorkspaceService {
   async createWorkspace(data: Prisma.WorkspaceUncheckedCreateInput) {
-    return prisma.workspace.create({ data });
+    return prisma.workspace.create({
+      data: {
+        ...data,
+        isCollaborative: data.isCollaborative ?? false,
+      },
+    });
   }
 
   async getWorkspaces(userId: string) {
@@ -20,6 +25,9 @@ export class WorkspaceService {
         collaborators: {
           where: { userId },
           select: { role: true }
+        },
+        _count: {
+          select: { collaborators: true }
         }
       }
     });
@@ -27,9 +35,11 @@ export class WorkspaceService {
     return workspaces.map((ws) => {
       const isOwner = ws.userId === userId;
       const currentUserRole = isOwner ? 'OWNER' : (ws.collaborators[0]?.role || 'MEMBER');
-      const { collaborators, ...rest } = ws;
+      const isCollaborative = ws.isCollaborative || (ws._count?.collaborators ?? 0) > 0;
+      const { collaborators, _count, ...rest } = ws;
       return {
         ...rest,
+        isCollaborative,
         isOwner,
         currentUserRole
       };
@@ -67,8 +77,11 @@ export class WorkspaceService {
       }
     }
 
+    const isCollaborative = workspace.isCollaborative || workspace.collaborators.length > 0;
+
     return {
       ...workspace,
+      isCollaborative,
       isOwner,
       currentUserRole
     };
@@ -180,7 +193,7 @@ export class WorkspaceService {
       throw new Error('Apenas o proprietário pode remover outros colaboradores.');
     }
 
-    return prisma.workspaceCollaborator.delete({
+    const deleted = await prisma.workspaceCollaborator.delete({
       where: {
         workspaceId_userId: {
           workspaceId,
@@ -188,6 +201,18 @@ export class WorkspaceService {
         }
       }
     });
+
+    const remainingCount = await prisma.workspaceCollaborator.count({
+      where: { workspaceId }
+    });
+    if (remainingCount === 0) {
+      await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { isCollaborative: false }
+      });
+    }
+
+    return deleted;
   }
 
   async leaveWorkspace(workspaceId: string, userId: string) {
@@ -211,7 +236,7 @@ export class WorkspaceService {
       throw new Error('Você não faz parte deste workspace.');
     }
 
-    return prisma.workspaceCollaborator.delete({
+    const deleted = await prisma.workspaceCollaborator.delete({
       where: {
         workspaceId_userId: {
           workspaceId,
@@ -219,6 +244,18 @@ export class WorkspaceService {
         }
       }
     });
+
+    const remainingCount = await prisma.workspaceCollaborator.count({
+      where: { workspaceId }
+    });
+    if (remainingCount === 0) {
+      await prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { isCollaborative: false }
+      });
+    }
+
+    return deleted;
   }
 
   async updateCollaboratorRole(
@@ -408,6 +445,13 @@ export class WorkspaceService {
         userId
       }
     });
+
+    if (!workspace.isCollaborative) {
+      await prisma.workspace.update({
+        where: { id: workspace.id },
+        data: { isCollaborative: true }
+      });
+    }
 
     return { id: workspace.id, nome: workspace.nome, status: 'joined' };
   }

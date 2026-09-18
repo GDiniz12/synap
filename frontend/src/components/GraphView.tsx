@@ -32,20 +32,20 @@ interface GraphViewProps {
   onUpdateWorkspace?: (workspace: any) => void;
 }
 
-// Discord Theme Color Presets for Color Groups
+// Tesseract Theme Color Presets for Color Groups
 export const PRESET_GROUP_COLORS = [
-  '#20b8cd', // Synap Blue
-  '#23a55a', // Discord Green
-  '#f0b232', // Discord Yellow / Amber
-  '#f23f43', // Discord Red
-  '#eb459e', // Discord Fuchsia
-  '#38bdf8', // Discord Cyan / Sky
-  '#9b59b6', // Discord Purple
+  '#20b8cd', // Cyan
+  '#23a55a', // Green
+  '#f0b232', // Yellow / Amber
+  '#f23f43', // Red
+  '#eb459e', // Fuchsia
+  '#38bdf8', // Light Cyan / Sky
+  '#9b59b6', // Purple
   '#57f287', // Bright Green
   '#fee75c', // Bright Yellow
   '#e67e22', // Orange
   '#1abc9c', // Teal
-  '#80848e', // Discord Muted Gray
+  '#80848e', // Muted Gray
 ];
 
 export const NEUTRAL_FALLBACK_COLOR = '#4e5058';
@@ -340,7 +340,7 @@ export default function GraphView({
 
   return (
     <div className="w-full h-full relative overflow-hidden bg-[#1e1f22] select-none font-sans">
-      {/* Top Floating Navigation Toolbar (Discord Aesthetic) */}
+      {/* Top Floating Navigation Toolbar */}
       <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-20">
         {/* Left Control Cluster */}
         <div className="flex items-center gap-2 pointer-events-auto">
@@ -381,7 +381,7 @@ export default function GraphView({
             )}
           </div>
 
-          {/* Graph Mode Switch (Discord Pills) */}
+          {/* Graph Mode Switch */}
           <div className="flex items-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-1 shadow-lg gap-1">
             <button
               type="button"
@@ -481,10 +481,10 @@ export default function GraphView({
         </div>
       </div>
 
-      {/* Retractable Floating Discord Control Panel (Filters, Groups, Physics) */}
+      {/* Retractable Floating Control Panel (Filters, Groups, Physics) */}
       {isSettingsOpen && (
         <div className="absolute top-14 left-3 z-30 w-[360px] sm:w-[390px] max-h-[calc(100vh-100px)] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in duration-100">
-          {/* Drawer Header with Discord Tabs */}
+          {/* Drawer Header */}
           <div className="border-b border-[#383a40] bg-[#1e1f22]/80">
             <div className="flex items-center justify-between p-2.5 px-3">
               <span className="text-xs font-semibold text-white tracking-tight flex items-center gap-2">
@@ -566,7 +566,7 @@ export default function GraphView({
                   <div className="py-6 px-3 text-center">
                     <p className="text-white font-medium mb-1">Nenhum grupo ativo</p>
                     <p className="text-[11px] text-[#949ba4] mb-3 leading-relaxed">
-                      Notas sem grupo utilizam a cor neutra do Discord. Adicione regras para destacar pastas, tags ou termos.
+                      Notas sem grupo utilizam a cor neutra padrão. Adicione regras para destacar pastas, tags ou termos.
                     </p>
                     <button
                       type="button"
@@ -887,7 +887,7 @@ export default function GraphView({
         )}
       </div>
 
-      {/* Discord Embed-style Side Preview Card on Hover */}
+      {/* Side Preview Card on Hover */}
       {hoveredNota && (
         <div
           className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none"
