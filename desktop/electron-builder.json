@@ -1,6 +1,6 @@
 {
-  "appId": "app.synap.desktop",
-  "productName": "Synap",
+  "appId": "app.tesseract.desktop",
+  "productName": "Tesseract",
   "directories": {
     "output": "release",
     "buildResources": "resources"
@@ -19,7 +19,7 @@
   "linux": {
     "target": ["AppImage", "deb"],
     "category": "Office",
-    "maintainer": "Synap <contact@synap.app>",
+    "maintainer": "Tesseract <contact@tesseract.app>",
     "icon": "resources/icon.png"
   },
   "mac": {

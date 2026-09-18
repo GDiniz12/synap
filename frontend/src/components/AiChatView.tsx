@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import katex from 'katex';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 
 export interface AiChatThread {
   id: string;
@@ -790,7 +790,7 @@ export default function AiChatView({
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        setErrorMessage(err.message || 'Falha ao se comunicar com o Synap AI.');
+        setErrorMessage(err.message || 'Falha ao se comunicar com o Tesseract AI.');
       }
     } finally {
       setIsLoading(false);
@@ -837,7 +837,7 @@ export default function AiChatView({
   ];
 
   return (
-    <div className="flex h-full w-full bg-[var(--discord-canvas)] text-[var(--discord-text-primary)] select-text overflow-hidden">
+    <div className="flex h-full w-full bg-[#141414] text-white select-text overflow-hidden font-sansation">
       {/* Hidden File Input for Attachments */}
       <input
         type="file"
@@ -849,14 +849,14 @@ export default function AiChatView({
 
       {/* Main Chat Column */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Discord-style Channel Header */}
-        <div className="h-12 min-h-[48px] px-4 border-b border-[var(--discord-border)] bg-[var(--discord-sidebar)] flex items-center justify-between shrink-0 shadow-xs z-10">
+        {/* Header */}
+        <div className="h-12 min-h-[48px] px-4 border-b border-white/10 bg-[#181818] flex items-center justify-between shrink-0 z-10 font-sansation">
           <div className="flex items-center gap-2 overflow-hidden">
             {!isSidebarOpen && onToggleSidebar && (
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="p-1.5 rounded-[4px] hover:bg-[var(--discord-hover)] text-[var(--discord-text-muted)] hover:text-[var(--discord-text-primary)] transition-colors cursor-pointer border-none bg-transparent shrink-0 mr-1"
+                className="p-1.5 rounded-none hover:bg-white/5 text-zinc-400 hover:text-white transition-colors cursor-pointer border-none bg-transparent shrink-0 mr-1"
                 title="Expandir Barra Lateral"
                 aria-label="Expandir Barra Lateral"
               >
@@ -868,23 +868,23 @@ export default function AiChatView({
               </button>
             )}
             <div className="flex items-center gap-2">
-              <SynapLogo size={22} priority />
+              <TesseractLogo size={20} variant="ai" priority />
               <h2 className="text-sm font-bold text-white tracking-tight">
-                Synap AI
+                Tesseract AI
               </h2>
             </div>
-            <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-1.5 hidden sm:block" />
-            <span className="text-xs text-[var(--discord-text-muted)] truncate hidden sm:inline">
-              Chat de Inteligência Artificial do workspace
+            <div className="w-[1px] h-4 bg-white/10 mx-1.5 hidden sm:block" />
+            <span className="text-xs text-zinc-400 truncate hidden sm:inline">
+              Assistente de IA do workspace
             </span>
           </div>
 
           <div className="flex items-center gap-1.5">
             {/* Global Context Indicator Badge */}
             {includeGlobalContext && (
-              <span className="hidden md:flex items-center gap-1 text-[11px] font-mono text-[var(--brand)] bg-[var(--brand)]/15 border border-[var(--brand)]/30 px-2 py-0.5 rounded-[4px]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
-                Contexto Global Ativo
+              <span className="hidden md:flex items-center gap-1.5 text-[11px] font-mono text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Contexto Global
               </span>
             )}
 
@@ -892,10 +892,10 @@ export default function AiChatView({
             <button
               type="button"
               onClick={() => setIsThreadsPanelOpen((prev) => !prev)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-xs font-medium transition-colors cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-none text-xs font-medium transition-colors cursor-pointer ${
                 isThreadsPanelOpen
-                  ? 'bg-[var(--discord-active)] text-white'
-                  : 'text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)]'
+                  ? 'bg-white/10 text-white'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
               title="Alternar painel de conversas (Threads)"
             >
@@ -911,8 +911,8 @@ export default function AiChatView({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-7 h-7 flex items-center justify-center rounded-[4px] text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
-                title="Fechar Synap AI"
+                className="w-7 h-7 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+                title="Fechar Tesseract AI"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -927,23 +927,23 @@ export default function AiChatView({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 no-scrollbar">
           {/* Welcome Banner when empty */}
           {messages.length === 0 && !isLoading && (
-            <div className="flex flex-col items-start max-w-2xl py-6 animate-smooth-pop">
+            <div className="flex flex-col items-start max-w-2xl py-6 animate-smooth-pop font-sansation">
               <div className="mb-4">
-                <SynapLogo size={48} priority />
+                <TesseractLogo size={42} variant="ai" priority />
               </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Como posso ajudar você hoje?</h1>
-              <p className="text-sm text-[var(--discord-text-muted)] mt-1.5 leading-relaxed">
+              <h1 className="text-xl font-bold text-white tracking-tight">Como posso ajudar você hoje?</h1>
+              <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed">
                 Converse sobre suas notas, analise documentos, resuma ideias ou crie novos flashcards e diagramas diretamente no seu workspace.
               </p>
 
               {/* Mentions usage hint banner */}
-              <div className="mt-4 p-3 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-[var(--discord-text-channel)]">
+              <div className="mt-4 p-3 rounded-none bg-[#181818] border border-white/10 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-zinc-300">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-[var(--brand)] px-1.5 py-0.5 rounded bg-[var(--brand)]/15">/</span>
+                  <span className="font-mono font-bold text-white px-1.5 py-0.5 rounded-none bg-white/10">/</span>
                   <span>Adicione contexto de notas ou desenhos</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-[var(--brand)] px-1.5 py-0.5 rounded bg-[var(--brand)]/15">#</span>
+                  <span className="font-mono font-bold text-white px-1.5 py-0.5 rounded-none bg-white/10">#</span>
                   <span>Adicione pastas completas com todas as notas</span>
                 </div>
               </div>
@@ -955,12 +955,12 @@ export default function AiChatView({
                     key={idx}
                     type="button"
                     onClick={() => handleSendMessage(qp.prompt)}
-                    className="p-3 text-left rounded-[6px] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] border border-[var(--discord-border)] transition-all cursor-pointer flex flex-col gap-1 group shadow-xs"
+                    className="p-3 text-left rounded-none bg-[#181818] hover:bg-white/5 border border-white/10 transition-colors cursor-pointer flex flex-col gap-1 group"
                   >
-                    <span className="text-xs font-semibold text-[var(--discord-text-primary)] group-hover:text-[var(--brand)] transition-colors">
+                    <span className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors">
                       {qp.title}
                     </span>
-                    <span className="text-[11px] text-[var(--discord-text-muted)] line-clamp-2 leading-relaxed">
+                    <span className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
                       {qp.prompt}
                     </span>
                   </button>
@@ -975,27 +975,27 @@ export default function AiChatView({
             const createdEntities = msg.metadata?.createdEntities;
             const displayName = isUser
               ? (currentUser?.username ? `@${currentUser.username}` : (currentUser?.name || 'Você'))
-              : 'Synap AI';
+              : 'Tesseract AI';
 
             return (
               <div
                 key={msg.id || idx}
-                className="group flex items-start gap-3.5 hover:bg-[var(--discord-sidebar)]/30 -mx-4 px-4 py-1.5 rounded transition-colors"
+                className="group flex items-start gap-3.5 hover:bg-white/[0.02] -mx-4 px-4 py-1.5 rounded-none transition-colors"
               >
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 mt-0.5 shadow-xs flex items-center justify-center select-none">
+                <div className="w-8 h-8 rounded-none overflow-hidden shrink-0 mt-0.5 border border-white/10 flex items-center justify-center select-none bg-zinc-800">
                   {isUser ? (
                     currentUser?.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={currentUser.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-[var(--brand)] flex items-center justify-center text-white font-bold text-xs">
+                      <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-white font-bold text-xs">
                         {(currentUser?.name || currentUser?.username || 'U').charAt(0).toUpperCase()}
                       </div>
                     )
                   ) : (
-                    <div className="w-full h-full bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center">
-                      <SynapLogo size={24} />
+                    <div className="w-full h-full bg-[#181818] flex items-center justify-center">
+                      <TesseractLogo size={18} variant="ai" />
                     </div>
                   )}
                 </div>
@@ -1003,8 +1003,8 @@ export default function AiChatView({
                 {/* Message Content Body */}
                 <div className="flex-1 overflow-hidden">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-white tracking-tight">{displayName}</span>
-                    <span className="text-[10px] text-[var(--discord-text-muted)] font-mono">
+                    <span className="text-xs font-semibold text-white tracking-tight">{displayName}</span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
                       {msg.createdAt
                         ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                         : 'Agora'}
@@ -1013,7 +1013,7 @@ export default function AiChatView({
 
                   {/* Body text */}
                   {isUser ? (
-                    <p className="text-[13.5px] leading-relaxed text-[var(--discord-text-primary)] whitespace-pre-wrap">
+                    <p className="text-[13px] leading-relaxed text-zinc-200 whitespace-pre-wrap">
                       {msg.conteudo}
                     </p>
                   ) : (
@@ -1025,21 +1025,21 @@ export default function AiChatView({
 
                   {/* Created Entities Cards (Notes, Canvas, Folders, Decks created by AI tools) */}
                   {createdEntities && (
-                    <div className="mt-3 pt-2.5 border-t border-[var(--discord-border)] flex flex-col gap-1.5">
+                    <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-col gap-1.5">
                       {createdEntities.notesCreated?.map((n: any) => (
                         <div
                           key={n.id}
                           onClick={() => onOpenNota?.({ id: n.id, titulo: n.titulo })}
-                          className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] border border-[var(--discord-border)] cursor-pointer text-xs transition-colors"
+                          className="flex items-center justify-between p-2 rounded-none bg-[#181818] hover:bg-white/5 border border-white/10 cursor-pointer text-xs transition-colors"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-channel)]">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                               <polyline points="14 2 14 8 20 8" />
                             </svg>
                             <span className="font-medium text-white truncate">Nota criada: {n.titulo}</span>
                           </div>
-                          <span className="text-[11px] font-mono text-[var(--brand)] font-semibold shrink-0">Abrir ↗</span>
+                          <span className="text-[11px] font-mono text-white font-semibold shrink-0">Abrir ↗</span>
                         </div>
                       ))}
 
@@ -1047,10 +1047,10 @@ export default function AiChatView({
                         <div
                           key={d.id}
                           onClick={() => onOpenNota?.({ id: d.id, titulo: d.titulo, tipo: 'desenho' })}
-                          className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] border border-[var(--discord-border)] cursor-pointer text-xs transition-colors"
+                          className="flex items-center justify-between p-2 rounded-none bg-[#181818] hover:bg-white/5 border border-white/10 cursor-pointer text-xs transition-colors"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#38bdf8]">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
                               <rect x="3" y="3" width="7" height="7" rx="1" />
                               <rect x="14" y="3" width="7" height="7" rx="1" />
                               <rect x="14" y="14" width="7" height="7" rx="1" />
@@ -1058,38 +1058,38 @@ export default function AiChatView({
                             </svg>
                             <span className="font-medium text-white truncate">Canvas criado: {d.titulo}</span>
                           </div>
-                          <span className="text-[11px] font-mono text-[#38bdf8] font-semibold shrink-0">Abrir Canvas ↗</span>
+                          <span className="text-[11px] font-mono text-white font-semibold shrink-0">Abrir Canvas ↗</span>
                         </div>
                       ))}
 
                       {createdEntities.foldersCreated?.map((f: any) => (
                         <div
                           key={f.id}
-                          className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] text-xs"
+                          className="flex items-center justify-between p-2 rounded-none bg-[#181818] border border-white/10 text-xs"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-channel)]">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
                               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                             </svg>
                             <span className="font-medium text-white truncate">Pasta criada: {f.nome}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-[var(--discord-text-muted)] shrink-0">Organização</span>
+                          <span className="text-[10px] font-mono text-zinc-500 shrink-0">Organização</span>
                         </div>
                       ))}
 
                       {createdEntities.decksCreated?.map((d: any) => (
                         <div
                           key={d.id}
-                          className="flex items-center justify-between p-2 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] text-xs"
+                          className="flex items-center justify-between p-2 rounded-none bg-[#181818] border border-white/10 text-xs"
                         >
                           <div className="flex items-center gap-2 truncate">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-channel)]">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
                               <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
                               <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
                             </svg>
                             <span className="font-medium text-white truncate">Deck criado: {d.nome}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-[var(--discord-text-muted)] shrink-0">{d.count} cartões</span>
+                          <span className="text-[10px] font-mono text-zinc-500 shrink-0">{d.count} cartões</span>
                         </div>
                       ))}
                     </div>
@@ -1102,25 +1102,25 @@ export default function AiChatView({
           {/* Live Streaming Message Block */}
           {isLoading && (
             <div className="flex items-start gap-3.5 -mx-4 px-4 py-1.5">
-              <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 mt-0.5 bg-[var(--discord-sidebar)] border border-[var(--discord-border)] flex items-center justify-center">
-                <SynapLogo size={24} />
+              <div className="w-8 h-8 rounded-none overflow-hidden shrink-0 mt-0.5 bg-[#181818] border border-white/10 flex items-center justify-center">
+                <TesseractLogo size={18} variant="ai" />
               </div>
               <div className="flex-1 overflow-hidden space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">Synap AI</span>
-                  <span className="text-[10px] text-[var(--discord-text-muted)] font-mono">Pensando...</span>
+                  <span className="text-xs font-semibold text-white">Tesseract AI</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">Pensando...</span>
                 </div>
 
                 {/* Tool Execution Badges */}
                 {toolLogs.map((log, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 text-xs font-mono text-[var(--discord-text-muted)] bg-[var(--discord-sidebar)] px-2.5 py-1 rounded-[4px] border border-[var(--discord-border)] w-fit"
+                    className="flex items-center gap-2 text-xs font-mono text-zinc-400 bg-[#181818] px-2.5 py-1 rounded-none border border-white/10 w-fit"
                   >
                     {log.status === 'running' ? (
-                      <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     ) : (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#23a55a" strokeWidth="2.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     )}
@@ -1135,8 +1135,8 @@ export default function AiChatView({
                   />
                 ) : (
                   toolLogs.length === 0 && (
-                    <div className="flex items-center gap-2 text-xs text-[var(--discord-text-muted)] py-1">
-                      <div className="w-2.5 h-2.5 rounded-full border-2 border-[var(--brand)] border-t-transparent animate-spin" />
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 py-1">
+                      <div className="w-2.5 h-2.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                       <span>Processando contexto e formulando resposta...</span>
                     </div>
                   )
@@ -1147,15 +1147,15 @@ export default function AiChatView({
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="p-3 rounded-[6px] border border-[#ed4245]/40 bg-[#ed4245]/10 text-xs text-[var(--discord-text-primary)] flex items-start gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ed4245" strokeWidth="2" className="shrink-0 mt-0.5">
+            <div className="p-3 rounded-none border border-red-500/30 bg-red-500/10 text-xs text-red-400 flex items-start gap-2.5 font-sansation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 mt-0.5">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               <div className="flex-1">
-                <p className="font-semibold text-[#ed4245]">Erro no Synap AI</p>
-                <p className="mt-0.5 leading-relaxed">{errorMessage}</p>
+                <p className="font-semibold text-red-400">Erro no Tesseract AI</p>
+                <p className="mt-0.5 leading-relaxed text-zinc-300">{errorMessage}</p>
               </div>
             </div>
           )}
@@ -1163,15 +1163,15 @@ export default function AiChatView({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Discord Bottom Input Box */}
-        <div className="px-4 pb-6 pt-0 bg-[var(--discord-canvas)] shrink-0 relative">
+        {/* Bottom Input Box */}
+        <div className="px-4 pb-6 pt-0 bg-[#141414] shrink-0 relative">
           {/* Autocomplete Popover for / (notes/drawings) and # (folders) */}
           {autocompleteState.isOpen && autocompleteOptions.length > 0 && (
             <div
               ref={autocompleteRef}
-              className="absolute bottom-full left-4 mb-2 w-72 sm:w-96 bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl overflow-hidden z-50 animate-smooth-pop"
+              className="absolute bottom-full left-4 mb-2 w-72 sm:w-96 bg-[#181818] border border-white/10 rounded-none shadow-2xl overflow-hidden z-50 animate-smooth-pop font-sansation"
             >
-              <div className="px-3 py-2 bg-[var(--discord-user-bar)] border-b border-[var(--discord-border)] flex items-center justify-between text-[11px] font-mono text-[var(--discord-text-muted)]">
+              <div className="px-3 py-2 bg-[#121212] border-b border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
                 <span className="font-semibold uppercase tracking-wider">
                   {autocompleteState.trigger === '/' ? 'NOTAS E DESENHOS (/)' : 'PASTAS DO WORKSPACE (#)'}
                 </span>
@@ -1183,24 +1183,24 @@ export default function AiChatView({
                     key={opt.id}
                     type="button"
                     onClick={() => handleSelectAutocomplete(opt)}
-                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-[4px] text-left text-xs transition-colors cursor-pointer ${
+                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-none text-left text-xs transition-colors cursor-pointer ${
                       idx === autocompleteState.selectedIndex
-                        ? 'bg-[var(--discord-active)] text-white font-medium'
-                        : 'text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)]'
+                        ? 'bg-white/10 text-white font-medium'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate">
                       {opt.type === 'desenho' ? (
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--brand)] shrink-0">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-300 shrink-0">
                           <path d="M12 19l7-7 3 3-7 7-3-3z" />
                           <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
                         </svg>
                       ) : opt.type === 'pasta' ? (
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#f59e0b] shrink-0">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-300 shrink-0">
                           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                         </svg>
                       ) : (
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-channel)] shrink-0">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 shrink-0">
                           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                           <polyline points="14 2 14 8 20 8" />
                         </svg>
@@ -1208,7 +1208,7 @@ export default function AiChatView({
                       <span className="truncate">{opt.title}</span>
                     </div>
                     {opt.type === 'pasta' && 'noteCount' in opt && (opt as any).noteCount !== undefined && (
-                      <span className="text-[10px] font-mono text-[var(--discord-text-muted)] shrink-0">
+                      <span className="text-[10px] font-mono text-zinc-500 shrink-0">
                         {(opt as any).noteCount} notas
                       </span>
                     )}
@@ -1222,9 +1222,9 @@ export default function AiChatView({
           {isPlusMenuOpen && (
             <div
               ref={plusMenuRef}
-              className="absolute bottom-full left-4 mb-2 w-64 bg-[var(--discord-sidebar)] border border-[var(--discord-border)] rounded-[8px] shadow-2xl p-1.5 flex flex-col gap-1 z-50 animate-smooth-pop"
+              className="absolute bottom-full left-4 mb-2 w-64 bg-[#181818] border border-white/10 rounded-none shadow-2xl p-1.5 flex flex-col gap-1 z-50 animate-smooth-pop font-sansation"
             >
-              <div className="px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-[var(--discord-text-muted)] border-b border-[var(--discord-border)] mb-0.5">
+              <div className="px-2 py-1 text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400 border-b border-white/10 mb-0.5">
                 Caixa de Ferramentas
               </div>
 
@@ -1232,7 +1232,7 @@ export default function AiChatView({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-xs text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer text-left"
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-none text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
@@ -1247,7 +1247,7 @@ export default function AiChatView({
                   setIncludeGlobalContext((prev) => !prev);
                   setIsPlusMenuOpen(false);
                 }}
-                className="flex items-center justify-between px-2.5 py-1.5 rounded-[4px] text-xs text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer text-left"
+                className="flex items-center justify-between px-2.5 py-1.5 rounded-none text-xs text-zinc-300 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-left"
               >
                 <div className="flex items-center gap-2.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1261,7 +1261,7 @@ export default function AiChatView({
                   type="checkbox"
                   checked={includeGlobalContext}
                   readOnly
-                  className="accent-[var(--brand)] w-3.5 h-3.5 pointer-events-none"
+                  className="accent-white w-3.5 h-3.5 pointer-events-none"
                 />
               </button>
 
@@ -1269,7 +1269,7 @@ export default function AiChatView({
               <button
                 type="button"
                 onClick={handleClearCurrentMessages}
-                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[4px] text-xs text-[#ed4245] hover:bg-[#ed4245]/15 transition-colors cursor-pointer text-left border-t border-[var(--discord-border)] mt-0.5"
+                className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-none text-xs text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer text-left border-t border-white/10 mt-0.5"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="3 6 5 6 21 6" />
@@ -1280,13 +1280,13 @@ export default function AiChatView({
             </div>
           )}
 
-          {/* Main Discord-style Input Box Wrapper (Enlarged & Faithful to Discord) */}
-          <div className="rounded-[8px] bg-[#383a40] flex flex-col transition-all shadow-md focus-within:ring-1 focus-within:ring-[var(--brand)]/50">
+          {/* Main Input Box Wrapper */}
+          <div className="rounded-none bg-[#181818] border border-white/10 flex flex-col transition-all shadow-md focus-within:border-white/30 font-sansation">
             {/* Attached Context Chips Tray */}
             {(attachedContexts.length > 0 || includeGlobalContext) && (
-              <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-2.5 pb-1.5 border-b border-[#4e5058]/50">
+              <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-2.5 pb-1.5 border-b border-white/10">
                 {includeGlobalContext && (
-                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-[var(--brand)] bg-[var(--brand)]/15 border border-[var(--brand)]/30 px-2 py-0.5 rounded-[4px]">
+                  <span className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded-none">
                     <span>🌐 Workspace Completo</span>
                     <button
                       type="button"
@@ -1304,25 +1304,25 @@ export default function AiChatView({
                 {attachedContexts.map((ctx) => (
                   <span
                     key={`${ctx.type}-${ctx.id}`}
-                    className="flex items-center gap-1.5 text-[11px] font-mono text-[#dbdee1] bg-[#2b2d31] border border-[#1f2023] px-2 py-0.5 rounded-[4px]"
+                    className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-200 bg-[#121212] border border-white/10 px-2 py-0.5 rounded-none"
                   >
                     {ctx.type === 'desenho' ? (
-                      <span className="text-[var(--brand)] font-bold">/</span>
+                      <span className="text-zinc-400 font-bold">/</span>
                     ) : ctx.type === 'pasta' ? (
-                      <span className="text-[#f59e0b] font-bold">#</span>
+                      <span className="text-zinc-400 font-bold">#</span>
                     ) : ctx.type === 'file' ? (
-                      <span className="text-[var(--discord-text-muted)]">📎</span>
+                      <span className="text-zinc-400">📎</span>
                     ) : (
-                      <span className="text-[var(--brand)] font-bold">/</span>
+                      <span className="text-zinc-400 font-bold">/</span>
                     )}
                     <span className="truncate max-w-[140px]">{ctx.title}</span>
                     {ctx.noteCount !== undefined && (
-                      <span className="text-[10px] text-[var(--discord-text-muted)]">({ctx.noteCount} notas)</span>
+                      <span className="text-[10px] text-zinc-500">({ctx.noteCount} notas)</span>
                     )}
                     <button
                       type="button"
                       onClick={() => handleRemoveContext(ctx.id, ctx.type)}
-                      className="text-[var(--discord-text-muted)] hover:text-white cursor-pointer ml-0.5"
+                      className="text-zinc-500 hover:text-white cursor-pointer ml-0.5"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -1342,31 +1342,30 @@ export default function AiChatView({
               }}
               className="flex items-center gap-3 px-4 py-2.5 min-h-[48px]"
             >
-              {/* Plus Button (Toolbox Trigger - far left inside bar) */}
+              {/* Plus Button (Toolbox Trigger) */}
               <button
                 type="button"
                 onClick={() => setIsPlusMenuOpen((prev) => !prev)}
-                className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                className={`w-7 h-7 rounded-none flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
                   isPlusMenuOpen
-                    ? 'bg-[#4e5058] text-white'
-                    : 'text-[#b5bac1] hover:text-white hover:bg-[#4e5058]/60'
+                    ? 'bg-white/15 text-white'
+                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 }`}
                 title="Caixa de ferramentas (+)"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="12" y1="5" x2="12" y2="19" />
                   <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
               </button>
 
-              {/* Textarea - tall, spacious, auto-growing */}
+              {/* Textarea */}
               <textarea
                 ref={textareaRef}
                 rows={1}
                 value={inputValue}
                 onChange={handleInputChange}
                 onKeyDown={(e) => {
-                  // Handle autocomplete navigation
                   if (autocompleteState.isOpen && autocompleteOptions.length > 0) {
                     if (e.key === 'ArrowDown') {
                       e.preventDefault();
@@ -1396,14 +1395,13 @@ export default function AiChatView({
                     }
                   }
 
-                  // Normal submit on Enter (without Shift)
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSendMessage();
                   }
                 }}
-                placeholder="Perguntar à Synap AI... (Shift+Enter para nova linha)"
-                className="flex-1 bg-transparent border-none outline-none text-[15px] leading-[22px] text-[#dbdee1] placeholder-[#80848e] resize-none max-h-48 min-h-[26px] py-0.5 font-sans no-scrollbar"
+                placeholder="Perguntar ao Tesseract AI... (Shift+Enter para nova linha)"
+                className="flex-1 bg-transparent border-none outline-none text-[14px] leading-[22px] text-white placeholder-zinc-500 resize-none max-h-48 min-h-[26px] py-0.5 font-sansation no-scrollbar"
               />
 
               {/* Right Side Action Icons */}
@@ -1413,17 +1411,17 @@ export default function AiChatView({
                   <button
                     type="button"
                     onClick={handleStopGeneration}
-                    className="px-2 py-1 rounded-[4px] bg-[#ed4245] hover:bg-[#ed4245]/90 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-xs"
+                    className="px-2.5 py-1 rounded-none bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 border border-red-500/30"
                     title="Parar geração"
                   >
-                    <div className="w-2 h-2 bg-white rounded-xs" />
+                    <div className="w-2 h-2 bg-red-400 rounded-none" />
                     <span>Parar</span>
                   </button>
                 ) : (
                   (inputValue.trim() || attachedContexts.length > 0) && (
                     <button
                       type="submit"
-                      className="w-7 h-7 rounded-full bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs animate-in zoom-in-75 duration-100 shrink-0"
+                      className="w-7 h-7 rounded-none bg-white hover:bg-zinc-200 text-black flex items-center justify-center transition-colors cursor-pointer shrink-0"
                       title="Enviar mensagem (Enter)"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1439,13 +1437,13 @@ export default function AiChatView({
         </div>
       </div>
 
-      {/* Collapsible Discord Threads Panel (Right Side) */}
+      {/* Collapsible Threads Panel (Right Side) */}
       {isThreadsPanelOpen && (
-        <div className="w-72 sm:w-80 h-full border-l border-[var(--discord-border)] bg-[var(--discord-sidebar)] flex flex-col shrink-0 overflow-hidden animate-in slide-in-from-right-4 duration-200">
+        <div className="w-72 sm:w-80 h-full border-l border-white/10 bg-[#181818] flex flex-col shrink-0 overflow-hidden font-sansation">
           {/* Threads Header */}
-          <div className="h-12 min-h-[48px] px-3.5 border-b border-[var(--discord-border)] flex items-center justify-between bg-[var(--discord-user-bar)]">
+          <div className="h-12 min-h-[48px] px-3.5 border-b border-white/10 flex items-center justify-between bg-[#121212]">
             <div className="flex items-center gap-2">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--discord-text-channel)]">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               <h3 className="text-xs font-bold text-white tracking-tight">Tópicos & Conversas</h3>
@@ -1453,7 +1451,7 @@ export default function AiChatView({
             <button
               type="button"
               onClick={() => setIsThreadsPanelOpen(false)}
-              className="w-6 h-6 flex items-center justify-center rounded text-[var(--discord-text-muted)] hover:text-white hover:bg-[var(--discord-hover)] transition-colors cursor-pointer text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer text-xs"
               title="Recolher painel"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1464,11 +1462,11 @@ export default function AiChatView({
           </div>
 
           {/* New Conversation Button */}
-          <div className="p-3 border-b border-[var(--discord-border)] bg-[var(--discord-sidebar)]">
+          <div className="p-3 border-b border-white/10 bg-[#181818]">
             <button
               type="button"
               onClick={handleCreateNewThread}
-              className="w-full py-1.5 px-3 rounded-[4px] bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              className="w-full py-1.5 px-3 rounded-none bg-white hover:bg-zinc-200 text-black text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -1481,7 +1479,7 @@ export default function AiChatView({
           {/* Thread List */}
           <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-1 no-scrollbar">
             {threads.length === 0 ? (
-              <div className="py-8 px-4 text-center text-xs text-[var(--discord-text-muted)]">
+              <div className="py-8 px-4 text-center text-xs text-zinc-500">
                 Nenhuma conversa salva ainda.
               </div>
             ) : (
@@ -1491,18 +1489,18 @@ export default function AiChatView({
                   <div
                     key={thread.id}
                     onClick={() => setActiveThreadId(thread.id)}
-                    className={`group flex items-center justify-between p-2.5 rounded-[4px] cursor-pointer transition-colors ${
+                    className={`group flex items-center justify-between p-2.5 rounded-none cursor-pointer transition-colors ${
                       isActive
-                        ? 'bg-[var(--discord-active)] text-white font-medium'
-                        : 'text-[var(--discord-text-channel)] hover:text-white hover:bg-[var(--discord-hover)]'
+                        ? 'bg-white/10 text-white font-medium'
+                        : 'text-zinc-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <div className="flex flex-col gap-0.5 truncate pr-2">
                       <div className="flex items-center gap-1.5 truncate">
-                        <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">#</span>
+                        <span className="text-[10px] font-mono text-zinc-500">#</span>
                         <span className="text-xs truncate font-medium">{thread.titulo}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-[var(--discord-text-muted)] pl-3">
+                      <span className="text-[10px] font-mono text-zinc-500 pl-3">
                         {thread.updatedAt ? new Date(thread.updatedAt).toLocaleDateString() : 'Hoje'}
                         {thread._count?.mensagens ? ` • ${thread._count.mensagens} msgs` : ''}
                       </span>
@@ -1511,7 +1509,7 @@ export default function AiChatView({
                     <button
                       type="button"
                       onClick={(e) => handleDeleteThread(thread.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#ed4245] transition-opacity cursor-pointer text-xs"
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 transition-opacity cursor-pointer text-xs"
                       title="Excluir conversa"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

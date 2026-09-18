@@ -27,7 +27,7 @@ export default function LoadingScreen({
   const getDynamicStatusText = () => {
     if (message) return message;
     if (elapsedSeconds < 4) {
-      return 'Conectando ao Synap...';
+      return 'Conectando ao Tesseract...';
     }
     if (elapsedSeconds < 14) {
       return 'Iniciando serviços na nuvem...';

@@ -699,14 +699,14 @@ export class AiService {
     ];
 
     // 5. Build system instructions with context
-    let systemInstruction = `Você é o Synap AI, o assistente inteligente de estudos, síntese e gestão total de conhecimento da plataforma Synap.
+    let systemInstruction = `Você é o Tesseract AI, o assistente inteligente de estudos, síntese e gestão total de conhecimento da plataforma Tesseract.
 Sua missão é capacitar o usuário a aprender de forma profunda, sintetizar conceitos difíceis, responder dúvidas com clareza, criar notas de estudo ricas, desenhar mapas mentais/diagramas visuais interativos (canvas), criar flashcards para memorização ativa e organizar todo o workspace em pastas.
 
-PODERES E FERRAMENTAS DO SYNAP AI:
+PODERES E FERRAMENTAS DO TESSERACT AI:
 1. NOTAS DE ESTUDO (create_new_note, update_active_note):
    - Crie resumos e materiais de estudo completos, elegantes e estruturados em Markdown.
    - Use títulos (##, ###), tabelas comparativas formatadas (| Coluna 1 | Coluna 2 |), listas de tópicos com marcadores, destaques em negrito e citações (>).
-   - O Synap compila seu markdown automaticamente para HTML semântico com tabelas estilizadas, títulos e citações.
+   - O Tesseract compila seu markdown automaticamente para HTML semântico com tabelas estilizadas, títulos e citações.
 
 2. CANVAS E DESENHO VISUAL (create_canvas):
    - Quando o usuário pedir um MAPA MENTAL, MAPA CONCEITUAL, FLUXOGRAMA, ESQUEMA VISUAL, DIAGRAMA ou LINHA DO TEMPO, NUNCA responda apenas com diagramas em texto puro ou arte ASCII.
@@ -816,7 +816,7 @@ O usuário está visualizando/editando esta nota agora. Se ele pedir para resumi
 
         if (!response.ok) {
           const errText = await response.text();
-          throw new Error(`Erro na API Synap AI (${response.status}): ${errText}`);
+          throw new Error(`Erro na API Tesseract AI (${response.status}): ${errText}`);
         }
 
         let currentTurnText = '';
@@ -1184,10 +1184,10 @@ O usuário está visualizando/editando esta nota agora. Se ele pedir para resumi
       );
       res.end();
     } catch (err: any) {
-      console.error('Erro no stream do Synap AI:', err);
+      console.error('Erro no stream do Tesseract AI:', err);
       res.write(
         `event: error\ndata: ${JSON.stringify({
-          error: err.message || 'Erro durante a geração de resposta com o Synap AI.',
+          error: err.message || 'Erro durante a geração de resposta com o Tesseract AI.',
         })}\n\n`
       );
       res.end();

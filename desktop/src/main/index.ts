@@ -8,7 +8,7 @@ dotenv.config();
 
 // Ensure proper taskbar icon binding and grouping on Windows
 if (process.platform === 'win32') {
-  app.setAppUserModelId('app.synap.desktop');
+  app.setAppUserModelId('app.tesseract.desktop');
 }
 
 const isDev = process.env.ELECTRON_IS_DEV === '1' || !app.isPackaged;

@@ -125,7 +125,7 @@ export default function IsometricGraph({
           if (!pos) return null;
           const isHovered = hoveredNodeId === node.id;
 
-          // Only color if an active group matched this note! Otherwise neutral Discord gray
+          // Only color if an active group matched this note! Otherwise neutral gray
           const hasCustomGroupColor =
             pos.color &&
             pos.color !== '#525252' &&
@@ -160,7 +160,7 @@ export default function IsometricGraph({
                 emissiveIntensity={isHovered ? 0.5 : 0.08}
               />
 
-              {/* Discord-styled Label */}
+              {/* Node Label */}
               {(showLabels || isHovered) && (
                 <Html position={[0, pos.height / 2 + 3, 0]} center zIndexRange={[100, 0]}>
                   <div

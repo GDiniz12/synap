@@ -5,10 +5,19 @@ import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
 import MathEquationModal from './MathEquationModal';
 import DrawingYouTubeModal from './DrawingYouTubeModal';
-import LiveCursors from './LiveCursors';
-import { useTheme } from './ThemeProvider';
+import { useCollaboration } from '@/hooks/useCollaboration';
 
-export type ToolType = 'hand' | 'select' | 'pencil' | 'rectangle' | 'ellipse' | 'arrow' | 'line' | 'text' | 'image' | 'eraser';
+export type ToolType =
+  | 'hand'
+  | 'select'
+  | 'pencil'
+  | 'rectangle'
+  | 'ellipse'
+  | 'arrow'
+  | 'line'
+  | 'text'
+  | 'image'
+  | 'eraser';
 
 export interface Point {
   x: number;
@@ -17,7 +26,18 @@ export interface Point {
 
 export interface DrawingElement {
   id: string;
-  type: 'pencil' | 'rectangle' | 'ellipse' | 'line' | 'arrow' | 'text' | 'image' | 'note_card' | 'flashcard' | 'math' | 'youtube';
+  type:
+    | 'pencil'
+    | 'rectangle'
+    | 'ellipse'
+    | 'line'
+    | 'arrow'
+    | 'text'
+    | 'image'
+    | 'note_card'
+    | 'flashcard'
+    | 'math'
+    | 'youtube';
   x: number;
   y: number;
   width?: number;
@@ -32,7 +52,6 @@ export interface DrawingElement {
   strokeColor: string;
   fillColor: string;
   strokeWidth: number;
-  // Embedded item data
   itemNota?: any;
   cardData?: any;
 }
@@ -47,7 +66,7 @@ export interface Bounds {
 }
 
 interface DrawingCanvasProps {
-  initialData?: string; // JSON string of DrawingElement[]
+  initialData?: string;
   onChange?: (dataJson: string) => void;
   title?: string;
   notas?: any[];
@@ -62,7 +81,9 @@ interface DrawingCanvasProps {
 
 const STROKE_COLORS = [
   '#ffffff', // White
-  '#94a3b8', // Gray
+  '#d4d4d8', // Light Gray
+  '#a1a1aa', // Zinc
+  '#71717a', // Dark Gray
   '#ef4444', // Red
   '#f97316', // Orange
   '#eab308', // Yellow
@@ -75,6 +96,7 @@ const STROKE_COLORS = [
 const FILL_COLORS = [
   'transparent',
   'rgba(255, 255, 255, 0.12)',
+  'rgba(255, 255, 255, 0.25)',
   'rgba(59, 130, 246, 0.25)',
   'rgba(34, 197, 94, 0.25)',
   'rgba(234, 179, 8, 0.25)',
@@ -90,49 +112,47 @@ export default function DrawingCanvas({
   workspaceId,
   isCollaborative,
   notaId,
-  itemNota,
-  cardData,
   onOpenNota,
   onOpenCard,
 }: DrawingCanvasProps) {
   const [elements, setElements] = useState<DrawingElement[]>(() => {
     if (initialData) {
       try {
-        return JSON.parse(initialData);
-      } catch (e) {
-        return [];
-      }
+        const parsed = JSON.parse(initialData);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {}
     }
     return [];
   });
 
-  const { users, cursors, status, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
+  const { users, cursors, status, broadcastChange, broadcastCursor } = useCollaboration(
     isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
     'drawing_change',
     (newVal: string) => {
       try {
         const parsed = JSON.parse(newVal);
-        setElements(parsed);
+        if (Array.isArray(parsed)) setElements(parsed);
       } catch (e) {}
     }
   );
 
-  const onChange = useCallback((val: string) => {
-    if (parentOnChange) parentOnChange(val);
-    broadcastChange(val);
-  }, [parentOnChange, broadcastChange]);
-
-
+  const onChange = useCallback(
+    (val: string) => {
+      if (parentOnChange) parentOnChange(val);
+      broadcastChange(val);
+    },
+    [parentOnChange, broadcastChange]
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { resolvedTheme } = useTheme();
 
-  // Tools & Styling States (Default to 'select')
+  // Tools & Styling States
   const [tool, setTool] = useState<ToolType>('select');
-  const [strokeColor, setStrokeColor] = useState<string>(() => resolvedTheme === 'light' ? '#000000' : '#ffffff');
+  const [strokeColor, setStrokeColor] = useState<string>('#ffffff');
   const [fillColor, setFillColor] = useState<string>('transparent');
   const [strokeWidth, setStrokeWidth] = useState<number>(2);
+  const [isStylePanelOpen, setIsStylePanelOpen] = useState<boolean>(false);
 
   // Picker Modal State
   const [pickerModal, setPickerModal] = useState<'nota' | 'card' | null>(null);
@@ -151,14 +171,12 @@ export default function DrawingCanvas({
   // YouTube Modal State
   const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
 
-  // Elements and History
-
+  // History Stack
   const [history, setHistory] = useState<DrawingElement[][]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
-  // Multi-Selection State (IDs of selected elements)
+  // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  // Marquee Selection Box (Windows desktop style drag-to-select)
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
     startY: number;
@@ -184,7 +202,9 @@ export default function DrawingCanvas({
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Mouse action refs
-  const mouseModeRef = useRef<'drawing' | 'dragging_elements' | 'resizing_handle' | 'marquee_selecting' | 'panning' | 'idle'>('idle');
+  const mouseModeRef = useRef<
+    'drawing' | 'dragging_elements' | 'resizing_handle' | 'marquee_selecting' | 'panning' | 'idle'
+  >('idle');
   const activeHandleRef = useRef<HandleType | null>(null);
   const resizeInitialBoundsRef = useRef<Bounds | null>(null);
   const currentElementRef = useRef<DrawingElement | null>(null);
@@ -193,832 +213,562 @@ export default function DrawingCanvas({
   const isPanningRef = useRef(false);
   const panStartRef = useRef<Point>({ x: 0, y: 0 });
 
-  // Focus textarea automatically whenever editingText becomes active
+  // Touch gesture refs
+  const initialTouchDistanceRef = useRef<number | null>(null);
+  const initialZoomRef = useRef<number>(1);
+
   useEffect(() => {
-    if (editingText) {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-      }
-      const focusTimer = setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-        }
-      }, 40);
-      return () => clearTimeout(focusTimer);
+    if (editingText && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+      textMountedAtRef.current = Date.now();
     }
   }, [editingText]);
 
-  const lastNotaId = useRef<string | undefined>(notaId);
-
-  // Synchronize when note changes
-  useEffect(() => {
-    if (notaId !== lastNotaId.current) {
-      lastNotaId.current = notaId;
-      if (!initialData) {
-        setElements([]);
-        return;
-      }
-      try {
-        const parsed = JSON.parse(initialData);
-        if (Array.isArray(parsed)) {
-          setElements(parsed);
-        }
-      } catch {
-        // ignore
-      }
-    }
-  }, [initialData, notaId]);
-
-  // Push new state to history & propagate change
   const commitElements = useCallback(
     (newElements: DrawingElement[]) => {
       setElements(newElements);
-      setHistory((prev) => [...prev.slice(0, historyIndex + 1), newElements]);
+      const json = JSON.stringify(newElements);
+      onChange(json);
+
+      // Push to history
+      setHistory((prev) => {
+        const next = prev.slice(0, historyIndex + 1);
+        return [...next, newElements];
+      });
       setHistoryIndex((prev) => prev + 1);
-      if (onChange) {
-        onChange(JSON.stringify(newElements));
-      }
     },
     [historyIndex, onChange]
   );
 
-  // Insert Note or Flashcard container at the center of current viewport
-  const handleInsertItem = (item: any, type: 'nota' | 'card') => {
-    const container = containerRef.current;
-    const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
-    const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
-
-    const width = 300;
-    const height = 220;
-    const newEl: DrawingElement = {
-      id: Math.random().toString(),
-      type: type === 'nota' ? 'note_card' : 'flashcard',
-      x: viewCenterX - width / 2,
-      y: viewCenterY - height / 2,
-      width,
-      height,
-      strokeColor: '#38bdf8',
-      fillColor: 'transparent',
-      strokeWidth: 2,
-      itemNota: item,
-      cardData: type === 'card' ? item : undefined,
-    };
-
-    commitElements([...elements, newEl]);
-    setTool('select');
-    setSelectedIds([newEl.id]);
-  };
-
-  const handleConfirmMath = (latex: string) => {
-    if (mathModal.editingElementId) {
-      const updatedList = elements.map((el) =>
-        el.id === mathModal.editingElementId ? { ...el, latex } : el
-      );
-      commitElements(updatedList);
-    } else {
-      const container = containerRef.current;
-      const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
-      const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
-      const width = 300;
-      const height = 140;
-
-      const newMathEl: DrawingElement = {
-        id: 'math_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        type: 'math',
-        x: viewCenterX - width / 2,
-        y: viewCenterY - height / 2,
-        width,
-        height,
-        latex,
-        strokeColor: '#38bdf8',
-        fillColor: 'transparent',
-        strokeWidth: 2,
-      };
-
-      commitElements([...elements, newMathEl]);
-      setTool('select');
-      setSelectedIds([newMathEl.id]);
-    }
-  };
-
-  // Insert YouTube Video into Canvas
-  const handleConfirmYouTube = (youtubeId: string, url: string) => {
-    const container = containerRef.current;
-    const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
-    const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
-
-    const width = 420;
-    const height = 260;
-
-    const newEl: DrawingElement = {
-      id: Math.random().toString(),
-      type: 'youtube',
-      x: viewCenterX - width / 2,
-      y: viewCenterY - height / 2,
-      width,
-      height,
-      youtubeId,
-      youtubeUrl: url,
-      strokeColor: '#38bdf8',
-      fillColor: 'transparent',
-      strokeWidth: 1,
-    };
-
-    commitElements([...elements, newEl]);
-    setSelectedIds([newEl.id]);
-    setTool('select');
-  };
-
-  // Insert Image into Canvas
-  const handleInsertImage = useCallback(
-    (file: File) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string;
-        if (!dataUrl) return;
-
-        const img = new Image();
-        img.onload = () => {
-          const container = containerRef.current;
-          const viewCenterX = container ? (container.clientWidth / 2 - pan.x) / zoom : 200;
-          const viewCenterY = container ? (container.clientHeight / 2 - pan.y) / zoom : 200;
-
-          const maxWidth = 400;
-          const scale = img.naturalWidth > maxWidth ? maxWidth / img.naturalWidth : 1;
-          const width = img.naturalWidth * scale;
-          const height = img.naturalHeight * scale;
-
-          const newEl: DrawingElement = {
-            id: Math.random().toString(),
-            type: 'image',
-            x: viewCenterX - width / 2,
-            y: viewCenterY - height / 2,
-            width,
-            height,
-            imageUrl: dataUrl,
-            strokeColor: 'transparent',
-            fillColor: 'transparent',
-            strokeWidth: 0,
-          };
-
-          imageCacheRef.current.set(dataUrl, img);
-          commitElements([...elements, newEl]);
-          setTool('select');
-          setSelectedIds([newEl.id]);
-        };
-        img.src = dataUrl;
-      };
-      reader.readAsDataURL(file);
-    },
-    [commitElements, elements, pan.x, pan.y, zoom]
-  );
-
-  // Paste image handler from clipboard
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      if (editingText) return;
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile();
-          if (file) {
-            handleInsertImage(file);
-            break;
-          }
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [editingText, handleInsertImage]);
-
-  // Initial history snapshot
-  useEffect(() => {
-    if (history.length === 0 && elements.length > 0) {
-      setHistory([elements]);
-      setHistoryIndex(0);
-    }
-  }, [elements, history.length]);
-
-  // Undo / Redo
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
-      const nextIdx = historyIndex - 1;
-      const prevElements = history[nextIdx];
-      setHistoryIndex(nextIdx);
-      setElements(prevElements);
-      if (onChange) onChange(JSON.stringify(prevElements));
+      const targetIndex = historyIndex - 1;
+      const targetState = history[targetIndex];
+      setElements(targetState);
+      setHistoryIndex(targetIndex);
+      onChange(JSON.stringify(targetState));
+      setSelectedIds([]);
     }
   }, [history, historyIndex, onChange]);
 
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
-      const nextIdx = historyIndex + 1;
-      const nextElements = history[nextIdx];
-      setHistoryIndex(nextIdx);
-      setElements(nextElements);
-      if (onChange) onChange(JSON.stringify(nextElements));
+      const targetIndex = historyIndex + 1;
+      const targetState = history[targetIndex];
+      setElements(targetState);
+      setHistoryIndex(targetIndex);
+      onChange(JSON.stringify(targetState));
+      setSelectedIds([]);
     }
   }, [history, historyIndex, onChange]);
 
-  // Coordinate transforms
+  // Coordinate Conversion
   const screenToWorld = useCallback(
     (screenX: number, screenY: number): Point => {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return { x: screenX, y: screenY };
-      const clientX = screenX - rect.left;
-      const clientY = screenY - rect.top;
       return {
-        x: (clientX - pan.x) / zoom,
-        y: (clientY - pan.y) / zoom,
+        x: (screenX - pan.x) / zoom,
+        y: (screenY - pan.y) / zoom,
       };
     },
     [pan, zoom]
   );
 
-  const worldToScreen = useCallback(
-    (worldX: number, worldY: number): Point => {
-      return {
-        x: worldX * zoom + pan.x,
-        y: worldY * zoom + pan.y,
-      };
-    },
-    [pan, zoom]
-  );
-
-  // Helper: Get robust bounding box of any element
-  const getElementBounds = (el: DrawingElement): Bounds => {
-    let minX = el.x;
-    let minY = el.y;
-    let maxX = el.x + (el.width || 0);
-    let maxY = el.y + (el.height || 0);
-
+  const getElementBounds = useCallback((el: DrawingElement): Bounds => {
     if (el.points && el.points.length > 0) {
-      minX = Math.min(...el.points.map((p) => p.x));
-      maxX = Math.max(...el.points.map((p) => p.x));
-      minY = Math.min(...el.points.map((p) => p.y));
-      maxY = Math.max(...el.points.map((p) => p.y));
-    } else if (el.type === 'text') {
-      const fontSize = el.fontSize || 18;
-      const lines = (el.text || '').split('\n');
-      const maxLineLen = Math.max(...lines.map((l) => l.length), 1);
-      minX = el.x;
-      maxX = el.x + Math.max(40, maxLineLen * (fontSize * 0.6));
-      minY = el.y - fontSize;
-      maxY = el.y + (lines.length - 1) * (fontSize * 1.35) + 4;
-    } else if (
-      el.type === 'rectangle' ||
-      el.type === 'ellipse' ||
-      el.type === 'image' ||
-      el.type === 'note_card' ||
-      el.type === 'flashcard' ||
-      el.type === 'math' ||
-      el.type === 'youtube'
-    ) {
-      minX = Math.min(el.x, el.x + (el.width || 0));
-      maxX = Math.max(el.x, el.x + (el.width || 0));
-      minY = Math.min(el.y, el.y + (el.height || 0));
-      maxY = Math.max(el.y, el.y + (el.height || 0));
-    }
-
-    return { minX, minY, maxX, maxY };
-  };
-
-  // Helper: Get merged selection bounding box for multiple selected elements
-  const getSelectionBounds = useCallback(
-    (ids: string[], allElements: DrawingElement[]): Bounds | null => {
-      const selected = allElements.filter((el) => ids.includes(el.id));
-      if (selected.length === 0) return null;
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      selected.forEach((el) => {
-        const b = getElementBounds(el);
-        if (b.minX < minX) minX = b.minX;
-        if (b.minY < minY) minY = b.minY;
-        if (b.maxX > maxX) maxX = b.maxX;
-        if (b.maxY > maxY) maxY = b.maxY;
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      el.points.forEach((p) => {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
       });
-      if (minX === Infinity) return null;
       return { minX, minY, maxX, maxY };
+    }
+    const w = el.width || 0;
+    const h = el.height || 0;
+    const minX = Math.min(el.x, el.x + w);
+    const maxX = Math.max(el.x, el.x + w);
+    const minY = Math.min(el.y, el.y + h);
+    const maxY = Math.max(el.y, el.y + h);
+    return { minX, minY, maxX, maxY };
+  }, []);
+
+  const getMultiSelectionBounds = useCallback(
+    (ids: string[]): Bounds | null => {
+      if (ids.length === 0) return null;
+      let minX = Infinity,
+        minY = Infinity,
+        maxX = -Infinity,
+        maxY = -Infinity;
+      let found = false;
+      elements.forEach((el) => {
+        if (ids.includes(el.id)) {
+          found = true;
+          const b = getElementBounds(el);
+          minX = Math.min(minX, b.minX);
+          minY = Math.min(minY, b.minY);
+          maxX = Math.max(maxX, b.maxX);
+          maxY = Math.max(maxY, b.maxY);
+        }
+      });
+      return found ? { minX, minY, maxX, maxY } : null;
     },
-    []
+    [elements, getElementBounds]
   );
 
-  // Helper: Detect if a point hits any handle of the selected elements
-  const getHandleAtPoint = useCallback(
-    (
-      point: Point,
-      selectedElements: DrawingElement[],
-      zoomLevel: number
-    ): { handle: HandleType; elementId?: string } | null => {
-      if (selectedElements.length === 0) return null;
-      const hitRadius = 12 / zoomLevel;
-
-      // 1. Single Line or Arrow endpoint handles
-      if (
-        selectedElements.length === 1 &&
-        (selectedElements[0].type === 'line' || selectedElements[0].type === 'arrow') &&
-        selectedElements[0].points &&
-        selectedElements[0].points.length === 2
-      ) {
-        const p1 = selectedElements[0].points[0];
-        const p2 = selectedElements[0].points[1];
-        if (Math.hypot(point.x - p1.x, point.y - p1.y) <= hitRadius) {
-          return { handle: 'start', elementId: selectedElements[0].id };
-        }
-        if (Math.hypot(point.x - p2.x, point.y - p2.y) <= hitRadius) {
-          return { handle: 'end', elementId: selectedElements[0].id };
-        }
-      }
-
-      // 2. 8 Bounding Box Handles
-      const bounds = getSelectionBounds(
-        selectedElements.map((e) => e.id),
-        selectedElements
+  const isPointInElement = useCallback(
+    (point: Point, el: DrawingElement): boolean => {
+      const padding = 8;
+      const b = getElementBounds(el);
+      return (
+        point.x >= b.minX - padding &&
+        point.x <= b.maxX + padding &&
+        point.y >= b.minY - padding &&
+        point.y <= b.maxY + padding
       );
-      if (!bounds) return null;
+    },
+    [getElementBounds]
+  );
 
-      const padding = 6 / zoomLevel;
-      const bMinX = bounds.minX - padding;
-      const bMinY = bounds.minY - padding;
-      const bMaxX = bounds.maxX + padding;
-      const bMaxY = bounds.maxY + padding;
-      const midX = (bMinX + bMaxX) / 2;
-      const midY = (bMinY + bMaxY) / 2;
+  const isElementInSelectionBox = useCallback(
+    (
+      el: DrawingElement,
+      box: { startX: number; startY: number; currentX: number; currentY: number }
+    ): boolean => {
+      const minBoxX = Math.min(box.startX, box.currentX);
+      const maxBoxX = Math.max(box.startX, box.currentX);
+      const minBoxY = Math.min(box.startY, box.currentY);
+      const maxBoxY = Math.max(box.startY, box.currentY);
 
-      const handlePositions: { handle: HandleType; x: number; y: number }[] = [
-        { handle: 'nw', x: bMinX, y: bMinY },
-        { handle: 'n', x: midX, y: bMinY },
-        { handle: 'ne', x: bMaxX, y: bMinY },
-        { handle: 'e', x: bMaxX, y: midY },
-        { handle: 'se', x: bMaxX, y: bMaxY },
-        { handle: 's', x: midX, y: bMaxY },
-        { handle: 'sw', x: bMinX, y: bMaxY },
-        { handle: 'w', x: bMinX, y: midY },
+      const b = getElementBounds(el);
+      return b.maxX >= minBoxX && b.minX <= maxBoxX && b.maxY >= minBoxY && b.minY <= maxBoxY;
+    },
+    [getElementBounds]
+  );
+
+  // Resize Handle Hit Testing
+  const getHandleAtPoint = useCallback(
+    (point: Point, bounds: Bounds): HandleType | null => {
+      const handleSize = 10 / zoom;
+      const { minX, minY, maxX, maxY } = bounds;
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+
+      const handles: { type: HandleType; x: number; y: number }[] = [
+        { type: 'nw', x: minX, y: minY },
+        { type: 'n', x: midX, y: minY },
+        { type: 'ne', x: maxX, y: minY },
+        { type: 'e', x: maxX, y: midY },
+        { type: 'se', x: maxX, y: maxY },
+        { type: 's', x: midX, y: maxY },
+        { type: 'sw', x: minX, y: maxY },
+        { type: 'w', x: minX, y: midY },
       ];
 
-      for (const h of handlePositions) {
-        if (Math.hypot(point.x - h.x, point.y - h.y) <= hitRadius) {
-          return { handle: h.handle };
+      for (const h of handles) {
+        if (
+          point.x >= h.x - handleSize &&
+          point.x <= h.x + handleSize &&
+          point.y >= h.y - handleSize &&
+          point.y <= h.y + handleSize
+        ) {
+          return h.type;
         }
       }
-
       return null;
     },
-    [getSelectionBounds]
+    [zoom]
   );
 
-  // Helper: Cursor style for handles
-  const getCursorForHandle = (handle: HandleType): string => {
-    switch (handle) {
-      case 'nw':
-      case 'se':
-        return 'nwse-resize';
-      case 'ne':
-      case 'sw':
-        return 'nesw-resize';
-      case 'n':
-      case 's':
-        return 'ns-resize';
-      case 'e':
-      case 'w':
-        return 'ew-resize';
-      case 'start':
-      case 'end':
-        return 'crosshair';
-      default:
-        return 'default';
-    }
-  };
-
-  // Check if point hits element (for single selection / hover)
-  const isPointInElement = (point: Point, el: DrawingElement): boolean => {
-    const threshold = 14 / zoom;
-    const { minX, minY, maxX, maxY } = getElementBounds(el);
-
-    if (
-      el.type === 'text' ||
-      el.type === 'rectangle' ||
-      el.type === 'image' ||
-      el.type === 'note_card' ||
-      el.type === 'flashcard' ||
-      el.type === 'math' ||
-      el.type === 'youtube'
-    ) {
-      return (
-        point.x >= minX - threshold &&
-        point.x <= maxX + threshold &&
-        point.y >= minY - threshold &&
-        point.y <= maxY + threshold
-      );
-    }
-    if (el.type === 'ellipse') {
-      const rx = Math.abs(el.width || 0) / 2;
-      const ry = Math.abs(el.height || 0) / 2;
-      const cx = el.x + (el.width || 0) / 2;
-      const cy = el.y + (el.height || 0) / 2;
-      if (rx === 0 || ry === 0) return false;
-      const val =
-        Math.pow(point.x - cx, 2) / Math.pow(rx + threshold, 2) +
-        Math.pow(point.y - cy, 2) / Math.pow(ry + threshold, 2);
-      return val <= 1.2;
-    }
-    if (el.type === 'pencil' && el.points) {
-      return el.points.some((p) => {
-        const dx = p.x - point.x;
-        const dy = p.y - point.y;
-        return Math.sqrt(dx * dx + dy * dy) <= threshold;
-      });
-    }
-    if ((el.type === 'line' || el.type === 'arrow') && el.points && el.points.length >= 2) {
-      const p1 = el.points[0];
-      const p2 = el.points[1];
-      const l2 = Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2);
-      if (l2 === 0) return false;
-      const t = Math.max(0, Math.min(1, ((point.x - p1.x) * (p2.x - p1.x) + (point.y - p1.y) * (p2.y - p1.y)) / l2));
-      const projX = p1.x + t * (p2.x - p1.x);
-      const projY = p1.y + t * (p2.y - p1.y);
-      const dist = Math.sqrt(Math.pow(point.x - projX, 2) + Math.pow(point.y - projY, 2));
-      return dist <= threshold;
-    }
-    return false;
-  };
-
-  // Check if element is inside rectangular selection box
-  const isElementInSelectionBox = (el: DrawingElement, box: { startX: number; startY: number; currentX: number; currentY: number }) => {
-    const boxMinX = Math.min(box.startX, box.currentX);
-    const boxMaxX = Math.max(box.startX, box.currentX);
-    const boxMinY = Math.min(box.startY, box.currentY);
-    const boxMaxY = Math.max(box.startY, box.currentY);
-
-    const { minX, minY, maxX, maxY } = getElementBounds(el);
-
-    return maxX >= boxMinX && minX <= boxMaxX && maxY >= boxMinY && minY <= boxMaxY;
-  };
-
-  // Draw individual element
-  const drawElement = useCallback(
-    (ctx: CanvasRenderingContext2D, el: DrawingElement) => {
-      // Don't render static text on canvas while currently editing it in input
-      if (editingText && editingText.id === el.id) return;
-
-      ctx.save();
-      ctx.strokeStyle = el.strokeColor;
-      ctx.fillStyle = el.fillColor;
-      ctx.lineWidth = el.strokeWidth;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      if (el.type === 'pencil' && el.points && el.points.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(el.points[0].x, el.points[0].y);
-        for (let i = 1; i < el.points.length; i++) {
-          const p = el.points[i];
-          ctx.lineTo(p.x, p.y);
-        }
-        ctx.stroke();
-      } else if (el.type === 'rectangle') {
-        const w = el.width || 0;
-        const h = el.height || 0;
-        if (el.fillColor !== 'transparent') {
-          ctx.fillRect(el.x, el.y, w, h);
-        }
-        ctx.strokeRect(el.x, el.y, w, h);
-      } else if (el.type === 'ellipse') {
-        const cx = el.x + (el.width || 0) / 2;
-        const cy = el.y + (el.height || 0) / 2;
-        const rx = Math.abs(el.width || 0) / 2;
-        const ry = Math.abs(el.height || 0) / 2;
-        if (rx > 0 && ry > 0) {
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-          if (el.fillColor !== 'transparent') ctx.fill();
-          ctx.stroke();
-        }
-      } else if (el.type === 'line' && el.points && el.points.length >= 2) {
-        const p1 = el.points[0];
-        const p2 = el.points[1];
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-      } else if (el.type === 'arrow' && el.points && el.points.length >= 2) {
-        const p1 = el.points[0];
-        const p2 = el.points[1];
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-
-        // Arrowhead
-        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        const headlen = 14;
-        ctx.beginPath();
-        ctx.moveTo(p2.x, p2.y);
-        ctx.lineTo(p2.x - headlen * Math.cos(angle - Math.PI / 6), p2.y - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(p2.x, p2.y);
-        ctx.lineTo(p2.x - headlen * Math.cos(angle + Math.PI / 6), p2.y - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
-      } else if (el.type === 'text' && el.text) {
-        const fontSize = el.fontSize || 18;
-        ctx.font = `${fontSize}px "Short Stack", "Virgil", cursive, sans-serif`;
-        ctx.fillStyle = el.strokeColor;
-        const lines = el.text.split('\n');
-        const lineHeight = fontSize * 1.35;
-        lines.forEach((line, idx) => {
-          ctx.fillText(line, el.x, el.y + idx * lineHeight);
-        });
-      } else if (el.type === 'image' && el.imageUrl) {
-        let img = imageCacheRef.current.get(el.imageUrl);
-        if (!img) {
-          img = new Image();
-          img.src = el.imageUrl;
-          img.onload = () => {
-            renderCanvas();
-          };
-          imageCacheRef.current.set(el.imageUrl, img);
-        }
-        if (img.complete && img.naturalWidth > 0) {
-          const w = el.width || img.naturalWidth;
-          const h = el.height || img.naturalHeight;
-          ctx.drawImage(img, el.x, el.y, w, h);
-        } else {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(el.x, el.y, el.width || 200, el.height || 150);
-        }
-      }
-
-      ctx.restore();
-    },
-    [editingText]
-  );
-
-  // Main Canvas Render
+  // Main Canvas Render Loop
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const width = canvas.width / dpr;
-    const height = canvas.height / dpr;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.scale(dpr, dpr);
-
-    // Canvas Background (Discord Canvas tone)
-    ctx.fillStyle = resolvedTheme === 'light' ? '#f2f3f5' : '#313338';
+    // Fundo #141414
+    ctx.fillStyle = '#141414';
     ctx.fillRect(0, 0, width, height);
 
-    // Dot Grid (Excalidraw style)
-    const gridSize = 24 * zoom;
-    const offsetX = pan.x % gridSize;
-    const offsetY = pan.y % gridSize;
-
-    ctx.fillStyle = resolvedTheme === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)';
-    for (let x = offsetX; x < width; x += gridSize) {
-      for (let y = offsetY; y < height; y += gridSize) {
-        ctx.fillRect(x, y, 1.5, 1.5);
-      }
-    }
-
-    // Transforms
+    ctx.save();
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
-    // Draw Elements
-    elements.forEach((el) => {
-      drawElement(ctx, el);
-    });
+    // Grid de pontos sutis
+    const dotSpacing = 24;
+    const startX = Math.floor(-pan.x / zoom / dotSpacing) * dotSpacing;
+    const endX = startX + width / zoom + dotSpacing * 2;
+    const startY = Math.floor(-pan.y / zoom / dotSpacing) * dotSpacing;
+    const endY = startY + height / zoom + dotSpacing * 2;
 
-    // Draw Active Drawing Element (In-progress)
-    if (currentElementRef.current) {
-      drawElement(ctx, currentElementRef.current);
-    }
-
-    // Draw Selection Bounding Box & 8 Control Handles for selected elements
-    if (selectedIds.length > 0) {
-      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
-
-      // Single line or arrow with 2 points
-      if (
-        selectedElements.length === 1 &&
-        (selectedElements[0].type === 'line' || selectedElements[0].type === 'arrow') &&
-        selectedElements[0].points &&
-        selectedElements[0].points.length === 2
-      ) {
-        const p1 = selectedElements[0].points[0];
-        const p2 = selectedElements[0].points[1];
-
-        ctx.save();
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-
-        // Start handle
-        ctx.beginPath();
-        ctx.arc(p1.x, p1.y, 4.5, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-
-        // End handle
-        ctx.beginPath();
-        ctx.arc(p2.x, p2.y, 4.5, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-      } else {
-        const bounds = getSelectionBounds(selectedIds, elements);
-        if (bounds) {
-          const { minX, minY, maxX, maxY } = bounds;
-          const padding = 6;
-          const bMinX = minX - padding;
-          const bMinY = minY - padding;
-          const bMaxX = maxX + padding;
-          const bMaxY = maxY + padding;
-          const bWidth = bMaxX - bMinX;
-          const bHeight = bMaxY - bMinY;
-
-          ctx.save();
-          // Bounding box outline
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 1.2;
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(bMinX, bMinY, bWidth, bHeight);
-          ctx.setLineDash([]);
-
-          // 8 Control Handles
-          const handleSize = 8;
-          const midX = (bMinX + bMaxX) / 2;
-          const midY = (bMinY + bMaxY) / 2;
-
-          const handles = [
-            { x: bMinX, y: bMinY }, // nw
-            { x: midX, y: bMinY }, // n
-            { x: bMaxX, y: bMinY }, // ne
-            { x: bMaxX, y: midY }, // e
-            { x: bMaxX, y: bMaxY }, // se
-            { x: midX, y: bMaxY }, // s
-            { x: bMinX, y: bMaxY }, // sw
-            { x: bMinX, y: midY }, // w
-          ];
-
-          ctx.fillStyle = '#ffffff';
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 1.5;
-
-          handles.forEach((h) => {
-            ctx.fillRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
-            ctx.strokeRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
-          });
-
-          ctx.restore();
-        }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    for (let x = startX; x < endX; x += dotSpacing) {
+      for (let y = startY; y < endY; y += dotSpacing) {
+        ctx.fillRect(x - 0.5, y - 0.5, 1.5, 1.5);
       }
     }
 
-    // Draw Windows-Style Marquee Drag-Selection Box
+    // Renderizar Elementos
+    elements.forEach((el) => {
+      ctx.save();
+      ctx.strokeStyle = el.strokeColor || '#ffffff';
+      ctx.fillStyle = el.fillColor || 'transparent';
+      ctx.lineWidth = el.strokeWidth || 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (el.type === 'pencil' && el.points && el.points.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(el.points[0].x, el.points[0].y);
+        for (let i = 1; i < el.points.length; i++) {
+          ctx.lineTo(el.points[i].x, el.points[i].y);
+        }
+        ctx.stroke();
+      } else if (el.type === 'rectangle') {
+        const w = el.width || 0;
+        const h = el.height || 0;
+        if (el.fillColor && el.fillColor !== 'transparent') {
+          ctx.fillRect(el.x, el.y, w, h);
+        }
+        ctx.strokeRect(el.x, el.y, w, h);
+      } else if (el.type === 'ellipse') {
+        const w = Math.abs(el.width || 0);
+        const h = Math.abs(el.height || 0);
+        const centerX = el.x + (el.width || 0) / 2;
+        const centerY = el.y + (el.height || 0) / 2;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, w / 2, h / 2, 0, 0, Math.PI * 2);
+        if (el.fillColor && el.fillColor !== 'transparent') {
+          ctx.fill();
+        }
+        ctx.stroke();
+      } else if (el.type === 'line' && el.points && el.points.length === 2) {
+        ctx.beginPath();
+        ctx.moveTo(el.points[0].x, el.points[0].y);
+        ctx.lineTo(el.points[1].x, el.points[1].y);
+        ctx.stroke();
+      } else if (el.type === 'arrow' && el.points && el.points.length === 2) {
+        const [p1, p2] = el.points;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+
+        // Cabeça da seta
+        const headlen = 14;
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        ctx.beginPath();
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(
+          p2.x - headlen * Math.cos(angle - Math.PI / 6),
+          p2.y - headlen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(
+          p2.x - headlen * Math.cos(angle + Math.PI / 6),
+          p2.y - headlen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      } else if (el.type === 'text' && el.text) {
+        const fSize = el.fontSize || 18;
+        ctx.font = `${fSize}px 'Sansation', sans-serif`;
+        ctx.fillStyle = el.strokeColor || '#ffffff';
+        ctx.textBaseline = 'top';
+        const lines = el.text.split('\n');
+        lines.forEach((line, i) => {
+          ctx.fillText(line, el.x, el.y + i * (fSize * 1.3));
+        });
+      } else if (el.type === 'image' && el.imageUrl) {
+        let img = imageCacheRef.current.get(el.imageUrl);
+        if (!img) {
+          img = new Image();
+          img.src = el.imageUrl;
+          img.onload = () => renderCanvas();
+          imageCacheRef.current.set(el.imageUrl, img);
+        } else if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, el.x, el.y, el.width || 200, el.height || 150);
+        }
+      }
+
+      ctx.restore();
+    });
+
+    // Renderizar Elemento Atual sendo Desenhado
+    if (currentElementRef.current) {
+      const el = currentElementRef.current;
+      ctx.save();
+      ctx.strokeStyle = el.strokeColor || '#ffffff';
+      ctx.fillStyle = el.fillColor || 'transparent';
+      ctx.lineWidth = el.strokeWidth || 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (el.type === 'pencil' && el.points && el.points.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(el.points[0].x, el.points[0].y);
+        for (let i = 1; i < el.points.length; i++) {
+          ctx.lineTo(el.points[i].x, el.points[i].y);
+        }
+        ctx.stroke();
+      } else if (el.type === 'rectangle') {
+        const w = el.width || 0;
+        const h = el.height || 0;
+        if (el.fillColor && el.fillColor !== 'transparent') {
+          ctx.fillRect(el.x, el.y, w, h);
+        }
+        ctx.strokeRect(el.x, el.y, w, h);
+      } else if (el.type === 'ellipse') {
+        const w = Math.abs(el.width || 0);
+        const h = Math.abs(el.height || 0);
+        const centerX = el.x + (el.width || 0) / 2;
+        const centerY = el.y + (el.height || 0) / 2;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, w / 2, h / 2, 0, 0, Math.PI * 2);
+        if (el.fillColor && el.fillColor !== 'transparent') {
+          ctx.fill();
+        }
+        ctx.stroke();
+      } else if (el.type === 'line' && el.points && el.points.length === 2) {
+        ctx.beginPath();
+        ctx.moveTo(el.points[0].x, el.points[0].y);
+        ctx.lineTo(el.points[1].x, el.points[1].y);
+        ctx.stroke();
+      } else if (el.type === 'arrow' && el.points && el.points.length === 2) {
+        const [p1, p2] = el.points;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+
+        const headlen = 14;
+        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        ctx.beginPath();
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(
+          p2.x - headlen * Math.cos(angle - Math.PI / 6),
+          p2.y - headlen * Math.sin(angle - Math.PI / 6)
+        );
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(
+          p2.x - headlen * Math.cos(angle + Math.PI / 6),
+          p2.y - headlen * Math.sin(angle + Math.PI / 6)
+        );
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Caixa de Seleção / Bounding Box dos Elementos Selecionados
+    const bounds = getMultiSelectionBounds(selectedIds);
+    if (bounds && tool === 'select') {
+      const padding = 6 / zoom;
+      const bMinX = bounds.minX - padding;
+      const bMinY = bounds.minY - padding;
+      const bMaxX = bounds.maxX + padding;
+      const bMaxY = bounds.maxY + padding;
+      const bW = bMaxX - bMinX;
+      const bH = bMaxY - bMinY;
+
+      ctx.save();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5 / zoom;
+      ctx.setLineDash([4 / zoom, 4 / zoom]);
+      ctx.strokeRect(bMinX, bMinY, bW, bH);
+      ctx.setLineDash([]);
+
+      // Alças de redimensionamento (Handles)
+      const handleSize = 7 / zoom;
+      const midX = (bMinX + bMaxX) / 2;
+      const midY = (bMinY + bMaxY) / 2;
+      const handles = [
+        { x: bMinX, y: bMinY },
+        { x: midX, y: bMinY },
+        { x: bMaxX, y: bMinY },
+        { x: bMaxX, y: midY },
+        { x: bMaxX, y: bMaxY },
+        { x: midX, y: bMaxY },
+        { x: bMinX, y: bMaxY },
+        { x: bMinX, y: midY },
+      ];
+
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1 / zoom;
+      handles.forEach((h) => {
+        ctx.fillRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
+        ctx.strokeRect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
+      });
+
+      ctx.restore();
+    }
+
+    // Caixa de Seleção Marquee (Arrastar para selecionar)
     if (selectionBox) {
       const minX = Math.min(selectionBox.startX, selectionBox.currentX);
       const maxX = Math.max(selectionBox.startX, selectionBox.currentX);
       const minY = Math.min(selectionBox.startY, selectionBox.currentY);
       const maxY = Math.max(selectionBox.startY, selectionBox.currentY);
 
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1 / zoom;
       ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
-
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
       ctx.strokeRect(minX, minY, maxX - minX, maxY - minY);
-      ctx.setLineDash([]);
+      ctx.restore();
     }
 
     ctx.restore();
-  }, [drawElement, elements, getSelectionBounds, pan, selectedIds, selectionBox, zoom]);
+  }, [
+    elements,
+    getMultiSelectionBounds,
+    pan,
+    selectedIds,
+    selectionBox,
+    tool,
+    zoom,
+  ]);
 
-  // Adjust canvas size
+  // Redimensionamento do canvas conforme container
   useEffect(() => {
-    const updateSize = () => {
-      if (canvasRef.current) {
-        const { width, height } = canvasRef.current.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
-        canvasRef.current.width = width * dpr;
-        canvasRef.current.height = height * dpr;
-        renderCanvas();
-      }
+    const handleResize = () => {
+      const container = containerRef.current;
+      const canvas = canvasRef.current;
+      if (!container || !canvas) return;
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+      renderCanvas();
     };
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [renderCanvas]);
 
   useEffect(() => {
     renderCanvas();
   }, [renderCanvas]);
 
-  // Finish and commit text input
-  const handleFinishText = useCallback(() => {
-    if (!editingText) return;
-    const textVal = editingText.text.trim();
-
-    if (textVal) {
-      const existingIdx = elements.findIndex((el) => el.id === editingText.id);
-      if (existingIdx !== -1) {
-        const updated = [...elements];
-        updated[existingIdx] = { ...updated[existingIdx], text: textVal };
-        commitElements(updated);
-        setSelectedIds([editingText.id]);
-        setTool('select');
-      } else {
+  // Inserção de Imagem
+  const handleInsertImage = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const center = screenToWorld(
+          (containerRef.current?.clientWidth || 800) / 2,
+          (containerRef.current?.clientHeight || 600) / 2
+        );
+        const maxDim = 320;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = (h / w) * maxDim;
+            w = maxDim;
+          } else {
+            w = (w / h) * maxDim;
+            h = maxDim;
+          }
+        }
         const newEl: DrawingElement = {
-          id: editingText.id,
-          type: 'text',
-          x: editingText.worldX,
-          y: editingText.worldY,
-          text: textVal,
-          strokeColor,
+          id: `img-${Date.now()}`,
+          type: 'image',
+          x: center.x - w / 2,
+          y: center.y - h / 2,
+          width: w,
+          height: h,
+          imageUrl: dataUrl,
+          strokeColor: '#ffffff',
           fillColor: 'transparent',
           strokeWidth: 1,
         };
         commitElements([...elements, newEl]);
         setSelectedIds([newEl.id]);
         setTool('select');
-      }
-    }
-    setEditingText(null);
-  }, [commitElements, editingText, elements, strokeColor]);
-
-  // Double Click Handler (Edit existing text)
-  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const worldPoint = screenToWorld(e.clientX, e.clientY);
-    const hitText = [...elements].reverse().find((el) => el.type === 'text' && isPointInElement(worldPoint, el));
-
-    if (hitText) {
-      textMountedAtRef.current = Date.now();
-      setEditingText({
-        id: hitText.id,
-        worldX: hitText.x,
-        worldY: hitText.y,
-        text: hitText.text || '',
-      });
-    }
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
   };
 
   // Mouse Handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    // If text was being edited and user clicks on canvas, commit it
-    if (editingText) {
-      handleFinishText();
-      return;
-    }
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+    const worldPoint = screenToWorld(clientX, clientY);
 
-    // Space or middle mouse click for Panning OR Hand Tool (0 / H)
-    if (tool === 'hand' || isSpacePressed || e.button === 1) {
+    broadcastCursor(worldPoint.x, worldPoint.y);
+
+    // Pan com botão do meio ou Spacebar ou Tool Hand
+    if (e.button === 1 || tool === 'hand' || isSpacePressed) {
       isPanningRef.current = true;
       mouseModeRef.current = 'panning';
-      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      panStartRef.current = { x: clientX - pan.x, y: clientY - pan.y };
       return;
     }
 
-    const worldPoint = screenToWorld(e.clientX, e.clientY);
+    if (e.button !== 0) return;
+
+    // Concluir edição de texto se clicou fora
+    if (editingText && Date.now() - textMountedAtRef.current > 300) {
+      const trimmed = editingText.text.trim();
+      if (trimmed) {
+        const existingIdx = elements.findIndex((el) => el.id === editingText.id);
+        if (existingIdx >= 0) {
+          const updated = [...elements];
+          updated[existingIdx] = { ...updated[existingIdx], text: trimmed };
+          commitElements(updated);
+        } else {
+          const newEl: DrawingElement = {
+            id: editingText.id,
+            type: 'text',
+            x: editingText.worldX,
+            y: editingText.worldY,
+            text: trimmed,
+            fontSize: 18,
+            strokeColor,
+            fillColor: 'transparent',
+            strokeWidth: 1,
+          };
+          commitElements([...elements, newEl]);
+        }
+      }
+      setEditingText(null);
+    }
+
     startPointRef.current = worldPoint;
 
-    // 1. TEXT TOOL (7 / T) -> Creates new text
-    if (tool === 'text') {
-      const newId = Math.random().toString();
-      textMountedAtRef.current = Date.now();
-      setEditingText({
-        id: newId,
-        worldX: worldPoint.x,
-        worldY: worldPoint.y,
-        text: '',
-      });
-      return;
+    // 1. Tool Select: Checar Resize Handles se houver seleção
+    if (tool === 'select' && selectedIds.length > 0) {
+      const bounds = getMultiSelectionBounds(selectedIds);
+      if (bounds) {
+        const handle = getHandleAtPoint(worldPoint, bounds);
+        if (handle) {
+          mouseModeRef.current = 'resizing_handle';
+          activeHandleRef.current = handle;
+          resizeInitialBoundsRef.current = bounds;
+          dragInitialElementsRef.current = elements.map((el) => ({ ...el }));
+          return;
+        }
+      }
     }
 
-    // 2. SELECT TOOL (1 / V) -> Select, Drag & Resize
+    // 2. Tool Select: Checar Clique em Elementos
     if (tool === 'select') {
-      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
-      const handleHit = getHandleAtPoint(worldPoint, selectedElements, zoom);
-
-      if (handleHit) {
-        mouseModeRef.current = 'resizing_handle';
-        activeHandleRef.current = handleHit.handle;
-        resizeInitialBoundsRef.current = getSelectionBounds(selectedIds, elements);
-        dragInitialElementsRef.current = JSON.parse(JSON.stringify(elements));
-        return;
-      }
-
       const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
-
       if (hit) {
         if (e.shiftKey) {
           setSelectedIds((prev) =>
@@ -1030,7 +780,8 @@ export default function DrawingCanvas({
           }
         }
         mouseModeRef.current = 'dragging_elements';
-        dragInitialElementsRef.current = JSON.parse(JSON.stringify(elements));
+        dragInitialElementsRef.current = elements.map((el) => ({ ...el }));
+        return;
       } else {
         if (!e.shiftKey) {
           setSelectedIds([]);
@@ -1042,11 +793,23 @@ export default function DrawingCanvas({
           currentX: worldPoint.x,
           currentY: worldPoint.y,
         });
+        return;
       }
+    }
+
+    // 3. Tool Text: Inserir novo texto
+    if (tool === 'text') {
+      const newId = `text-${Date.now()}`;
+      setEditingText({
+        id: newId,
+        worldX: worldPoint.x,
+        worldY: worldPoint.y,
+        text: '',
+      });
       return;
     }
 
-    // 3. ERASER TOOL (8 / E)
+    // 4. Tool Eraser
     if (tool === 'eraser') {
       const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
       if (hit) {
@@ -1056,9 +819,9 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 4. DRAWING GEOMETRIC SHAPES & PENCIL
+    // 5. Drawing Shapes (Pencil, Rect, Ellipse, Line, Arrow)
     mouseModeRef.current = 'drawing';
-    const newId = Math.random().toString();
+    const newId = `el-${Date.now()}`;
 
     if (tool === 'pencil') {
       currentElementRef.current = {
@@ -1068,7 +831,7 @@ export default function DrawingCanvas({
         y: worldPoint.y,
         points: [worldPoint],
         strokeColor,
-        fillColor,
+        fillColor: 'transparent',
         strokeWidth,
       };
     } else if (tool === 'rectangle') {
@@ -1095,139 +858,74 @@ export default function DrawingCanvas({
         fillColor,
         strokeWidth,
       };
-    } else if (tool === 'line' || tool === 'arrow') {
+    } else if (tool === 'line') {
       currentElementRef.current = {
         id: newId,
-        type: tool,
+        type: 'line',
         x: worldPoint.x,
         y: worldPoint.y,
         points: [worldPoint, worldPoint],
         strokeColor,
-        fillColor,
+        fillColor: 'transparent',
+        strokeWidth,
+      };
+    } else if (tool === 'arrow') {
+      currentElementRef.current = {
+        id: newId,
+        type: 'arrow',
+        x: worldPoint.x,
+        y: worldPoint.y,
+        points: [worldPoint, worldPoint],
+        strokeColor,
+        fillColor: 'transparent',
         strokeWidth,
       };
     }
-
-    renderCanvas();
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const worldPoint = screenToWorld(e.clientX, e.clientY);
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const clientX = e.clientX - rect.left;
+    const clientY = e.clientY - rect.top;
+    const worldPoint = screenToWorld(clientX, clientY);
 
-    // Broadcast live cursor to collaborators
-    if (isCollaborative && notaId) {
-      broadcastCursor(worldPoint.x, worldPoint.y, true);
-    }
+    broadcastCursor(worldPoint.x, worldPoint.y);
 
-    // Pan Move
-    if (isPanningRef.current) {
+    // Panning
+    if (isPanningRef.current || mouseModeRef.current === 'panning') {
       setPan({
-        x: e.clientX - panStartRef.current.x,
-        y: e.clientY - panStartRef.current.y,
+        x: clientX - panStartRef.current.x,
+        y: clientY - panStartRef.current.y,
       });
       return;
     }
 
-    // Dynamic Hover Cursor on Handles
-    if (mouseModeRef.current === 'idle' && tool === 'select') {
-      const selectedElements = elements.filter((el) => selectedIds.includes(el.id));
-      const handleHit = getHandleAtPoint(worldPoint, selectedElements, zoom);
-      if (handleHit) {
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = getCursorForHandle(handleHit.handle);
-        }
-      } else {
-        const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
-        if (canvasRef.current) {
-          canvasRef.current.style.cursor = hit ? 'move' : 'default';
-        }
-      }
-    } else {
-      if (canvasRef.current && canvasRef.current.style.cursor) {
-        canvasRef.current.style.cursor = '';
-      }
-    }
-
-    // 1. Interactive Resizing via Control Handles
-    if (mouseModeRef.current === 'resizing_handle' && activeHandleRef.current && resizeInitialBoundsRef.current) {
+    // 1. Resizing Handle
+    if (
+      mouseModeRef.current === 'resizing_handle' &&
+      activeHandleRef.current &&
+      resizeInitialBoundsRef.current
+    ) {
       const handle = activeHandleRef.current;
       const initBounds = resizeInitialBoundsRef.current;
-      const initW = Math.max(1, initBounds.maxX - initBounds.minX);
-      const initH = Math.max(1, initBounds.maxY - initBounds.minY);
-      const dx = worldPoint.x - startPointRef.current.x;
-      const dy = worldPoint.y - startPointRef.current.y;
+      const initW = initBounds.maxX - initBounds.minX || 1;
+      const initH = initBounds.maxY - initBounds.minY || 1;
 
-      // Special case: Single line/arrow start/end endpoints
-      if (selectedIds.length === 1 && (handle === 'start' || handle === 'end')) {
-        const single = dragInitialElementsRef.current.find((el) => el.id === selectedIds[0]);
-        if (single && (single.type === 'line' || single.type === 'arrow') && single.points?.length === 2) {
-          const pIndex = handle === 'start' ? 0 : 1;
-          setElements((prev) =>
-            prev.map((el) => {
-              if (el.id !== single.id || !el.points) return el;
-              const newPoints = [...el.points];
-              newPoints[pIndex] = { x: worldPoint.x, y: worldPoint.y };
-              return { ...el, points: newPoints };
-            })
-          );
-          return;
-        }
-      }
-
-      // Compute new candidate bounding box
       let newMinX = initBounds.minX;
-      let newMinY = initBounds.minY;
       let newMaxX = initBounds.maxX;
+      let newMinY = initBounds.minY;
       let newMaxY = initBounds.maxY;
 
-      if (handle.includes('w')) newMinX += dx;
-      if (handle.includes('e')) newMaxX += dx;
-      if (handle.includes('n')) newMinY += dy;
-      if (handle.includes('s')) newMaxY += dy;
+      if (handle.includes('e')) newMaxX = worldPoint.x;
+      if (handle.includes('w')) newMinX = worldPoint.x;
+      if (handle.includes('s')) newMaxY = worldPoint.y;
+      if (handle.includes('n')) newMinY = worldPoint.y;
 
       let newW = newMaxX - newMinX;
       let newH = newMaxY - newMinY;
-
-      // Enforce minimum dimensions
-      if (newW < 10) {
-        if (handle.includes('w')) newMinX = newMaxX - 10;
-        else newMaxX = newMinX + 10;
-        newW = 10;
-      }
-      if (newH < 10) {
-        if (handle.includes('n')) newMinY = newMaxY - 10;
-        else newMaxY = newMinY + 10;
-        newH = 10;
-      }
-
-      // Preserve aspect ratio if Shift is pressed or single image/math
-      const isShift = e.shiftKey;
-      const singleEl = selectedIds.length === 1 ? dragInitialElementsRef.current.find((el) => el.id === selectedIds[0]) : null;
-      const shouldLockRatio = isShift || singleEl?.type === 'image';
-
-      if (shouldLockRatio && ['nw', 'ne', 'se', 'sw'].includes(handle)) {
-        const ratio = initW / initH;
-        const currentRatio = newW / newH;
-        if (currentRatio > ratio) {
-          newW = newH * ratio;
-        } else {
-          newH = newW / ratio;
-        }
-
-        if (handle === 'se') {
-          newMaxX = newMinX + newW;
-          newMaxY = newMinY + newH;
-        } else if (handle === 'sw') {
-          newMinX = newMaxX - newW;
-          newMaxY = newMinY + newH;
-        } else if (handle === 'ne') {
-          newMaxX = newMinX + newW;
-          newMinY = newMaxY - newH;
-        } else if (handle === 'nw') {
-          newMinX = newMaxX - newW;
-          newMinY = newMaxY - newH;
-        }
-      }
+      if (Math.abs(newW) < 10) newW = 10;
+      if (Math.abs(newH) < 10) newH = 10;
 
       const scaleX = (newMaxX - newMinX) / initW;
       const scaleY = (newMaxY - newMinY) / initH;
@@ -1284,7 +982,7 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 2. Move/Drag Selected Elements (Select Tool)
+    // 2. Dragging Selected Elements
     if (mouseModeRef.current === 'dragging_elements' && selectedIds.length > 0) {
       const dx = worldPoint.x - startPointRef.current.x;
       const dy = worldPoint.y - startPointRef.current.y;
@@ -1314,23 +1012,23 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 3. Marquee Selection Box Drag
+    // 3. Marquee Selection Box
     if (mouseModeRef.current === 'marquee_selecting') {
-      setSelectionBox((prev) => (prev ? { ...prev, currentX: worldPoint.x, currentY: worldPoint.y } : null));
-
+      setSelectionBox((prev) =>
+        prev ? { ...prev, currentX: worldPoint.x, currentY: worldPoint.y } : null
+      );
       const box = {
         startX: startPointRef.current.x,
         startY: startPointRef.current.y,
         currentX: worldPoint.x,
         currentY: worldPoint.y,
       };
-
       const hits = elements.filter((el) => isElementInSelectionBox(el, box)).map((el) => el.id);
       setSelectedIds(hits);
       return;
     }
 
-    // 4. Active Eraser drag
+    // 4. Eraser Drag
     if (tool === 'eraser' && e.buttons === 1) {
       const hit = [...elements].reverse().find((el) => isPointInElement(worldPoint, el));
       if (hit) {
@@ -1340,7 +1038,7 @@ export default function DrawingCanvas({
       return;
     }
 
-    // 5. Drawing Shape or Pencil in progress
+    // 5. Drawing Shape in Progress
     if (mouseModeRef.current === 'drawing' && currentElementRef.current) {
       const curr = currentElementRef.current;
       if (curr.type === 'pencil' && curr.points) {
@@ -1358,7 +1056,6 @@ export default function DrawingCanvas({
   const handleMouseUp = () => {
     isPanningRef.current = false;
 
-    // End resizing elements via handle
     if (mouseModeRef.current === 'resizing_handle') {
       mouseModeRef.current = 'idle';
       activeHandleRef.current = null;
@@ -1368,7 +1065,6 @@ export default function DrawingCanvas({
       return;
     }
 
-    // End dragging elements
     if (mouseModeRef.current === 'dragging_elements') {
       mouseModeRef.current = 'idle';
       dragInitialElementsRef.current = [];
@@ -1376,20 +1072,18 @@ export default function DrawingCanvas({
       return;
     }
 
-    // End marquee box selection
     if (mouseModeRef.current === 'marquee_selecting') {
       mouseModeRef.current = 'idle';
       setSelectionBox(null);
       return;
     }
 
-    // End drawing element
     if (mouseModeRef.current === 'drawing' && currentElementRef.current) {
       mouseModeRef.current = 'idle';
       const newEl = currentElementRef.current;
       currentElementRef.current = null;
       commitElements([...elements, newEl]);
-      
+
       if (newEl.type !== 'pencil') {
         setTool('select');
         setSelectedIds([newEl.id]);
@@ -1402,91 +1096,7 @@ export default function DrawingCanvas({
     mouseModeRef.current = 'idle';
   };
 
-  // Touch Handlers for Mobile
-  const initialTouchDistanceRef = useRef<number | null>(null);
-  const initialZoomRef = useRef<number>(1);
-
-  const getDistance = (touches: React.TouchList) => {
-    return Math.sqrt(
-      Math.pow(touches[0].clientX - touches[1].clientX, 2) +
-      Math.pow(touches[0].clientY - touches[1].clientY, 2)
-    );
-  };
-
-  const getCenter = (touches: React.TouchList) => {
-    return {
-      x: (touches[0].clientX + touches[1].clientX) / 2,
-      y: (touches[0].clientY + touches[1].clientY) / 2,
-    };
-  };
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    // Only map single touches to drawing/mouse actions
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      const synthEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        button: 0,
-        shiftKey: false,
-        buttons: 1
-      } as unknown as React.MouseEvent<HTMLCanvasElement>;
-      handleMouseDown(synthEvent);
-    } 
-    else if (e.touches.length === 2) {
-      // 2 fingers = pan & zoom
-      // Cancel drawing if it was happening
-      if (mouseModeRef.current === 'drawing' && currentElementRef.current) {
-        currentElementRef.current = null;
-        renderCanvas();
-      }
-      mouseModeRef.current = 'panning';
-      initialTouchDistanceRef.current = getDistance(e.touches);
-      initialZoomRef.current = zoom;
-      
-      const center = getCenter(e.touches);
-      panStartRef.current = { x: center.x - pan.x, y: center.y - pan.y };
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 1) {
-      if (mouseModeRef.current === 'panning') return;
-      const touch = e.touches[0];
-      const synthEvent = {
-        clientX: touch.clientX,
-        clientY: touch.clientY,
-        buttons: 1
-      } as unknown as React.MouseEvent<HTMLCanvasElement>;
-      handleMouseMove(synthEvent);
-    } 
-    else if (e.touches.length === 2 && initialTouchDistanceRef.current !== null) {
-      const center = getCenter(e.touches);
-      const distance = getDistance(e.touches);
-      
-      // Zoom
-      const scale = distance / initialTouchDistanceRef.current;
-      const newZoom = Math.max(0.2, Math.min(3, initialZoomRef.current * scale));
-      
-      setPan({
-        x: center.x - panStartRef.current.x,
-        y: center.y - panStartRef.current.y,
-      });
-      setZoom(newZoom);
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.touches.length === 0) {
-      if (mouseModeRef.current !== 'panning') {
-        handleMouseUp();
-      }
-      initialTouchDistanceRef.current = null;
-      mouseModeRef.current = 'idle';
-    }
-  };
-
-  // Keyboard Shortcuts (Delete selected items, Undo, Redo, Tools)
+  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (editingText) return;
@@ -1512,7 +1122,7 @@ export default function DrawingCanvas({
           commitElements(remaining);
         }
       }
-      // Tool hotkeys (0-9)
+      // Tool Hotkeys
       if (e.key === 'h' || e.key === '0') setTool('hand');
       if (e.key === 'v' || e.key === '1') setTool('select');
       if (e.key === 'p' || e.key === '2') setTool('pencil');
@@ -1542,8 +1152,8 @@ export default function DrawingCanvas({
   // Zoom Scroll Handler
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    const newZoom = Math.max(0.2, Math.min(3, zoom * zoomFactor));
+    const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+    const newZoom = Math.max(0.2, Math.min(4, zoom * zoomFactor));
 
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -1569,9 +1179,9 @@ export default function DrawingCanvas({
     link.click();
   };
 
-  // Contextual Cursor Indicator
   const getCanvasCursor = () => {
-    if (tool === 'hand' || isSpacePressed) return isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab';
+    if (tool === 'hand' || isSpacePressed)
+      return isPanningRef.current ? 'cursor-grabbing' : 'cursor-grab';
     switch (tool) {
       case 'select':
         return selectedIds.length > 0 ? 'cursor-move' : 'cursor-default';
@@ -1591,8 +1201,8 @@ export default function DrawingCanvas({
   };
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -1605,9 +1215,9 @@ export default function DrawingCanvas({
           handleInsertImage(files[0]);
         }
       }}
-      className="relative w-full h-full flex flex-col bg-[var(--discord-canvas)] overflow-hidden select-none font-sans"
+      className="relative w-full h-full flex flex-col bg-[#141414] overflow-hidden select-none font-sansation"
     >
-      {/* Hidden Image File Input */}
+      {/* Input de Imagem Invisível */}
       <input
         type="file"
         ref={imageInputRef}
@@ -1622,296 +1232,239 @@ export default function DrawingCanvas({
         className="hidden"
       />
 
-      {/* Active Collaborators Presence Pill (Discord Style) */}
-      {workspaceId && notaId && isCollaborative && (
-        <div className="absolute top-4 right-4 z-50 flex items-center gap-2 bg-[var(--discord-sidebar)]/85 hover:bg-[var(--discord-sidebar)] backdrop-blur-md px-2.5 py-1 rounded-full border border-[var(--discord-border)] shadow-lg shadow-black/30 pointer-events-auto transition-all select-none">
-          {status !== 'connected' && (
-            <span className="text-[10px] font-mono text-[var(--discord-text-muted)]">
-              {status === 'connecting' ? 'Conectando...' : 'Offline'}
-            </span>
-          )}
-          <div className="flex -space-x-1.5 items-center">
-            {users.map((u: any, i: number) => {
-              const displayName = u.username ? `@${u.username}` : (u.name || 'Anônimo');
-              return (
-                <div
-                  key={u.id || i}
-                  className="relative group/canvas-avatar cursor-pointer"
-                >
-                  <div
-                    className="w-7 h-7 rounded-full overflow-hidden border-2 border-[var(--discord-sidebar)] shadow-xs flex items-center justify-center text-[10px] text-white font-bold transition-transform duration-150 group-hover/canvas-avatar:scale-115 group-hover/canvas-avatar:z-20 relative"
-                    style={{ backgroundColor: u.color || 'var(--brand)' }}
-                  >
-                    {u.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={u.avatarUrl}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <span>{(u.name || u.username || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-
-                  {/* Tooltip on hover */}
-                  <div className="absolute right-0 top-full mt-1.5 hidden group-hover/canvas-avatar:flex flex-col items-center z-50 pointer-events-none animate-smooth-pop">
-                    <div className="px-2 py-0.5 rounded bg-[var(--discord-user-bar)] border border-[var(--discord-border)] shadow-xl text-[11px] font-medium text-white whitespace-nowrap">
-                      {displayName}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {users.length > 1 && (
-            <span className="text-[10px] font-mono text-[var(--discord-text-muted)] pl-0.5">
-              {users.length}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Top Floating Toolbar (Tools Menu with Number Badges) */}
-      <div className="absolute md:top-4 md:bottom-auto bottom-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 bg-[var(--discord-sidebar)]/95 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] px-2 py-1.5 shadow-xl shadow-black/30 max-w-[95vw] overflow-x-auto no-scrollbar">
-        {/* Hand Navigation Tool (0) */}
+      {/* Barra de Ferramentas Flutuante Superior */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 bg-[#181818]/95 backdrop-blur-md border border-white/10 p-1 rounded-none shadow-2xl max-w-[95vw] overflow-x-auto no-scrollbar select-none font-sansation">
+        {/* Hand (0) */}
         <button
           type="button"
           onClick={() => {
             setTool('hand');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'hand'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="Mão / Navegar (0 ou H)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
             <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
             <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
             <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             0
           </span>
         </button>
 
-        {/* Selection Tool (1) */}
+        {/* Select (1) */}
         <button
           type="button"
-          onClick={() => {
-            setTool('select');
-          }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          onClick={() => setTool('select')}
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'select'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
-          title="Seleção / Mover (1 ou V) - Arraste no vazio para selecionar múltiplos"
+          title="Seleção / Mover (1 ou V)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
             <path d="m13 13 6 6"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             1
           </span>
         </button>
 
-        {/* Pencil Tool (2) */}
+        {/* Pencil (2) */}
         <button
           type="button"
           onClick={() => {
             setTool('pencil');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'pencil'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
-          title="Lápis / Caneta Livre (2 ou P)"
+          title="Lápis Livre (2 ou P)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             2
           </span>
         </button>
 
-        {/* Rectangle Tool (3) */}
+        {/* Rectangle (3) */}
         <button
           type="button"
           onClick={() => {
             setTool('rectangle');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'rectangle'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="Retângulo (3 ou R)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="18" height="18" x="3" y="3" rx="2"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="0"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             3
           </span>
         </button>
 
-        {/* Ellipse Tool (4) */}
+        {/* Ellipse (4) */}
         <button
           type="button"
           onClick={() => {
             setTool('ellipse');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'ellipse'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="Círculo / Elipse (4 ou O)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             4
           </span>
         </button>
 
-        {/* Arrow Tool (5) */}
+        {/* Arrow (5) */}
         <button
           type="button"
           onClick={() => {
             setTool('arrow');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'arrow'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="Seta Conectora (5 ou A)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             5
           </span>
         </button>
 
-        {/* Line Tool (6) */}
+        {/* Line (6) */}
         <button
           type="button"
           onClick={() => {
             setTool('line');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'line'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
-          title="Linha (6 ou L)"
+          title="Linha Reta (6 ou L)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="19" x2="19" y2="5"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             6
           </span>
         </button>
 
-        {/* Text Tool (7) */}
+        {/* Text (7) */}
         <button
           type="button"
           onClick={() => {
             setTool('text');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'text'
-              ? 'bg-[var(--brand)] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-white text-black font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
-          title="Texto (7 ou T) - Fonte Short Stack"
+          title="Texto (7 ou T)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="4 7 4 4 20 4 20 7"/>
             <line x1="9" y1="20" x2="15" y2="20"/>
             <line x1="12" y1="4" x2="12" y2="20"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             7
           </span>
         </button>
 
-        {/* Image Tool (8) */}
+        {/* Image (8) */}
         <button
           type="button"
-          onClick={() => {
-            imageInputRef.current?.click();
-          }}
-          className="relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]"
-          title="Adicionar Imagem (8 ou I / Ctrl+V / Arrastar para o canvas)"
+          onClick={() => imageInputRef.current?.click()}
+          className="relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer text-zinc-400 hover:text-white hover:bg-white/10"
+          title="Adicionar Imagem (8 ou I)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="18" height="18" x="3" y="3" rx="2"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="0"/>
             <circle cx="9" cy="9" r="2"/>
             <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             8
           </span>
         </button>
 
-        {/* Eraser Tool (9) */}
+        {/* Eraser (9) */}
         <button
           type="button"
           onClick={() => {
             setTool('eraser');
             setSelectedIds([]);
           }}
-          className={`relative w-8 h-8 flex items-center justify-center rounded-[5px] text-xs transition-colors cursor-pointer ${
+          className={`relative w-8 h-8 flex items-center justify-center rounded-none text-xs transition-colors cursor-pointer ${
             tool === 'eraser'
-              ? 'bg-[#ed4245] text-white shadow-xs font-bold'
-              : 'text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)]'
+              ? 'bg-red-500 text-white font-bold shadow-xs'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
           }`}
           title="Borracha (9 ou E)"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
             <path d="M22 21H7"/>
             <path d="m5 11 9 9"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-[3px] bg-[var(--discord-input)] border border-[var(--discord-border)] text-[var(--discord-text-muted)] leading-none select-none shadow-xs">
+          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
             9
           </span>
         </button>
 
-        <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-1" />
+        <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
 
-        {/* Insert Note Container Button (Icon only) */}
+        {/* Insert Note Container */}
         <button
           type="button"
           onClick={() => setPickerModal('nota')}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
-          title="Inserir container de Nota no Desenho"
+          className="w-8 h-8 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="Inserir Nota no Canvas"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/>
@@ -1919,247 +1472,154 @@ export default function DrawingCanvas({
           </svg>
         </button>
 
-        {/* Insert Card Container Button (Icon only) */}
+        {/* Insert Flashcard Container */}
         <button
           type="button"
           onClick={() => setPickerModal('card')}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
-          title="Inserir container de Flashcard no Desenho"
+          className="w-8 h-8 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="Inserir Flashcard no Canvas"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="18" height="14" x="3" y="5" rx="2"/>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect width="18" height="14" x="3" y="5" rx="0"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
             <line x1="12" y1="17" x2="12" y2="13"/>
             <line x1="10" y1="15" x2="14" y2="15"/>
           </svg>
         </button>
 
-        {/* Insert Math Equation Button */}
+        {/* Insert Math Equation */}
         <button
           type="button"
           onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer font-mono font-bold text-[11px]"
-          title="Inserir Equação Matemática (LaTeX / KaTeX)"
+          className="w-8 h-8 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer font-mono font-bold text-xs"
+          title="Inserir Equação Matemática LaTeX"
         >
           f(x)
         </button>
 
-        {/* Insert YouTube Video Button */}
+        {/* Insert YouTube Video */}
         <button
           type="button"
           onClick={() => setIsYouTubeModalOpen(true)}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] transition-colors cursor-pointer"
+          className="w-8 h-8 flex items-center justify-center rounded-none text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           title="Inserir Vídeo do YouTube"
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/>
             <polygon points="10 15 15 12 10 9 10 15"/>
           </svg>
         </button>
 
-        <div className="w-[1px] h-4 bg-[var(--discord-border)] mx-1" />
+        <div className="w-[1px] h-4 bg-white/10 mx-1 shrink-0" />
 
-        {/* Undo / Redo */}
+        {/* Botão de abrir/fechar painel de estilos */}
         <button
           type="button"
-          onClick={handleUndo}
-          disabled={historyIndex <= 0}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-          title="Desfazer (Ctrl + Z)"
+          onClick={() => setIsStylePanelOpen((prev) => !prev)}
+          className={`w-8 h-8 flex items-center justify-center rounded-none transition-colors cursor-pointer ${
+            isStylePanelOpen
+              ? 'bg-white text-black font-bold'
+              : 'text-zinc-400 hover:text-white hover:bg-white/10'
+          }`}
+          title="Estilo (Cores e Espessura)"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 7v6h6"/>
-            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleRedo}
-          disabled={historyIndex >= history.length - 1}
-          className="w-8 h-8 flex items-center justify-center rounded-[5px] text-[var(--discord-text-channel)] hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
-          title="Refazer (Ctrl + Y)"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 7v6h-6"/>
-            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
-          </svg>
+          <div
+            className="w-3.5 h-3.5 border border-white/40"
+            style={{ backgroundColor: strokeColor }}
+          />
         </button>
       </div>
 
-      {/* Left Floating Style Settings Palette */}
-      <div className="absolute top-20 left-4 z-20 flex flex-col gap-3 bg-[var(--discord-sidebar)]/95 backdrop-blur-md border border-[var(--discord-border)] rounded-[8px] p-3 shadow-xl shadow-black/30 text-xs text-[var(--discord-text-primary)] w-44">
-        {/* Stroke Color */}
-        <div className="flex flex-col gap-1.5">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Cor do Traço</span>
-          <div className="grid grid-cols-3 gap-1.5">
-            {STROKE_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setStrokeColor(c)}
-                className={`w-5 h-5 rounded-full border border-black/20 transition-all cursor-pointer ${
-                  strokeColor === c ? 'scale-115 ring-2 ring-[var(--brand)] shadow-xs' : 'hover:scale-110 opacity-80 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
+      {/* Painel Flutuante Lateral de Estilo (Cores e Espessura) */}
+      {isStylePanelOpen && (
+        <div className="absolute top-16 left-4 z-40 flex flex-col gap-3 bg-[#181818]/95 backdrop-blur-md border border-white/10 p-3 rounded-none shadow-2xl text-xs text-white w-48 font-sansation animate-in fade-in zoom-in-95 duration-100">
+          {/* Cor do Traço */}
+          <div className="flex flex-col gap-1.5">
+            <span className="font-semibold text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+              Cor do Traço
+            </span>
+            <div className="grid grid-cols-4 gap-1.5">
+              {STROKE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setStrokeColor(c)}
+                  className={`w-6 h-6 rounded-none border transition-transform cursor-pointer ${
+                    strokeColor === c
+                      ? 'scale-110 border-white ring-1 ring-white'
+                      : 'border-white/15 hover:scale-105 opacity-80 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Cor do Preenchimento */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-white/10">
+            <span className="font-semibold text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+              Preenchimento
+            </span>
+            <div className="grid grid-cols-4 gap-1.5">
+              {FILL_COLORS.map((fc, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setFillColor(fc)}
+                  className={`w-6 h-6 rounded-none border flex items-center justify-center transition-transform cursor-pointer ${
+                    fillColor === fc
+                      ? 'scale-110 border-white ring-1 ring-white'
+                      : 'border-white/15 hover:scale-105 opacity-80 hover:opacity-100'
+                  }`}
+                  style={{ backgroundColor: fc === 'transparent' ? '#141414' : fc }}
+                >
+                  {fc === 'transparent' && <span className="text-[10px] text-zinc-500">✕</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Espessura do Traço */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-[10px] uppercase tracking-wider text-zinc-500 font-mono">
+                Espessura
+              </span>
+              <span className="text-xs font-mono font-bold text-white">{strokeWidth}px</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 4, 8].map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  onClick={() => setStrokeWidth(w)}
+                  className={`flex-1 h-6 flex items-center justify-center rounded-none border text-[11px] font-mono cursor-pointer transition-colors ${
+                    strokeWidth === w
+                      ? 'bg-white text-black font-bold border-white'
+                      : 'bg-[#121212] text-zinc-400 hover:text-white border-white/10 hover:bg-white/5'
+                  }`}
+                >
+                  {w}px
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+      )}
 
-        {/* Fill Color */}
-        <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--discord-border)]">
-          <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Preenchimento</span>
-          <div className="grid grid-cols-4 gap-1.5">
-            {FILL_COLORS.map((fc, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => setFillColor(fc)}
-                className={`w-5 h-5 rounded-[4px] border flex items-center justify-center transition-all cursor-pointer ${
-                  fillColor === fc ? 'scale-115 ring-2 ring-[var(--brand)] border-[var(--brand)] shadow-xs' : 'border-[var(--discord-border)] hover:scale-105 opacity-80 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: fc === 'transparent' ? 'var(--discord-input)' : fc }}
-              >
-                {fc === 'transparent' && <span className="text-[9px] text-[var(--discord-text-muted)]">✕</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Stroke Width Slider (Force Bar / Range) */}
-        <div className="flex flex-col gap-2 pt-2 border-t border-[var(--discord-border)]">
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-[10px] uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">Espessura</span>
-            <span className="text-[11px] font-mono text-[var(--brand)] font-bold">{strokeWidth}px</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min="1"
-              max="24"
-              step="1"
-              value={strokeWidth}
-              onChange={(e) => setStrokeWidth(Number(e.target.value))}
-              className="w-full h-1.5 bg-[var(--discord-input)] rounded appearance-none cursor-pointer accent-[var(--brand)] hover:bg-[var(--discord-border)] transition-colors"
-            />
-          </div>
-          {/* Dynamic stroke preview bar */}
-          <div className="h-4 flex items-center justify-center bg-[var(--discord-input)] rounded-[4px] border border-[var(--discord-border)] px-2 overflow-hidden">
-            <div
-              className="rounded-full transition-all"
-              style={{
-                width: '100%',
-                height: `${Math.min(14, strokeWidth)}px`,
-                backgroundColor: strokeColor === '#ffffff' && resolvedTheme === 'light' ? '#000000' : strokeColor,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Insert Math Button in Side Palette */}
-        <button
-          type="button"
-          onClick={() => setMathModal({ visible: true, editingElementId: null, initialLatex: '' })}
-          className="mt-1 py-1.5 px-2 rounded-[4px] bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer font-medium"
-          title="Inserir Equação Matemática (LaTeX / KaTeX)"
-        >
-          <span className="font-mono font-bold text-[11px] text-[var(--brand)]">f(x)</span>
-          <span>Equação</span>
-        </button>
-
-        {/* Export Button */}
-        <button
-          type="button"
-          onClick={handleExportPNG}
-          className="py-1.5 px-2 rounded-[4px] bg-[var(--discord-hover)] hover:bg-[var(--discord-active)] text-[var(--discord-text-primary)] border border-[var(--discord-border)] flex items-center justify-center gap-1.5 text-xs transition-colors cursor-pointer font-medium"
-          title="Exportar como imagem PNG"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-        </button>
-      </div>
-
-      {/* Main Canvas with dynamic contextual cursor */}
+      {/* HTML5 Canvas Surface */}
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={() => {
-          if (isCollaborative && notaId) {
-            broadcastCursor(0, 0, false);
-          }
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onDoubleClick={handleDoubleClick}
         onWheel={handleWheel}
-        className={`w-full h-full ${getCanvasCursor()}`}
-        style={{ touchAction: 'none' }}
+        className={`w-full h-full block ${getCanvasCursor()}`}
       />
 
-      {/* Real-time Multiplayer Cursors (Miro/Figma style) */}
-      {workspaceId && notaId && isCollaborative && (
-        <LiveCursors
-          cursors={cursors}
-          transformCoord={(cursor) => worldToScreen(cursor.x, cursor.y)}
-        />
-      )}
-
-      {/* Seamless Inline Text Input Over Canvas (Short Stack Google Font, Multi-line) */}
-      {editingText && (
-        <div
-          style={{
-            position: 'absolute',
-            left: `${worldToScreen(editingText.worldX, editingText.worldY).x}px`,
-            top: `${worldToScreen(editingText.worldX, editingText.worldY).y - 12 * zoom}px`,
-            zIndex: 100,
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <textarea
-            ref={textareaRef}
-            value={editingText.text}
-            onChange={(e) => setEditingText((prev) => (prev ? { ...prev, text: e.target.value } : null))}
-            onBlur={() => {
-              if (Date.now() - textMountedAtRef.current < 250) {
-                textareaRef.current?.focus();
-                return;
-              }
-              handleFinishText();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                handleFinishText();
-              }
-            }}
-            placeholder="Digite seu texto..."
-            autoFocus
-            rows={Math.max(2, (editingText.text.match(/\n/g) || []).length + 1)}
-            className="bg-[var(--discord-sidebar)]/95 border border-[var(--brand)] rounded-[6px] outline-none text-white p-2.5 m-0 resize-none shadow-2xl"
-            style={{
-              color: strokeColor === '#ffffff' ? '#ffffff' : strokeColor,
-              fontSize: `${Math.max(14, 18 * zoom)}px`,
-              lineHeight: 1.4,
-              fontFamily: '"Short Stack", "Virgil", cursive, sans-serif',
-              minWidth: `${Math.max(160, 160 * zoom)}px`,
-              minHeight: `${Math.max(42, 42 * zoom)}px`,
-              width: `${Math.max(180, (Math.max(...(editingText.text || '').split('\n').map((l) => l.length), 1) + 4) * 12 * zoom)}px`,
-              caretColor: 'var(--brand)',
-            }}
-          />
-        </div>
-      )}
-
-      {/* Interactive Floating Note, Card, Math & YouTube Containers inside Canvas */}
+      {/* Interactive Embedded Containers (Cards, Notes, Math, YouTube) */}
       {elements
-        .filter((el) => el.type === 'note_card' || el.type === 'flashcard' || el.type === 'math' || el.type === 'youtube')
+        .filter((el) => ['note_card', 'flashcard', 'math', 'youtube'].includes(el.type))
         .map((el) => (
           <DrawingItemContainer
             key={el.id}
@@ -2169,68 +1629,66 @@ export default function DrawingCanvas({
             isSelected={selectedIds.includes(el.id)}
             onSelect={() => setSelectedIds([el.id])}
             onUpdateElement={(updated) => {
-              const updatedList = elements.map((item) => (item.id === updated.id ? updated : item));
-              commitElements(updatedList);
+              const next = elements.map((item) => (item.id === updated.id ? updated : item));
+              commitElements(next);
             }}
             onDeleteElement={() => {
               const remaining = elements.filter((item) => item.id !== el.id);
               commitElements(remaining);
-              setSelectedIds((prev) => prev.filter((id) => id !== el.id));
+              setSelectedIds([]);
             }}
             onOpenNota={onOpenNota}
             onOpenCard={onOpenCard}
-            onEditMath={(mathEl) =>
+            onEditMath={(item) =>
               setMathModal({
                 visible: true,
-                editingElementId: mathEl.id,
-                initialLatex: mathEl.latex || '',
+                editingElementId: item.id,
+                initialLatex: item.latex || '',
               })
             }
           />
         ))}
 
-      {/* Item Picker Modal (Add Note or Card) */}
-      {pickerModal && (
-        <DrawingItemPickerModal
-          type={pickerModal}
-          notas={notas}
-          workspaceId={workspaceId}
-          onSelect={(selectedItem) => handleInsertItem(selectedItem, pickerModal)}
-          onClose={() => setPickerModal(null)}
+      {/* Inline Text Area Editor for Double-Click / Insert Text */}
+      {editingText && (
+        <textarea
+          ref={textareaRef}
+          value={editingText.text}
+          onChange={(e) => setEditingText({ ...editingText, text: e.target.value })}
+          style={{
+            position: 'absolute',
+            left: `${editingText.worldX * zoom + pan.x}px`,
+            top: `${editingText.worldY * zoom + pan.y}px`,
+            fontSize: `${18 * zoom}px`,
+            color: strokeColor,
+            fontFamily: "'Sansation', sans-serif",
+            lineHeight: 1.3,
+            background: 'transparent',
+            border: '1px dashed rgba(255,255,255,0.4)',
+            outline: 'none',
+            padding: '2px 4px',
+            resize: 'none',
+            minWidth: '100px',
+            minHeight: '30px',
+            zIndex: 60,
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setEditingText(null);
+            }
+          }}
         />
       )}
 
-      {/* Math Equation Modal */}
-      <MathEquationModal
-        isOpen={mathModal.visible}
-        initialLatex={mathModal.initialLatex}
-        onClose={() => setMathModal({ visible: false, editingElementId: null, initialLatex: '' })}
-        onConfirm={handleConfirmMath}
-      />
-
-      {/* YouTube Video Modal */}
-      <DrawingYouTubeModal
-        isOpen={isYouTubeModalOpen}
-        onClose={() => setIsYouTubeModalOpen(false)}
-        onConfirm={handleConfirmYouTube}
-      />
-
-      {/* Bottom Zoom and Pan Info */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 bg-[var(--discord-sidebar)]/90 backdrop-blur-md border border-[var(--discord-border)] rounded-[6px] px-2.5 py-1 text-xs text-[var(--discord-text-muted)] shadow-lg shadow-black/20">
+      {/* Bottom-Left HUD: Zoom & Desfazer / Refazer */}
+      <div className="absolute bottom-4 left-4 z-40 flex items-center gap-1 bg-[#181818]/95 backdrop-blur-md border border-white/10 p-1 rounded-none shadow-2xl select-none font-sansation text-xs text-zinc-300">
         <button
           type="button"
-          onClick={() => setZoom((z) => Math.max(0.2, z - 0.1))}
-          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded px-1.5 py-0.5 cursor-pointer transition-colors"
+          onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))}
+          className="w-7 h-7 flex items-center justify-center rounded-none hover:bg-white/10 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+          title="Diminuir Zoom"
         >
           -
-        </button>
-        <span className="font-mono">{Math.round(zoom * 100)}%</span>
-        <button
-          type="button"
-          onClick={() => setZoom((z) => Math.min(3, z + 0.1))}
-          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded px-1.5 py-0.5 cursor-pointer transition-colors"
-        >
-          +
         </button>
         <button
           type="button"
@@ -2238,11 +1696,158 @@ export default function DrawingCanvas({
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
-          className="hover:text-[var(--discord-text-primary)] hover:bg-[var(--discord-hover)] rounded pl-1.5 pr-1 py-0.5 border-l border-[var(--discord-border)] cursor-pointer transition-colors"
+          className="px-2 h-7 flex items-center justify-center rounded-none hover:bg-white/10 hover:text-white transition-colors cursor-pointer font-mono text-[11px]"
+          title="Resetar Zoom (100%)"
         >
-          Reset
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          onClick={() => setZoom((z) => Math.min(4, z + 0.15))}
+          className="w-7 h-7 flex items-center justify-center rounded-none hover:bg-white/10 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+          title="Aumentar Zoom"
+        >
+          +
+        </button>
+
+        <div className="w-[1px] h-4 bg-white/10 mx-1" />
+
+        <button
+          type="button"
+          onClick={handleUndo}
+          disabled={historyIndex <= 0}
+          className="w-7 h-7 flex items-center justify-center rounded-none hover:bg-white/10 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          title="Desfazer (Ctrl+Z)"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7v6h6"/>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleRedo}
+          disabled={historyIndex >= history.length - 1}
+          className="w-7 h-7 flex items-center justify-center rounded-none hover:bg-white/10 hover:text-white disabled:opacity-25 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          title="Refazer (Ctrl+Y)"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 7v6h-6"/>
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+          </svg>
         </button>
       </div>
+
+      {/* Bottom-Right HUD: Exportar PNG */}
+      <div className="absolute bottom-4 right-4 z-40 flex items-center gap-2 select-none font-sansation">
+        <button
+          type="button"
+          onClick={handleExportPNG}
+          className="h-8 px-3 rounded-none bg-[#181818]/95 backdrop-blur-md border border-white/10 text-zinc-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer text-xs font-medium flex items-center gap-1.5 shadow-2xl"
+          title="Exportar como imagem PNG"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Exportar PNG</span>
+        </button>
+      </div>
+
+      {/* Modais */}
+      {pickerModal && (
+        <DrawingItemPickerModal
+          type={pickerModal}
+          notas={notas}
+          workspaceId={workspaceId}
+          onSelect={(item) => {
+            const center = screenToWorld(
+              (containerRef.current?.clientWidth || 800) / 2,
+              (containerRef.current?.clientHeight || 600) / 2
+            );
+            const isCard = pickerModal === 'card';
+            const newEl: DrawingElement = {
+              id: `item-${Date.now()}`,
+              type: isCard ? 'flashcard' : 'note_card',
+              x: center.x - 150,
+              y: center.y - 100,
+              width: 300,
+              height: 200,
+              itemNota: item,
+              strokeColor: '#ffffff',
+              fillColor: 'transparent',
+              strokeWidth: 1,
+            };
+            commitElements([...elements, newEl]);
+            setSelectedIds([newEl.id]);
+            setTool('select');
+          }}
+          onClose={() => setPickerModal(null)}
+        />
+      )}
+
+      <MathEquationModal
+        isOpen={mathModal.visible}
+        initialLatex={mathModal.initialLatex}
+        onClose={() => setMathModal({ visible: false, editingElementId: null, initialLatex: '' })}
+        onConfirm={(latex) => {
+          if (mathModal.editingElementId) {
+            const next = elements.map((item) =>
+              item.id === mathModal.editingElementId ? { ...item, latex } : item
+            );
+            commitElements(next);
+          } else {
+            const center = screenToWorld(
+              (containerRef.current?.clientWidth || 800) / 2,
+              (containerRef.current?.clientHeight || 600) / 2
+            );
+            const newEl: DrawingElement = {
+              id: `math-${Date.now()}`,
+              type: 'math',
+              x: center.x - 140,
+              y: center.y - 60,
+              width: 280,
+              height: 120,
+              latex,
+              strokeColor: '#ffffff',
+              fillColor: 'transparent',
+              strokeWidth: 1,
+            };
+            commitElements([...elements, newEl]);
+            setSelectedIds([newEl.id]);
+            setTool('select');
+          }
+        }}
+      />
+
+      <DrawingYouTubeModal
+        isOpen={isYouTubeModalOpen}
+        onClose={() => setIsYouTubeModalOpen(false)}
+        onConfirm={(youtubeId, url) => {
+          const center = screenToWorld(
+            (containerRef.current?.clientWidth || 800) / 2,
+            (containerRef.current?.clientHeight || 600) / 2
+          );
+          const newEl: DrawingElement = {
+            id: `yt-${Date.now()}`,
+            type: 'youtube',
+            x: center.x - 200,
+            y: center.y - 120,
+            width: 400,
+            height: 240,
+            youtubeId,
+            youtubeUrl: url,
+            strokeColor: '#ffffff',
+            fillColor: 'transparent',
+            strokeWidth: 1,
+          };
+          commitElements([...elements, newEl]);
+          setSelectedIds([newEl.id]);
+          setTool('select');
+        }}
+      />
     </div>
   );
 }

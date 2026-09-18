@@ -277,12 +277,12 @@ export default function ObsidianGraph({
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Discord Dark Canvas Background (#1e1f22)
+      // Dark Canvas Background (#1e1f22)
       const bgColor = isLight ? '#f2f3f5' : '#1e1f22';
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, width, height);
 
-      // Subtle Discord dotted grid pattern
+      // Dotted grid pattern
       const currentTransform = transformRef.current;
       const dotSpacing = 36 * currentTransform.k;
       if (dotSpacing > 14) {
@@ -389,7 +389,7 @@ export default function ObsidianGraph({
           node.color !== '#4e5058' &&
           node.color !== '#80848e';
 
-        // Default neutral color is Discord Dark Surface gray (#4e5058 in dark / #94a3b8 in light)
+        // Default neutral color is Dark Surface gray (#4e5058 in dark / #94a3b8 in light)
         const baseColor = hasCustomGroupColor
           ? node.color
           : isLight

@@ -334,32 +334,32 @@ export default function WorkspaceSettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-smooth-fade"
+      className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 font-sansation"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[680px] h-[520px] bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-lg shadow-2xl flex overflow-hidden animate-smooth-pop relative select-none"
+        className="w-full max-w-[680px] h-[520px] bg-[#181818] border border-white/10 rounded-none shadow-2xl flex overflow-hidden animate-in zoom-in-95 duration-150 relative select-none"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Left Discord Settings Nav */}
-        <aside className="w-[200px] min-w-[200px] bg-[var(--discord-sidebar)] border-r border-[var(--discord-border)] p-4 flex flex-col justify-between">
+        {/* Left Settings Nav */}
+        <aside className="w-[200px] min-w-[200px] bg-[#141414] border-r border-white/10 p-4 flex flex-col justify-between">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] px-2.5 py-1 font-mono">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 px-2.5 py-1">
               {workspace.nome}
             </span>
 
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
-              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-none transition-colors flex items-center gap-2 cursor-pointer border-none ${
                 activeTab === 'overview'
-                  ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
-                  : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
+                  ? 'bg-white/10 text-white font-medium'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
               </svg>
               <span>Visão Geral</span>
             </button>
@@ -367,10 +367,10 @@ export default function WorkspaceSettingsModal({
             <button
               type="button"
               onClick={() => setActiveTab('collaborators')}
-              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-none transition-colors flex items-center gap-2 cursor-pointer border-none ${
                 activeTab === 'collaborators'
-                  ? 'bg-[var(--discord-active)] text-[var(--foreground)]'
-                  : 'text-[var(--discord-text-muted)] hover:text-[var(--foreground)] hover:bg-[var(--discord-hover)]'
+                  ? 'bg-white/10 text-white font-medium'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -384,15 +384,15 @@ export default function WorkspaceSettingsModal({
 
             {isOwner && (
               <>
-                <div className="h-[1px] bg-[var(--discord-border)] my-2" />
+                <div className="h-[1px] bg-white/10 my-2" />
 
                 <button
                   type="button"
                   onClick={() => setActiveTab('danger')}
-                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-[4px] transition-colors flex items-center gap-2 cursor-pointer border-none ${
+                  className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-none transition-colors flex items-center gap-2 cursor-pointer border-none ${
                     activeTab === 'danger'
-                      ? 'bg-red-500/10 text-red-500'
-                      : 'text-red-400/80 hover:text-red-400 hover:bg-red-500/10'
+                      ? 'bg-red-500/10 text-red-400 font-medium'
+                      : 'text-zinc-500 hover:text-red-400 hover:bg-red-500/10'
                   }`}
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -409,29 +409,29 @@ export default function WorkspaceSettingsModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-full text-xs h-8 flex items-center justify-center gap-1.5 rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+            className="w-full text-xs h-8 flex items-center justify-center gap-1.5 rounded-none bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer"
           >
             <span>Fechar (ESC)</span>
           </button>
         </aside>
 
         {/* Right Settings Content Area */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-6 overflow-y-auto bg-[#181818]">
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <form onSubmit={handleSaveOverview} className="flex flex-col gap-5">
               <div>
-                <h3 className="text-base font-bold text-[var(--foreground)]">Visão Geral do Workspace</h3>
-                <p className="text-xs text-[var(--accents-5)] mt-0.5">
+                <h3 className="text-base font-bold text-white">Visão Geral do Workspace</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
                   Atualize o ícone de exibição e os detalhes fundamentais.
                 </p>
               </div>
 
               {/* Icon / Avatar preview and change */}
-              <div className="flex items-center gap-4 p-4 rounded-[6px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] relative">
+              <div className="flex items-center gap-4 p-4 rounded-none bg-white/[0.02] border border-white/10 relative">
                 <div
                   onClick={() => setIsPickerOpen(!isPickerOpen)}
-                  className="w-16 h-16 rounded-full border-2 border-dashed border-[var(--discord-border)] hover:border-[var(--brand)] transition-all flex items-center justify-center cursor-pointer relative overflow-hidden group shrink-0 bg-[var(--discord-input)]"
+                  className="w-16 h-16 rounded-none border border-dashed border-white/20 hover:border-white/50 transition-all flex items-center justify-center cursor-pointer relative overflow-hidden group shrink-0 bg-white/5"
                   title="Alterar emoji ou foto"
                 >
                   <WorkspaceIcon
@@ -442,18 +442,18 @@ export default function WorkspaceSettingsModal({
                     emojiClassName="text-2xl"
                   />
 
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity text-[10px] font-mono font-bold">
+                  <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity text-[10px] font-mono font-bold">
                     TROCAR
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5 flex-1">
-                  <span className="text-xs font-semibold text-[var(--foreground)]">Ícone do Workspace</span>
+                  <span className="text-xs font-semibold text-white">Ícone do Workspace</span>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setIsPickerOpen(!isPickerOpen)}
-                      className="h-7 px-2.5 text-[11px] font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="h-7 px-2.5 text-[11px] font-semibold rounded-none bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" />
@@ -471,7 +471,7 @@ export default function WorkspaceSettingsModal({
                           setIconPreview(null);
                           setIsPickerOpen(false);
                         }}
-                        className="text-[11px] text-[#f23f43] hover:text-red-300 transition-colors cursor-pointer px-2"
+                        className="text-[11px] text-zinc-500 hover:text-red-400 transition-colors cursor-pointer px-2"
                       >
                         Remover
                       </button>
@@ -484,8 +484,8 @@ export default function WorkspaceSettingsModal({
                     className="hidden"
                     onChange={handleFileChange}
                   />
-                  <span className="text-[11px] text-[var(--accents-5)]">
-                    Escolha um emoji no estilo Notion ou envie uma foto personalizada.
+                  <span className="text-[11px] text-zinc-500">
+                    Escolha um emoji ou envie uma foto personalizada.
                   </span>
                 </div>
 
@@ -519,7 +519,7 @@ export default function WorkspaceSettingsModal({
 
               {/* Name */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
                   NOME DO WORKSPACE
                 </label>
                 <input
@@ -527,31 +527,30 @@ export default function WorkspaceSettingsModal({
                   required
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  className="w-full h-9 px-3 text-sm bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                  className="w-full h-8 px-3 text-xs bg-white/5 border border-white/10 focus:border-white/30 text-white rounded-none outline-none transition-colors font-sansation"
                 />
               </div>
 
-              {/* Collaborative */}
-              <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-[6px] border border-[var(--discord-border)] bg-[var(--discord-sidebar)] hover:bg-[var(--discord-hover)] transition-colors">
-                <input
-                  type="checkbox"
-                  checked={isCollaborative}
-                  onChange={(e) => setIsCollaborative(e.target.checked)}
-                  className="w-4 h-4 rounded border-[var(--discord-border)] text-[var(--brand)] focus:ring-0 cursor-pointer"
-                />
-                <div className="flex flex-col">
-                  <span className="text-xs font-semibold text-[var(--foreground)]">Ativar Modo Colaborativo</span>
-                  <span className="text-[11px] text-[var(--discord-text-muted)]">
-                    Permite convidar membros para colaborar em tempo real com Live Cursors
+              {/* Collaborative Status */}
+              <div className="flex items-center justify-between p-3.5 rounded-none border border-white/10 bg-white/[0.02]">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold text-white">Colaboração e Membros</span>
+                  <span className="text-[11px] text-zinc-400">
+                    {isCollaborative
+                      ? 'Workspace colaborativo ativo. Membros podem editar notas e desenhar em tempo real.'
+                      : 'Workspace pessoal. Para torná-lo colaborativo, basta convidar membros pelo botão de compartilhamento.'}
                   </span>
                 </div>
-              </label>
+                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-none bg-white/5 border border-white/10 text-zinc-400 shrink-0 ml-3">
+                  {isCollaborative ? 'Colaborativo' : 'Pessoal'}
+                </span>
+              </div>
 
-              <div className="pt-3 border-t border-[var(--discord-border)] flex justify-end">
+              <div className="pt-3 border-t border-white/10 flex justify-end">
                 <button
                   type="submit"
                   disabled={!nome.trim() || isSaving}
-                  className="bg-[var(--brand)] hover:opacity-90 active:opacity-80 text-white text-xs h-9 px-5 font-semibold rounded-[4px] transition-all disabled:opacity-50 cursor-pointer"
+                  className="bg-white text-black hover:bg-zinc-200 text-xs h-8 px-5 font-bold rounded-none transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {isSaving ? 'Salvando...' : 'Salvar Alterações'}
                 </button>
@@ -563,23 +562,23 @@ export default function WorkspaceSettingsModal({
           {activeTab === 'collaborators' && (
             <div className="flex flex-col gap-5">
               <div>
-                <h3 className="text-base font-bold text-[var(--foreground)]">Colaboradores do Workspace</h3>
-                <p className="text-xs text-[var(--discord-text-muted)] mt-0.5">
+                <h3 className="text-base font-bold text-white">Colaboradores do Workspace</h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
                   Convide colegas para acessar e editar este workspace em tempo real.
                 </p>
               </div>
 
               {/* Invite Link */}
-              <div className="flex flex-col gap-2 p-3.5 rounded-lg bg-[var(--discord-sidebar)] border border-[var(--discord-border)]">
+              <div className="flex flex-col gap-2 p-3.5 rounded-none bg-white/[0.02] border border-white/10">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
                     LINK DE CONVITE
                   </span>
                   {inviteCode && !confirmResetLink && (
                     <button
                       type="button"
                       onClick={() => setConfirmResetLink(true)}
-                      className="text-[10px] text-[#949ba4] hover:text-[#f23f43] transition-colors cursor-pointer font-mono"
+                      className="text-[10px] text-zinc-400 hover:text-red-400 transition-colors cursor-pointer font-mono"
                     >
                       Redefinir link
                     </button>
@@ -587,8 +586,8 @@ export default function WorkspaceSettingsModal({
                 </div>
 
                 {confirmResetLink ? (
-                  <div className="p-2.5 rounded-[4px] bg-[#1e1f22] border border-[#383a40] flex items-center justify-between gap-2">
-                    <span className="text-xs text-[#dbdee1]">
+                  <div className="p-3 rounded-none bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                    <span className="text-xs text-zinc-300">
                       O link atual deixará de funcionar. Confirmar?
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -596,14 +595,14 @@ export default function WorkspaceSettingsModal({
                         type="button"
                         onClick={handleResetLink}
                         disabled={isResettingLink}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#da373b] text-white transition-colors cursor-pointer disabled:opacity-50"
+                        className="px-3 py-1 text-xs font-bold rounded-none bg-red-500 hover:bg-red-600 text-white transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {isResettingLink ? 'Redefinindo...' : 'Sim, redefinir'}
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmResetLink(false)}
-                        className="px-2.5 py-1 text-xs font-medium rounded-[4px] bg-[#313338] text-[#949ba4] hover:text-white transition-colors cursor-pointer"
+                        className="px-3 py-1 text-xs font-semibold rounded-none bg-white/5 text-zinc-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
                       >
                         Cancelar
                       </button>
@@ -616,30 +615,30 @@ export default function WorkspaceSettingsModal({
                       readOnly
                       value={loadingLink ? 'Carregando link...' : (inviteCode ? `${typeof window !== 'undefined' ? window.location.origin : ''}/invite/${inviteCode}` : '')}
                       placeholder="Carregando link..."
-                      className="flex-1 h-9 px-3 text-xs font-mono bg-[#1e1f22] border border-[#383a40] text-[#dbdee1] rounded-[4px] outline-none select-all"
+                      className="flex-1 h-8 px-3 text-xs font-mono bg-white/5 border border-white/10 text-zinc-300 rounded-none outline-none select-all"
                     />
                     <button
                       type="button"
                       onClick={handleCopyLink}
                       disabled={!inviteCode || loadingLink}
-                      className={`shrink-0 px-4 h-9 rounded-[4px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                      className={`shrink-0 px-4 h-8 rounded-none font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
                         isCopied
-                          ? 'bg-[#23a55a] text-white'
-                          : 'bg-[#20b8cd] hover:bg-[#1ba2b4] text-white'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-white text-black hover:bg-zinc-200'
                       }`}
                     >
                       {isCopied ? 'Copiado!' : 'Copiar Link'}
                     </button>
                   </div>
                 )}
-                <span className="text-[11px] text-[var(--discord-text-muted)]">
+                <span className="text-[11px] text-zinc-500">
                   Qualquer pessoa com este link pode ingressar diretamente no workspace.
                 </span>
               </div>
 
               {/* Search User & Invite */}
               <div className="flex flex-col gap-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
                   BUSCAR OU CONVIDAR POR E-MAIL
                 </span>
                 <form onSubmit={handleInvite} className="flex gap-2">
@@ -652,17 +651,17 @@ export default function WorkspaceSettingsModal({
                         setSearchQuery(e.target.value);
                         setInviteEmail(e.target.value);
                       }}
-                      className="w-full h-9 pl-3 pr-8 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                      className="w-full h-8 pl-3 pr-8 text-xs bg-white/5 border border-white/10 focus:border-white/30 text-white rounded-none outline-none transition-colors"
                     />
                     {isSearching && (
-                      <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-[#949ba4] border-t-[#20b8cd] rounded-full animate-spin" />
+                      <div className="absolute right-2.5 w-3.5 h-3.5 border-2 border-zinc-500 border-t-white rounded-full animate-spin" />
                     )}
                   </div>
                   {searchQuery.trim().includes('@') && (
                     <button
                       type="submit"
                       disabled={!inviteEmail.trim() || isInviting}
-                      className="bg-[#20b8cd] hover:bg-[#1ba2b4] text-white text-xs h-9 px-4 whitespace-nowrap font-semibold rounded-[4px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
+                      className="bg-white hover:bg-zinc-200 text-black text-xs h-8 px-4 whitespace-nowrap font-bold rounded-none shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       {isInviting ? 'Convidando...' : 'Convidar E-mail'}
                     </button>
@@ -671,13 +670,13 @@ export default function WorkspaceSettingsModal({
 
                 {/* Dropdown Results */}
                 {searchQuery.trim().length >= 2 && (
-                  <div className="mt-1 p-2 rounded-lg bg-[#1e1f22] border border-[#383a40] shadow-xl flex flex-col gap-1 max-h-[180px] overflow-y-auto">
+                  <div className="mt-1 p-1.5 rounded-none bg-[#141414] border border-white/10 shadow-2xl flex flex-col gap-1 max-h-[180px] overflow-y-auto">
                     {isSearching ? (
-                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                      <div className="py-2 text-center text-xs text-zinc-500">
                         Buscando usuários...
                       </div>
                     ) : searchResults.length === 0 ? (
-                      <div className="py-2 text-center text-xs text-[#949ba4]">
+                      <div className="py-2 text-center text-xs text-zinc-500">
                         Nenhum usuário encontrado para "{searchQuery}".
                       </div>
                     ) : (
@@ -689,10 +688,10 @@ export default function WorkspaceSettingsModal({
                         return (
                           <div
                             key={u.id}
-                            className="flex items-center justify-between p-2 rounded-md hover:bg-[#2b2d31] transition-colors gap-2"
+                            className="flex items-center justify-between p-2 rounded-none hover:bg-white/5 transition-colors gap-2"
                           >
                             <div className="flex items-center gap-2 overflow-hidden">
-                              <div className="w-6 h-6 rounded-full bg-[#2b2d31] border border-[#383a40] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
+                              <div className="w-6 h-6 rounded-none bg-white/10 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
                                 {u.avatarUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img src={u.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
@@ -702,14 +701,14 @@ export default function WorkspaceSettingsModal({
                               </div>
                               <div className="flex flex-col overflow-hidden text-left">
                                 <span className="text-xs font-medium text-white truncate">{u.name || u.username}</span>
-                                <span className="text-[10px] text-[#949ba4] font-mono truncate">
+                                <span className="text-[10px] text-zinc-500 font-mono truncate">
                                   {u.username ? `@${u.username}` : u.email}
                                 </span>
                               </div>
                             </div>
 
                             {isAlreadyMember ? (
-                              <span className="text-[10px] font-semibold text-[#23a55a] bg-[#23a55a]/10 border border-[#23a55a]/20 px-2 py-0.5 rounded-[4px]">
+                              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-none">
                                 Membro
                               </span>
                             ) : (
@@ -717,7 +716,7 @@ export default function WorkspaceSettingsModal({
                                 type="button"
                                 onClick={() => handleInviteUser(u)}
                                 disabled={isInvitingThis}
-                                className="shrink-0 bg-[#20b8cd] hover:bg-[#1ba2b4] text-white px-3 py-1 rounded-[4px] font-semibold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                                className="shrink-0 bg-white hover:bg-zinc-200 text-black px-3 py-1 rounded-none font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
                               >
                                 {isInvitingThis ? 'Adicionando...' : 'Convidar'}
                               </button>
@@ -732,12 +731,12 @@ export default function WorkspaceSettingsModal({
 
               {/* Active Members */}
               <div className="flex flex-col gap-2 mt-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--discord-text-muted)] font-mono">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
                   MEMBROS ATIVOS ({collaborators.length})
                 </span>
 
                 {collaborators.length === 0 ? (
-                  <div className="text-xs text-[var(--discord-text-muted)] p-4 text-center border border-dashed border-[var(--discord-border)] rounded-[4px]">
+                  <div className="text-xs text-zinc-500 p-4 text-center border border-dashed border-white/10 rounded-none">
                     Nenhum colaborador adicionado ainda.
                   </div>
                 ) : (
@@ -750,10 +749,10 @@ export default function WorkspaceSettingsModal({
                       return (
                         <div
                           key={c.id}
-                          className="flex items-center justify-between p-2.5 rounded-[4px] bg-[var(--discord-sidebar)] border border-[var(--discord-border)] text-xs"
+                          className="flex items-center justify-between p-2.5 rounded-none bg-white/[0.02] border border-white/10 text-xs"
                         >
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-[var(--discord-input)] overflow-hidden flex items-center justify-center text-[10px] font-bold text-white border border-[var(--discord-border)]">
+                            <div className="w-6 h-6 rounded-none bg-white/10 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white border border-white/10">
                               {c.user?.avatarUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -768,7 +767,7 @@ export default function WorkspaceSettingsModal({
                                 <span>{c.user?.name?.[0] || c.user?.username?.[0] || c.user?.email?.[0] || 'U'}</span>
                               )}
                             </div>
-                            <span className="font-medium text-[var(--foreground)] truncate max-w-[200px]">
+                            <span className="font-medium text-white truncate max-w-[200px]">
                               {displayName}
                             </span>
                           </div>
@@ -777,7 +776,7 @@ export default function WorkspaceSettingsModal({
                             <select
                               value={c.role || 'MEMBER'}
                               onChange={(e) => handleChangeRole(targetUserId, e.target.value as 'MEMBER' | 'VIEWER')}
-                              className="bg-[#1e1f22] text-[10px] text-[#dbdee1] border border-[#383a40] rounded px-1.5 py-0.5 outline-none cursor-pointer hover:border-[#20b8cd] transition-colors"
+                              className="bg-[#181818] text-[10px] text-zinc-300 border border-white/10 rounded-none px-2 py-0.5 outline-none cursor-pointer focus:border-white/30 transition-colors"
                               title="Alterar papel do colaborador"
                             >
                               <option value="MEMBER">Membro (Edição)</option>
@@ -789,10 +788,10 @@ export default function WorkspaceSettingsModal({
                               onClick={() => handleRemoveCollaborator(targetUserId)}
                               disabled={isRemoving}
                               title="Remover colaborador"
-                              className="w-6 h-6 flex items-center justify-center rounded-[4px] text-[#949ba4] hover:text-[#f23f43] hover:bg-[#35373c] transition-colors cursor-pointer disabled:opacity-50"
+                              className="w-6 h-6 flex items-center justify-center rounded-none text-zinc-500 hover:text-red-400 hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
                             >
                               {isRemoving ? (
-                                <div className="w-3 h-3 border-2 border-[#949ba4] border-t-[#f23f43] rounded-full animate-spin" />
+                                <div className="w-3 h-3 border-2 border-zinc-500 border-t-red-400 rounded-full animate-spin" />
                               ) : (
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -815,13 +814,13 @@ export default function WorkspaceSettingsModal({
             <div className="flex flex-col gap-5">
               <div>
                 <h3 className="text-base font-bold text-red-500">Zona de Perigo</h3>
-                <p className="text-xs text-[var(--discord-text-muted)] mt-0.5">
+                <p className="text-xs text-zinc-400 mt-0.5">
                   A exclusão de um workspace é irreversível. Todas as notas, pastas, flashcards e chats de IA contidos serão excluídos permanentemente.
                 </p>
               </div>
 
-              <div className="p-4 rounded-[6px] bg-red-500/5 border border-red-500/20 flex flex-col gap-3">
-                <span className="text-xs text-[var(--foreground)]">
+              <div className="p-4 rounded-none bg-red-500/5 border border-red-500/20 flex flex-col gap-3">
+                <span className="text-xs text-white">
                   Para confirmar a exclusão, digite o nome exato do workspace: <strong className="font-mono text-red-400">"{workspace.nome}"</strong>
                 </span>
 
@@ -830,14 +829,14 @@ export default function WorkspaceSettingsModal({
                   placeholder={workspace.nome}
                   value={deleteConfirmName}
                   onChange={(e) => setDeleteConfirmName(e.target.value)}
-                  className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#f23f43]/40 focus:border-[#f23f43] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                  className="w-full h-8 px-3 text-xs bg-white/5 border border-red-500/30 focus:border-red-500 text-white rounded-none outline-none transition-colors"
                 />
 
                 <button
                   type="button"
                   onClick={handleDelete}
                   disabled={deleteConfirmName !== workspace.nome || isDeleting}
-                  className="h-9 px-4 text-xs font-semibold rounded-[4px] bg-[#f23f43] hover:bg-[#d83a3e] text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer border-none flex items-center justify-center gap-2 self-end mt-1"
+                  className="h-8 px-4 text-xs font-bold rounded-none bg-red-500 hover:bg-red-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer border-none flex items-center justify-center gap-2 self-end mt-1"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18" />

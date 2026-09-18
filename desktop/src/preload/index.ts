@@ -25,3 +25,4 @@ const desktopAPI: SynapDesktopAPI = {
 };
 
 contextBridge.exposeInMainWorld('synapDesktop', desktopAPI);
+contextBridge.exposeInMainWorld('tesseractDesktop', desktopAPI);

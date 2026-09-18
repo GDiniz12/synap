@@ -1,6 +1,6 @@
-# Synap — Agent Guidelines & Engineering Standards
+# Tesseract — Agent Guidelines & Engineering Standards
 
-Welcome to the **Synap** codebase. Synap is a modern, high-performance knowledge management and note-taking platform featuring bi-directional linking, interactive graph visualization, drawing canvases, and flashcards with spaced repetition.
+Welcome to the **Tesseract** codebase. Tesseract is a modern, high-performance knowledge management and note-taking platform featuring bi-directional linking, interactive graph visualization, drawing canvases, and flashcards with spaced repetition.
 
 All AI coding assistants and contributors MUST strictly follow these guidelines when reading, designing, and modifying this codebase.
 
@@ -8,7 +8,7 @@ All AI coding assistants and contributors MUST strictly follow these guidelines 
 
 ## 1. Design System & UI Principles (Geist / Vercel Standards)
 
-Synap strictly adheres to a **minimalist, high-contrast, technical aesthetic** inspired by Vercel / Geist UI.
+Tesseract strictly adheres to a **minimalist, high-contrast, technical aesthetic** inspired by Vercel / Geist UI.
 
 ### 🚫 Strict Prohibition of Emojis
 - **NEVER use colorful emojis** (e.g., 🎨, 🚀, 📂, 📝, ⚙️, ❌) in UI components, buttons, tabs, modal headers, dropdowns, or notifications.

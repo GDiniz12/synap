@@ -13,5 +13,6 @@ export interface SynapDesktopAPI {
 declare global {
   interface Window {
     synapDesktop?: SynapDesktopAPI;
+    tesseractDesktop?: SynapDesktopAPI;
   }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "synap-desktop",
+  "name": "tesseract-desktop",
   "version": "1.0.0",
-  "description": "Synap Desktop Application",
+  "description": "Tesseract Desktop Application",
   "repository": {
     "type": "git",
     "url": "https://github.com/GDiniz12/synap.git"
@@ -25,7 +25,7 @@
     "desktop",
     "electron"
   ],
-  "author": "Synap Team",
+  "author": "Tesseract Team",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.17.19",

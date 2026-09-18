@@ -35,7 +35,7 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 app.use('/api', routes);
 
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Synap Backend is running successfully!' });
+  res.json({ status: 'ok', message: 'Tesseract Backend is running successfully!' });
 });
 
 import http from 'http';

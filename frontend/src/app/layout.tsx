@@ -14,15 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Synap",
-  description: "A comprehensive study tool with notes and flashcards",
+  title: "Tesseract",
+  description: "A comprehensive study tool with notes, graph visualization, canvas, and flashcards",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/synap-icon.ico" },
-      { url: "/synap-logo-unique.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/tesseract-icon.svg", type: "image/svg+xml" },
+      { url: "/tesseract-logo-256.png", type: "image/png" },
     ],
-    apple: "/logo-synap-512.png",
+    apple: "/tesseract-logo-512.png",
   },
 };
 
@@ -36,12 +36,18 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Sansation:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var saved = localStorage.getItem('synap_theme') || 'dark';
+                  var saved = localStorage.getItem('tesseract_theme') || localStorage.getItem('synap_theme') || 'dark';
                   var isDark = saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   var root = document.documentElement;
                   if (isDark) {
@@ -61,10 +67,10 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} h-full w-full overflow-hidden flex flex-col`} suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable} font-sansation h-full w-full overflow-hidden flex flex-col`} suppressHydrationWarning>
         <ThemeProvider>
           <TitleBar />
-          <main className="flex-1 min-h-0 w-full relative overflow-hidden flex flex-col">
+          <main className="flex-1 min-h-0 w-full relative overflow-hidden flex flex-col font-sansation">
             {children}
           </main>
         </ThemeProvider>

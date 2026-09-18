@@ -22,7 +22,6 @@ export default function CreateWorkspaceModal({
   const [name, setName] = useState('');
   const [iconUrl, setIconUrl] = useState('');
   const [iconPreview, setIconPreview] = useState<string | null>(null);
-  const [isCollaborative, setIsCollaborative] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -65,7 +64,7 @@ export default function CreateWorkspaceModal({
       }
     } catch (err: any) {
       console.error('Falha ao enviar imagem do workspace:', err);
-      if (showToast) showToast('Não foi possível enviar a imagem. Tente uma URL ou emoji.', 'error');
+      if (showToast) showToast('Não foi possível enviar a imagem. Tente novamente.', 'error');
     } finally {
       setIsUploading(false);
       setCropperImage(null);
@@ -101,7 +100,6 @@ export default function CreateWorkspaceModal({
         body: JSON.stringify({
           nome: name.trim(),
           icone: iconUrl.trim() || null,
-          isCollaborative,
         }),
       });
 
@@ -120,75 +118,107 @@ export default function CreateWorkspaceModal({
     setName('');
     setIconUrl('');
     setIconPreview(null);
-    setIsCollaborative(false);
     setIsPickerOpen(false);
     onClose();
   };
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-smooth-fade"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 font-sansation select-none"
       onClick={handleClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') handleClose();
+      }}
     >
       <div
-        className="w-full max-w-[440px] bg-[var(--discord-canvas)] border border-[var(--discord-border)] rounded-lg shadow-2xl overflow-visible flex flex-col animate-smooth-pop relative select-none"
+        className="w-full max-w-[440px] bg-[#181818] border border-white/10 rounded-none shadow-2xl overflow-visible flex flex-col animate-in zoom-in-95 duration-150 relative"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 flex flex-col gap-5">
           {/* Header */}
-          <div className="text-center flex flex-col gap-1.5">
-            <h2 className="text-xl font-bold text-[var(--foreground)] tracking-tight">
-              Personalize seu Workspace
-            </h2>
-            <p className="text-xs text-[var(--discord-text-muted)] leading-relaxed">
-              Dê personalidade ao seu novo espaço com um nome e um emoji ou foto de identificação.
+          <div className="text-left flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-white tracking-tight">
+                Novo Workspace
+              </h2>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-zinc-500 hover:text-white transition-colors cursor-pointer p-1"
+                aria-label="Fechar"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Crie um novo espaço de trabalho para organizar notas, grafos e flashcards.
             </p>
           </div>
 
-          {/* Icon Selector / Notion Popover Area */}
+          {/* Icon Selector */}
           <div className="flex flex-col items-center gap-2 relative">
             <div
               onClick={() => setIsPickerOpen(!isPickerOpen)}
-              className="w-20 h-20 rounded-full border-2 border-dashed border-[var(--discord-border)] hover:border-[var(--brand)] hover:scale-105 transition-all duration-200 flex flex-col items-center justify-center cursor-pointer bg-[var(--discord-input)] relative overflow-hidden group shadow-inner"
-              title="Clique para escolher um emoji ou foto"
+              className="w-16 h-16 rounded-none border border-dashed border-white/20 hover:border-white/50 transition-all duration-150 flex flex-col items-center justify-center cursor-pointer bg-white/5 relative overflow-hidden group"
+              title="Clique para escolher um ícone ou foto"
             >
               {iconPreview ? (
                 <WorkspaceIcon
                   icone={iconPreview}
                   nome={name || 'Novo Workspace'}
-                  size={42}
+                  size={32}
                   className="w-full h-full"
-                  emojiClassName="text-3xl"
+                  emojiClassName="text-2xl"
                 />
               ) : (
-                <div className="flex flex-col items-center text-[var(--discord-text-muted)] group-hover:text-[var(--foreground)] transition-colors">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10" />
-                    <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                    <line x1="9" y1="9" x2="9.01" y2="9" />
-                    <line x1="15" y1="9" x2="15.01" y2="9" />
+                <div className="flex flex-col items-center text-zinc-400 group-hover:text-white transition-colors">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="0" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
                   </svg>
-                  <span className="text-[9px] font-bold uppercase tracking-wider mt-1 font-mono">ÍCONE</span>
+                  <span className="text-[9px] font-mono mt-1 text-zinc-500">ÍCONE</span>
                 </div>
               )}
 
               {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                 </svg>
-                <span className="text-[9px] font-mono mt-0.5 font-semibold">ESCOLHER</span>
+                <span className="text-[8px] font-mono mt-0.5">ALTERAR</span>
               </div>
 
               {isUploading && (
-                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-none animate-spin" />
                 </div>
               )}
             </div>
 
-            {/* Hidden native file input */}
+            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -197,19 +227,18 @@ export default function CreateWorkspaceModal({
               onChange={handleFileChange}
             />
 
-            {/* Helper label */}
             <button
               type="button"
               onClick={() => setIsPickerOpen(!isPickerOpen)}
-              className="text-[11px] text-[var(--discord-text-muted)] hover:text-[var(--foreground)] transition-colors cursor-pointer border-none bg-transparent flex items-center gap-1"
+              className="text-[11px] text-zinc-400 hover:text-white transition-colors cursor-pointer border-none bg-transparent flex items-center gap-1 font-sansation"
             >
-              <span>{iconPreview ? 'Trocar emoji ou foto' : 'Escolher emoji ou foto'}</span>
+              <span>{iconPreview ? 'Trocar ícone' : 'Escolher ícone'}</span>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
 
-            {/* Floating Notion-style popover */}
+            {/* Icon picker popover */}
             {isPickerOpen && (
               <WorkspaceIconPickerPopover
                 currentIcon={iconPreview}
@@ -226,50 +255,36 @@ export default function CreateWorkspaceModal({
           {/* Form */}
           <form id="create-workspace-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#949ba4] font-mono">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 font-mono">
                 NOME DO WORKSPACE
               </label>
               <input
                 type="text"
                 required
-                placeholder="Ex: Ciência da Computação, Projeto Final..."
+                placeholder="Ex: Ciência da Computação, Engenharia, Projeto..."
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full h-9 px-3 text-xs bg-[#1e1f22] border border-[#383a40] focus:border-[#20b8cd] text-[#dbdee1] rounded-[4px] outline-none transition-colors"
+                className="w-full h-9 px-3 text-xs bg-white/5 border border-white/10 focus:border-white/30 text-white rounded-none outline-none transition-colors font-sansation placeholder-zinc-600"
                 autoFocus
               />
             </div>
-
-            {/* Collaborative Checkbox */}
-            <label className="flex items-center gap-2.5 cursor-pointer select-none p-3 rounded-[6px] border border-[#383a40] bg-[#1e1f22] hover:bg-[#35373c] transition-colors">
-              <input
-                type="checkbox"
-                checked={isCollaborative}
-                onChange={(e) => setIsCollaborative(e.target.checked)}
-                className="w-4 h-4 rounded border-[#383a40] text-[#20b8cd] focus:ring-0 cursor-pointer"
-              />
-              <div className="flex flex-col">
-                <span className="text-xs font-semibold text-white">Workspace Colaborativo</span>
-                <span className="text-[11px] text-[#949ba4]">Permitir convidar outros membros em tempo real</span>
-              </div>
-            </label>
           </form>
         </div>
 
-        {/* Discord Action Footer Bar */}
-        <div className="bg-[#1e1f22] border-t border-[#383a40] px-6 py-3.5 flex items-center justify-between rounded-b-lg">
+        {/* Footer */}
+        <div className="bg-[#141414] border-t border-white/10 px-6 py-3.5 flex items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={handleClose}
-            className="h-9 px-4 text-xs font-medium rounded-[4px] bg-[#313338] hover:bg-[#383a40] border border-[#383a40] text-[#dbdee1] hover:text-white transition-colors cursor-pointer"
+            className="h-8 px-4 text-xs font-semibold rounded-none bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors cursor-pointer"
             disabled={isSubmitting}
           >
-            Voltar
+            Cancelar
           </button>
           <button
             type="submit"
             form="create-workspace-form"
-            className="h-9 px-5 text-xs font-semibold rounded-[4px] bg-[#20b8cd] hover:bg-[#1ba2b4] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            className="h-8 px-5 text-xs font-bold rounded-none bg-white text-black hover:bg-zinc-200 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!name.trim() || isSubmitting}
           >
             {isSubmitting ? 'Criando...' : 'Criar Workspace'}
@@ -277,12 +292,11 @@ export default function CreateWorkspaceModal({
         </div>
       </div>
 
-      {/* Image Cropper Modal for Workspace Icon */}
       {cropperImage && (
         <ImageCropperModal
           isOpen={!!cropperImage}
           imageSrc={cropperImage}
-          cropShape="squircle"
+          cropShape="square"
           title="Recortar Ícone do Workspace"
           onConfirm={handleCroppedIconConfirm}
           onClose={() => setCropperImage(null)}
