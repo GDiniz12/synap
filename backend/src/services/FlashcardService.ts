@@ -213,6 +213,7 @@ export class FlashcardService {
           select: {
             id: true,
             titulo: true,
+            conteudo: true,
           },
         },
       },
@@ -239,6 +240,7 @@ export class FlashcardService {
           select: {
             id: true,
             titulo: true,
+            conteudo: true,
           },
         },
       },
@@ -292,7 +294,7 @@ export class FlashcardService {
         deckId: data.deckId,
         frente: data.frente,
         verso: data.verso,
-        tipo: data.tipo || 'card',
+        tipo: data.tipo || (data.notaId ? 'nota' : 'card'),
         notaId: data.notaId || null,
         reps: 0,
         interval: 0,
@@ -304,6 +306,13 @@ export class FlashcardService {
           select: {
             id: true,
             nome: true,
+          },
+        },
+        nota: {
+          select: {
+            id: true,
+            titulo: true,
+            conteudo: true,
           },
         },
       },
@@ -339,6 +348,7 @@ export class FlashcardService {
           select: {
             id: true,
             titulo: true,
+            conteudo: true,
           },
         },
       },
@@ -365,19 +375,28 @@ export class FlashcardService {
     });
   }
 
-  async updateFlashcard(id: string, data: { frente?: string; verso?: string; deckId?: string }) {
+  async updateFlashcard(id: string, data: { frente?: string; verso?: string; deckId?: string; tipo?: string; notaId?: string | null }) {
     return prisma.flashcard.update({
       where: { id },
       data: {
         ...(data.frente !== undefined && { frente: data.frente }),
         ...(data.verso !== undefined && { verso: data.verso }),
         ...(data.deckId !== undefined && { deckId: data.deckId }),
+        ...(data.tipo !== undefined && { tipo: data.tipo }),
+        ...(data.notaId !== undefined && { notaId: data.notaId }),
       },
       include: {
         deck: {
           select: {
             id: true,
             nome: true,
+          },
+        },
+        nota: {
+          select: {
+            id: true,
+            titulo: true,
+            conteudo: true,
           },
         },
       },

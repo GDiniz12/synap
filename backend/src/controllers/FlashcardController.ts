@@ -136,8 +136,8 @@ export class FlashcardController {
   async updateFlashcard(req: Request, res: Response): Promise<any> {
     try {
       const id = req.params.id as string;
-      const { frente, verso, deckId } = req.body;
-      const card = await flashcardService.updateFlashcard(id, { frente, verso, deckId });
+      const { frente, verso, deckId, tipo, notaId } = req.body;
+      const card = await flashcardService.updateFlashcard(id, { frente, verso, deckId, tipo, notaId });
       return res.json(card);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
