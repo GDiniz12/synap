@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import TitleBar from "@/components/TitleBar";
 import "./globals.css";
@@ -13,16 +13,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111113" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Tesseract",
   description: "A comprehensive study tool with notes, graph visualization, canvas, and flashcards",
+  applicationName: "Tesseract",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Tesseract",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
       { url: "/tesseract-icon.svg", type: "image/svg+xml" },
       { url: "/tesseract-logo-256.png", type: "image/png" },
     ],
-    apple: "/tesseract-logo-512.png",
+    apple: [
+      { url: "/tesseract-logo-512.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 
