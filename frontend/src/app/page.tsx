@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import SynapLogo from '@/components/SynapLogo';
+import TesseractLogo from '@/components/TesseractLogo';
 
 type OSType = 'windows' | 'linux' | 'mac' | 'unknown';
 
@@ -32,7 +32,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isDesktopApp = !!window.synapDesktop?.isDesktop;
+      const isDesktopApp = !!(window.tesseractDesktop?.isDesktop || window.synapDesktop?.isDesktop);
       const token = localStorage.getItem('token');
 
       // If running inside Electron desktop app, immediately bypass landing page
@@ -118,7 +118,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-[#383a40] bg-[#1e1f22]/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <SynapLogo size={36} className="transition-transform group-hover:scale-105" priority />
+            <TesseractLogo size={36} className="transition-transform group-hover:scale-105" priority />
             <span className="font-bold text-lg text-white tracking-tight">Tesseract</span>
           </Link>
 
@@ -587,7 +587,7 @@ export default function LandingPage() {
 
                   {/* AI message */}
                   <div className="flex items-start gap-3">
-                    <SynapLogo size={32} className="shrink-0 mt-0.5" />
+                    <TesseractLogo size={32} className="shrink-0 mt-0.5" />
                     <div className="w-full">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-white">Tesseract AI</span>
@@ -993,7 +993,7 @@ export default function LandingPage() {
       <footer className="w-full border-t border-[#383a40] bg-[#1e1f22] py-12 px-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <SynapLogo size={24} />
+            <TesseractLogo size={24} />
             <span className="text-xs text-[#949ba4]">
               © {new Date().getFullYear()} Tesseract Team. Todos os direitos reservados.
             </span>

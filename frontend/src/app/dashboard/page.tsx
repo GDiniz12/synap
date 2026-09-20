@@ -8,7 +8,7 @@ import CreateWorkspaceModal from '@/components/CreateWorkspaceModal';
 import SettingsModal from '@/components/SettingsModal';
 import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 import LoadingScreen from '@/components/LoadingScreen';
-import SynapLogo from '@/components/SynapLogo';
+import TesseractLogo from '@/components/TesseractLogo';
 import WorkspaceIcon from '@/components/WorkspaceIcon';
 import ToastContainer, { ToastMessage } from '@/components/Toast';
 
@@ -99,7 +99,7 @@ export default function DashboardPage() {
       <header className="h-14 min-h-[56px] px-6 sm:px-10 border-b border-white/10 bg-[#141414] flex items-center justify-between z-30 shrink-0 sticky top-0 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="flex items-center gap-2.5 text-white hover:opacity-80 transition-opacity">
-            <SynapLogo size={24} priority />
+            <TesseractLogo size={24} priority />
             <span className="text-sm font-bold tracking-tight font-sansation uppercase">
               Tesseract
             </span>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
         {workspaces.length === 0 ? (
           <div className="p-12 text-center rounded-none border border-dashed border-white/10 bg-white/5 flex flex-col items-center gap-3 my-auto">
             <div className="w-12 h-12 rounded-none bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 mb-1">
-              <SynapLogo size={32} />
+              <TesseractLogo size={32} />
             </div>
             <h3 className="text-sm font-bold text-white">Nenhum workspace encontrado</h3>
             <p className="text-xs text-zinc-400 max-w-sm leading-relaxed">

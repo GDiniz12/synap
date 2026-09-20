@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 
 interface LoadingScreenProps {
   message?: string;
@@ -46,9 +46,9 @@ export default function LoadingScreen({
     <div className={containerClasses}>
       {/* Brand & Loading Container */}
       <div className="flex flex-col items-center max-w-sm text-center animate-in fade-in duration-200">
-        {/* Synap Logo */}
+        {/* Tesseract Logo */}
         <div className="mb-8 flex flex-col items-center">
-          <SynapLogo size={52} priority />
+          <TesseractLogo size={52} priority />
         </div>
 
         {/* Minimalist Geist SVG Spinner */}

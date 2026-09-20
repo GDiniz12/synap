@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { translations, Language } from '@/lib/i18n';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 import { useTheme } from './ThemeProvider';
 import ImageCropperModal from './ImageCropperModal';
 
@@ -469,7 +469,7 @@ export default function SettingsModal({
             </div>
 
             <div className="hidden md:flex items-center gap-2 pt-3 border-t border-white/10">
-              <SynapLogo size={18} />
+              <TesseractLogo size={18} />
               <span className="text-[11px] font-mono text-zinc-500">Tesseract</span>
             </div>
           </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 
 interface ShareWorkspaceModalProps {
   workspaceId: string;
@@ -273,7 +273,7 @@ export default function ShareWorkspaceModal({ workspaceId, isOpen, onClose }: Sh
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-[#141414]">
           <div className="flex items-center gap-3">
-            <SynapLogo size={24} />
+            <TesseractLogo size={24} />
             <div>
               <h2 className="text-sm font-bold text-white tracking-tight leading-tight">Compartilhar Workspace</h2>
               <span className="text-xs text-zinc-400 block mt-0.5">Convide pessoas para colaborar em tempo real</span>

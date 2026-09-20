@@ -6,7 +6,8 @@ import { registerIpcHandlers } from './ipc';
 
 dotenv.config();
 
-// Ensure proper taskbar icon binding and grouping on Windows
+// Ensure proper app name and taskbar grouping on all platforms
+app.name = 'Tesseract';
 if (process.platform === 'win32') {
   app.setAppUserModelId('app.tesseract.desktop');
 }
@@ -53,6 +54,7 @@ function createWindow() {
   const appIcon = getAppIcon();
 
   mainWindow = new BrowserWindow({
+    title: 'Tesseract',
     width: 1280,
     height: 800,
     minWidth: 900,
@@ -92,6 +94,7 @@ function createWindow() {
       <html lang="pt-BR">
         <head>
           <meta charset="UTF-8">
+          <title>Tesseract</title>
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body {

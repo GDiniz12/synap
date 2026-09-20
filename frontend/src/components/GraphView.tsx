@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import GraphDrawingPreview from './GraphDrawingPreview';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 import { api } from '@/lib/api';
 import { useTheme } from './ThemeProvider';
 import IsometricGraph from './graph/IsometricGraph';
@@ -346,7 +346,7 @@ export default function GraphView({
         <div className="flex items-center gap-2 pointer-events-auto">
           {/* Brand Icon */}
           <div className="flex items-center justify-center bg-[#2b2d31]/90 backdrop-blur-md border border-[#383a40] rounded-[8px] p-2 shadow-lg">
-            <SynapLogo size={16} />
+            <TesseractLogo size={16} />
           </div>
 
           {/* Search Input Box */}

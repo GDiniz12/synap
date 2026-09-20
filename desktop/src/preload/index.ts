@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-export interface SynapDesktopAPI {
+export interface TesseractDesktopAPI {
   isDesktop: boolean;
   platform: string;
   minimize: () => Promise<void>;
@@ -12,7 +12,9 @@ export interface SynapDesktopAPI {
   getAppInfo: () => Promise<{ version: string; platform: string; isDesktop: boolean }>;
 }
 
-const desktopAPI: SynapDesktopAPI = {
+export type SynapDesktopAPI = TesseractDesktopAPI;
+
+const desktopAPI: TesseractDesktopAPI = {
   isDesktop: true,
   platform: process.platform,
   minimize: () => ipcRenderer.invoke('window:minimize'),
@@ -24,5 +26,5 @@ const desktopAPI: SynapDesktopAPI = {
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
 };
 
-contextBridge.exposeInMainWorld('synapDesktop', desktopAPI);
 contextBridge.exposeInMainWorld('tesseractDesktop', desktopAPI);
+contextBridge.exposeInMainWorld('synapDesktop', desktopAPI);

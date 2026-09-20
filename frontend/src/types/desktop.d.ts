@@ -1,4 +1,4 @@
-export interface SynapDesktopAPI {
+export interface TesseractDesktopAPI {
   isDesktop: boolean;
   platform: string;
   minimize: () => Promise<void>;
@@ -10,9 +10,11 @@ export interface SynapDesktopAPI {
   getAppInfo: () => Promise<{ version: string; platform: string; isDesktop: boolean }>;
 }
 
+export type SynapDesktopAPI = TesseractDesktopAPI;
+
 declare global {
   interface Window {
-    synapDesktop?: SynapDesktopAPI;
-    tesseractDesktop?: SynapDesktopAPI;
+    tesseractDesktop?: TesseractDesktopAPI;
+    synapDesktop?: TesseractDesktopAPI;
   }
 }

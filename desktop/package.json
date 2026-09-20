@@ -19,7 +19,7 @@
     "start": "electron ."
   },
   "keywords": [
-    "synap",
+    "tesseract",
     "notes",
     "graph",
     "desktop",

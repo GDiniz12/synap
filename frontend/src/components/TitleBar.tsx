@@ -1,19 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import SynapLogo from './SynapLogo';
+import TesseractLogo from './TesseractLogo';
 
 export default function TitleBar() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.synapDesktop?.isDesktop) {
+    if (typeof window !== 'undefined' && (window.tesseractDesktop?.isDesktop || window.synapDesktop?.isDesktop)) {
       setIsDesktop(true);
 
       const checkMaximized = async () => {
-        if (window.synapDesktop?.isMaximized) {
-          const max = await window.synapDesktop.isMaximized();
+        const desktopApi = window.tesseractDesktop || window.synapDesktop;
+        if (desktopApi?.isMaximized) {
+          const max = await desktopApi.isMaximized();
           setIsMaximized(max);
         }
       };
@@ -29,17 +30,20 @@ export default function TitleBar() {
   }
 
   const handleMinimize = () => {
-    window.synapDesktop?.minimize();
+    const desktopApi = window.tesseractDesktop || window.synapDesktop;
+    desktopApi?.minimize();
   };
 
   const handleMaximize = async () => {
-    await window.synapDesktop?.maximize();
-    const max = await window.synapDesktop?.isMaximized();
+    const desktopApi = window.tesseractDesktop || window.synapDesktop;
+    await desktopApi?.maximize();
+    const max = await desktopApi?.isMaximized();
     setIsMaximized(!!max);
   };
 
   const handleClose = () => {
-    window.synapDesktop?.close();
+    const desktopApi = window.tesseractDesktop || window.synapDesktop;
+    desktopApi?.close();
   };
 
   return (
@@ -59,9 +63,19 @@ export default function TitleBar() {
         position: 'relative',
       } as React.CSSProperties}
     >
-      {/* Brand Icon */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <SynapLogo size={16} priority />
+      {/* Brand Icon & App Title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <TesseractLogo size={14} priority />
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 500,
+            color: 'var(--foreground)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Tesseract
+        </span>
       </div>
 
       {/* Window Controls (Minimize, Maximize/Restore, Close) */}
