@@ -16,7 +16,7 @@ import TesseractLogo from '@/components/TesseractLogo';
 
 type SidebarTab = 'notes' | 'graph' | 'flashcards' | 'ai';
 
-export const GOOGLE_AI_PRO_MODELS = [
+const GOOGLE_AI_PRO_MODELS = [
   {
     id: 'gemini-2.5-pro',
     name: 'Gemini 2.5 Pro',
@@ -1641,7 +1641,7 @@ export default function MainPage() {
                               : 'text-zinc-400 hover:text-white hover:bg-white/5'
                           }`}
                         >
-                          3D Isométrico
+                          Tesseract 3D
                         </button>
                       </div>
                     </div>
@@ -1649,7 +1649,7 @@ export default function MainPage() {
                     <p className="text-[11px] text-zinc-500 leading-relaxed mb-3">
                       {graphMode === 'orthogonal'
                         ? 'Visualização 2D com blocos quadrados e conexões em 90°.'
-                        : 'Visualização tridimensional isométrica com torres e conexões 3D.'}
+                        : 'Notas em cubos dentro do Tesseract, com conexões animadas.'}
                     </p>
 
                     <div className="flex flex-col gap-1 pt-2 border-t border-white/5">

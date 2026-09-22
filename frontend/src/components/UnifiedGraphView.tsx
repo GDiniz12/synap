@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import OrthogonalGraphView from './OrthogonalGraphView';
-import IsometricGraphView from './IsometricGraphView';
+import TesseractGraphView from './TesseractGraphView';
 
 export type GraphVisualizationMode = 'orthogonal' | 'isometric';
 
@@ -48,17 +48,17 @@ export default function UnifiedGraphView({
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-[#141414] select-none flex-1 flex flex-col font-sansation">
+    <div className="w-full h-full relative overflow-hidden bg-[var(--background)] select-none flex-1 flex flex-col">
       {/* Floating Top-Center Mode Switcher Bar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-[#181818]/95 backdrop-blur-sm border border-white/10 p-1 rounded-none shadow-2xl font-sansation select-none">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-[var(--background)] backdrop-blur-sm border border-[var(--accents-2)] p-1 rounded-[var(--radius)] shadow-sm select-none">
         {/* Botão 2D Ortogonal */}
         <button
           type="button"
           onClick={() => handleModeChange('orthogonal')}
-          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-none cursor-pointer transition-all duration-150 ${
+          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-[var(--radius)] cursor-pointer transition-all duration-150 ${
             currentMode === 'orthogonal'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-[var(--foreground)] text-[var(--background)]'
+              : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-1)]'
           }`}
           aria-label="Modo 2D Ortogonal"
         >
@@ -68,7 +68,7 @@ export default function UnifiedGraphView({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.5"
+            strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
             className="shrink-0"
@@ -84,12 +84,12 @@ export default function UnifiedGraphView({
         <button
           type="button"
           onClick={() => handleModeChange('isometric')}
-          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-none cursor-pointer transition-all duration-150 ${
+          className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-[var(--radius)] cursor-pointer transition-all duration-150 ${
             currentMode === 'isometric'
-              ? 'bg-white text-black shadow-md'
-              : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              ? 'bg-[var(--foreground)] text-[var(--background)]'
+              : 'text-[var(--accents-5)] hover:text-[var(--foreground)] hover:bg-[var(--accents-1)]'
           }`}
-          aria-label="Modo 3D Isométrico"
+          aria-label="Modo Tesseract 3D"
         >
           <svg
             width="13"
@@ -102,11 +102,11 @@ export default function UnifiedGraphView({
             strokeLinejoin="round"
             className="shrink-0"
           >
-            <path d="m21.12 6.4-9-5a2 2 0 0 0-2.24 0l-9 5A2 2 0 0 0 0 8.13v7.74a2 2 0 0 0 1 1.73l9 5a2 2 0 0 0 2 0l9-5a2 2 0 0 0 1-1.73V8.13a2 2 0 0 0-.88-1.73z" />
-            <path d="M12 22V12" />
-            <path d="m21.12 6.4-9.12 5.6-9.12-5.6" />
+            <rect x="3" y="3" width="18" height="18" />
+            <rect x="8" y="8" width="8" height="8" />
+            <path d="m3 3 5 5m13-5-5 5m5 13-5-5M3 21l5-5" />
           </svg>
-          <span>3D Isométrico</span>
+          <span>Tesseract 3D</span>
         </button>
       </div>
 
@@ -119,7 +119,7 @@ export default function UnifiedGraphView({
           onOpenNota={onOpenNota}
         />
       ) : (
-        <IsometricGraphView
+        <TesseractGraphView
           notas={notas}
           pastas={pastas}
           activeWorkspace={activeWorkspace}
