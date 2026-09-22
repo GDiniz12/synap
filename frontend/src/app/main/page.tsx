@@ -105,6 +105,8 @@ export default function MainPage() {
     setHoveredTooltip(null);
   };
 
+
+
   // Carregar preferência de sidebar trancada
   useEffect(() => {
     try {
@@ -207,6 +209,63 @@ export default function MainPage() {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Refs para título da nota e desenho
+  const noteTitleRef = useRef<HTMLDivElement>(null);
+  const drawingTitleInputRef = useRef<HTMLInputElement>(null);
+  const shouldSelectTitleRef = useRef(false);
+
+  // Sincronizar o título no elemento contentEditable quando mudar a nota ativa
+  useEffect(() => {
+    if (noteTitleRef.current && selectedNota && selectedNota.tipo !== 'desenho') {
+      const currentText = noteTitleRef.current.innerText.trim();
+      const expectedText = (selectedNota.titulo ?? 'Nova Nota').trim();
+      if (currentText !== expectedText && !noteTitleRef.current.contains(document.activeElement)) {
+        noteTitleRef.current.innerText = selectedNota.titulo ?? 'Nova Nota';
+      }
+    }
+  }, [selectedNota?.id, selectedNota?.titulo, selectedNota?.tipo]);
+
+  // Auto-focar e selecionar o texto do título quando uma nota/desenho for criada
+  useEffect(() => {
+    if (shouldSelectTitleRef.current) {
+      shouldSelectTitleRef.current = false;
+      const selectAll = () => {
+        if (selectedNota?.tipo === 'desenho') {
+          const el = drawingTitleInputRef.current;
+          if (el) {
+            el.focus();
+            el.setSelectionRange(0, el.value.length);
+            el.select();
+          }
+        } else {
+          const el = noteTitleRef.current;
+          if (el) {
+            el.focus();
+            const sel = window.getSelection();
+            if (sel) {
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+        }
+      };
+
+      selectAll();
+      requestAnimationFrame(selectAll);
+      const t1 = setTimeout(selectAll, 50);
+      const t2 = setTimeout(selectAll, 150);
+      const t3 = setTimeout(selectAll, 300);
+
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+  }, [selectedNota?.id, selectedNota?.tipo]);
 
   // Synap AI State & Handlers
   const [aiThreads, setAiThreads] = useState<any[]>([]);
@@ -793,8 +852,23 @@ export default function MainPage() {
 
   const handleCreateNote = async (tipo: 'texto' | 'desenho' = 'texto') => {
     if (!activeWorkspace?.id) return;
+    const defaultTitle = tipo === 'desenho' ? 'Novo Desenho' : 'Nova Nota';
+    const tempId = `temp-${Date.now()}`;
+    const optimisticNote = {
+      id: tempId,
+      titulo: defaultTitle,
+      conteudo: tipo === 'desenho' ? '[]' : '',
+      tipo,
+      workspaceId: activeWorkspace.id,
+    };
+
+    // Resposta instantânea na UI: abre a nota na hora e seleciona o título
+    shouldSelectTitleRef.current = true;
+    setActiveTab('notes');
+    setSelectedNota(optimisticNote);
+    setOpenTabIds((prev) => (prev.includes(tempId) ? prev : [...prev, tempId]));
+
     try {
-      const defaultTitle = tipo === 'desenho' ? 'Novo Desenho' : 'Nova Nota';
       const created = await api('/notas', {
         method: 'POST',
         body: JSON.stringify({
@@ -808,7 +882,7 @@ export default function MainPage() {
       setNotas(refreshedNotas || []);
       if (created) {
         setSelectedNota(created);
-        setOpenTabIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
+        setOpenTabIds((prev) => prev.map((id) => (id === tempId ? created.id : id)));
       }
     } catch (err) {
       console.error('Erro ao criar nota/desenho:', err);
@@ -1115,7 +1189,7 @@ export default function MainPage() {
 
       {/* Container Fixo na Esquerda (Centralizado verticalmente) */}
       <div
-        className={`fixed top-1/2 -translate-y-1/2 z-40 flex flex-col items-start select-none transition-all duration-300 ease-in-out ${
+        className={`fixed top-1/2 -translate-y-1/2 z-40 flex flex-col items-start select-none transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
           isExpanded ? 'left-0' : '-left-[60px] md:left-0'
         }`}
         onMouseEnter={() => {
@@ -1132,13 +1206,13 @@ export default function MainPage() {
       >
         {/* Sidebar (Retângulo puro sem bordas com fonte Sansation) */}
         <aside
-          className={`bg-[#1c1c1c] font-sansation shadow-2xl transition-all duration-300 ease-in-out flex flex-col py-3 select-none overflow-hidden ${
-            isExpanded ? 'w-[230px] h-[420px]' : 'w-14 h-[380px]'
+          className={`bg-[#1c1c1c] font-sansation shadow-2xl transition-all duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] will-change-[width,height] flex flex-col py-2.5 select-none overflow-hidden ${
+            isExpanded ? 'w-[280px] h-[480px]' : 'w-14 h-[240px]'
           }`}
         >
-          {/* Header da Sidebar com Tesseract Logo quando expandida */}
+          {/* Header da Sidebar com Tesseract Logo quando expandida (Apenas Mobile) */}
           {isExpanded && (
-            <div className="px-3 pb-2.5 mb-1 border-b border-white/10 flex items-center justify-between shrink-0">
+            <div className="md:hidden px-3 pb-2.5 mb-1 border-b border-white/10 flex items-center justify-between shrink-0">
               <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
                 <TesseractLogo size={20} showText={true} />
               </Link>
@@ -1149,7 +1223,7 @@ export default function MainPage() {
                   setIsCreateMenuOpen(false);
                   setIsWorkspaceModalOpen(false);
                 }}
-                className="md:hidden w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white rounded-none hover:bg-white/5 cursor-pointer"
+                className="w-6 h-6 flex items-center justify-center text-zinc-400 hover:text-white rounded-none hover:bg-white/5 cursor-pointer"
                 aria-label="Fechar menu"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1162,7 +1236,7 @@ export default function MainPage() {
           {/* Seção Superior: Ícones de navegação | Linha divisória vertical | Conteúdo da aba ativa */}
           <div className="flex-1 min-h-0 flex flex-row items-stretch overflow-hidden">
             {/* Coluna Esquerda: 4 Ícones de navegação com indicador lateral */}
-            <nav className="flex flex-col gap-3.5 shrink-0 w-14 items-center py-1">
+            <nav className="flex flex-col gap-2.5 shrink-0 w-14 items-center py-0.5">
               {/* 1º Ícone: Pastas, Notas, Desenhos (Square Text) */}
               <div
                 className="relative w-full h-8 flex items-center justify-center"
@@ -1332,7 +1406,7 @@ export default function MainPage() {
                 </button>
               </div>
 
-              {/* 4º Ícone: Tesseract AI (Loader Pinwheel) */}
+              {/* 4º Ícone: Tesseract AI (Tesseract Hyperdimensional Cube) */}
               <div
                 className="relative w-full h-8 flex items-center justify-center"
                 onMouseEnter={(e) => {
@@ -1367,23 +1441,15 @@ export default function MainPage() {
                   }`}
                   aria-label="Tesseract AI"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-loader-pinwheel shrink-0"
-                  >
-                    <path d="M22 12a1 1 0 0 1-10 0 1 1 0 0 0-10 0" />
-                    <path d="M7 20.7a1 1 0 1 1 5-8.7 1 1 0 1 0 5-8.6" />
-                    <path d="M7 3.3a1 1 0 1 1 5 8.6 1 1 0 1 0 5 8.6" />
-                    <circle cx="12" cy="12" r="10" />
-                  </svg>
+                  <TesseractLogo
+                    size={22}
+                    variant={activeTab === 'ai' ? 'ai' : 'default'}
+                    className={`shrink-0 transition-opacity duration-150 ${
+                      activeTab === 'ai'
+                        ? 'opacity-100 text-white'
+                        : 'opacity-60 hover:opacity-100 text-zinc-400'
+                    }`}
+                  />
                 </button>
               </div>
             </nav>
@@ -1395,7 +1461,7 @@ export default function MainPage() {
 
             {/* Conteúdo da aba ativa quando aberta */}
             {isExpanded && (
-              <div className="flex-1 min-h-0 overflow-y-auto pr-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent">
+              <div className="flex-1 min-h-0 overflow-y-auto pr-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent animate-in fade-in duration-200">
                 {/* ABA 1: PASTAS, NOTAS E DESENHOS */}
                 {activeTab === 'notes' && (
                   <div className="flex flex-col flex-1 py-0.5">
@@ -2113,7 +2179,7 @@ export default function MainPage() {
           activeTab === 'flashcards' ||
           (activeTab === 'notes' && selectedNota?.tipo === 'desenho')
             ? 'p-0 overflow-hidden w-full h-full'
-            : 'px-6 sm:px-12 py-6 sm:py-10 overflow-y-auto'
+            : 'px-6 sm:px-10 md:pl-32 md:pr-12 lg:pl-44 lg:pr-16 py-6 sm:py-10 overflow-y-auto'
         }`}
       >
         {activeTab === 'graph' ? (
@@ -2572,9 +2638,16 @@ export default function MainPage() {
               {/* Minimalist Drawing Title Header */}
               <div className="px-6 py-2.5 border-b border-white/10 bg-[#141414] flex items-center justify-between shrink-0 z-10">
                 <input
+                  ref={drawingTitleInputRef}
                   type="text"
                   value={selectedNota.titulo || ''}
                   onChange={(e) => handleTitleChange(e.target.value)}
+                  onFocus={(e) => {
+                    if (e.target.value === 'Novo Desenho' || shouldSelectTitleRef.current) {
+                      e.target.setSelectionRange(0, e.target.value.length);
+                      e.target.select();
+                    }
+                  }}
                   placeholder="Nome do Desenho..."
                   className="bg-transparent text-base sm:text-lg font-bold font-sansation text-white placeholder-zinc-700 outline-none border-none px-0 leading-tight w-full select-text"
                 />
@@ -2597,13 +2670,49 @@ export default function MainPage() {
             </div>
           ) : (
             <div className="w-full max-w-3xl flex flex-col flex-1 min-h-0 font-sansation animate-in fade-in duration-200">
-              {/* Título da Nota: Texto direto na tela, sem bordas */}
-              <input
-                type="text"
-                value={selectedNota.titulo || ''}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Nota sem título"
-                className="w-full bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white placeholder-zinc-700 outline-none border-none mb-6 px-0 leading-tight select-text"
+              {/* Título da Nota: Bloco nativo que quebra linhas para baixo naturalmente e suporta Enter */}
+              <div
+                ref={noteTitleRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => {
+                  const text = e.currentTarget.innerText;
+                  handleTitleChange(text);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const editor =
+                      document.querySelector<HTMLElement>('.notion-editor') ||
+                      document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
+                    if (editor) {
+                      editor.focus();
+                      const sel = window.getSelection();
+                      if (sel) {
+                        const range = document.createRange();
+                        if (editor.firstChild) {
+                          range.setStart(editor.firstChild, 0);
+                        } else {
+                          range.setStart(editor, 0);
+                        }
+                        range.collapse(true);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                      }
+                    }
+                  } else if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const editor =
+                      document.querySelector<HTMLElement>('.notion-editor') ||
+                      document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
+                    if (editor) {
+                      editor.focus();
+                    }
+                  }
+                }}
+                data-title-editor="true"
+                data-placeholder="Nota sem título"
+                className="w-full min-h-[48px] bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700 block"
               />
 
               {/* Conteúdo da Nota: Editor rico integrado à tela sem molduras */}

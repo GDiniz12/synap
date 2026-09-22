@@ -855,7 +855,7 @@ export default function WorkspaceSettingsModal({
         <ImageCropperModal
           isOpen={!!cropperImage}
           imageSrc={cropperImage}
-          cropShape="squircle"
+          cropShape="square"
           title="Recortar Ícone do Workspace"
           onConfirm={handleCroppedIconConfirm}
           onClose={() => setCropperImage(null)}

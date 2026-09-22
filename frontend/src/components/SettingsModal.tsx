@@ -1144,7 +1144,7 @@ export default function SettingsModal({
         <ImageCropperModal
           isOpen={!!cropperImage}
           imageSrc={cropperImage}
-          cropShape="round"
+          cropShape="square"
           title="Recortar Foto de Perfil"
           onConfirm={handleCroppedAvatarConfirm}
           onClose={() => setCropperImage(null)}

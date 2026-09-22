@@ -42,7 +42,7 @@ export default function ImageCropperModal({
   const CROP_SIZE = 240; // Size of the crop window
 
   // Default title based on shape
-  const modalTitle = title || (cropShape === 'round' ? 'Recortar Foto de Perfil' : 'Recortar Ícone do Workspace');
+  const modalTitle = title || (cropShape === 'square' ? 'Recortar Imagem' : cropShape === 'round' ? 'Recortar Foto de Perfil' : 'Recortar Ícone do Workspace');
 
   // Reset transforms whenever a new image is provided
   useEffect(() => {
