@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useTheme } from './ThemeProvider';
 import IsometricGraph from './graph/IsometricGraph';
 import ObsidianGraph from './graph/ObsidianGraph';
+import { extractGraphLinks } from '@/lib/graphLinks';
 
 export type GroupRuleType = 'pasta' | 'tag' | 'titulo' | 'conteudo' | 'tipo';
 
@@ -249,41 +250,7 @@ export default function GraphView({
 
   // Extract Links from HTML content of notes
   const links = useMemo<GraphLink[]>(() => {
-    const extractedLinks: GraphLink[] = [];
-    const noteIdSet = new Set(notas.map((n) => n.id));
-    const titleToIdMap = new Map(notas.map((n) => [n.titulo.toLowerCase().trim(), n.id]));
-
-    notas.forEach((sourceNota) => {
-      const content = sourceNota.conteudo || '';
-
-      // Match data-note-id="..."
-      const dataIdRegex = /data-note-id=["']([^"']+)["']/g;
-      let m;
-      while ((m = dataIdRegex.exec(content)) !== null) {
-        const targetId = m[1];
-        if (targetId && targetId !== sourceNota.id && noteIdSet.has(targetId)) {
-          extractedLinks.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-
-      // Match [[Title]] wikilinks
-      const wikiRegex = /\[\[(.*?)\]\]/g;
-      while ((m = wikiRegex.exec(content)) !== null) {
-        const targetTitle = m[1].toLowerCase().trim();
-        const targetId = titleToIdMap.get(targetTitle);
-        if (targetId && targetId !== sourceNota.id) {
-          extractedLinks.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-    });
-
-    // Remove duplicates
-    const unique = new Map<string, GraphLink>();
-    extractedLinks.forEach((l) => {
-      const key = `${l.source}->${l.target}`;
-      unique.set(key, l);
-    });
-    return Array.from(unique.values());
+    return extractGraphLinks(notas);
   }, [notas]);
 
   // Connection count for each note

@@ -2,9 +2,57 @@
 
 import { useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrthographicCamera, Line, Html, OrbitControls } from '@react-three/drei';
+import { OrthographicCamera, Html, OrbitControls } from '@react-three/drei';
 import * as d3 from 'd3-force';
+import * as THREE from 'three';
 import { resolveNodeColor, GraphGroup } from '../GraphView';
+
+interface IsometricBeamProps {
+  p1: [number, number, number];
+  p2: [number, number, number];
+  color: string;
+  isHighlighted: boolean;
+  isDimmed: boolean;
+}
+
+function IsometricBeam({ p1, p2, color, isHighlighted, isDimmed }: IsometricBeamProps) {
+  const beamData = useMemo(() => {
+    const v1 = new THREE.Vector3(p1[0], p1[1], p1[2]);
+    const v2 = new THREE.Vector3(p2[0], p2[1], p2[2]);
+    const dir = new THREE.Vector3().subVectors(v2, v1);
+    const len = dir.length();
+    if (len < 0.001) return null;
+    const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.clone().normalize()
+    );
+    return {
+      mid: [mid.x, mid.y, mid.z] as [number, number, number],
+      length: len,
+      quaternion,
+    };
+  }, [p1, p2]);
+
+  if (!beamData) return null;
+
+  const radius = isHighlighted ? 1.4 : 0.8;
+
+  return (
+    <mesh position={beamData.mid} quaternion={beamData.quaternion}>
+      <cylinderGeometry args={[radius, radius, beamData.length, 8]} />
+      <meshStandardMaterial
+        color={color}
+        emissive={isHighlighted ? '#ffffff' : color}
+        emissiveIntensity={isHighlighted ? 0.6 : 0.15}
+        roughness={0.25}
+        metalness={0.3}
+        transparent={isDimmed}
+        opacity={isDimmed ? 0.2 : 0.9}
+      />
+    </mesh>
+  );
+}
 
 interface IsometricGraphProps {
   notas: any[];
@@ -180,30 +228,30 @@ export default function IsometricGraph({
 
         {/* Edges */}
         {finalLinks.map((link: any, i) => {
-          const sourcePos = positions.get(link.source.id || link.source);
-          const targetPos = positions.get(link.target.id || link.target);
+          const sourceId = link.source?.id || link.source;
+          const targetId = link.target?.id || link.target;
+          const sourcePos = positions.get(sourceId);
+          const targetPos = positions.get(targetId);
           if (!sourcePos || !targetPos) return null;
 
-          const isSourceHovered = hoveredNodeId === (link.source.id || link.source);
-          const isTargetHovered = hoveredNodeId === (link.target.id || link.target);
+          const isSourceHovered = hoveredNodeId === sourceId;
+          const isTargetHovered = hoveredNodeId === targetId;
           const isHighlighted = hoveredNodeId ? isSourceHovered || isTargetHovered : false;
           const isDimmed = hoveredNodeId && !isHighlighted;
 
           const highlightColor = '#20b8cd'; // Synap Blue
-          const normalColor = isLight ? '#94a3b8' : '#383a40';
-          const dimmedColor = isLight ? '#e2e8f0' : '#232428';
+          const normalColor = isLight ? '#94a3b8' : '#71717a';
+          const dimmedColor = isLight ? '#e2e8f0' : '#27272a';
+          const edgeColor = isHighlighted ? highlightColor : isDimmed ? dimmedColor : normalColor;
 
           return (
-            <Line
-              key={i}
-              points={[
-                [sourcePos.x, sourcePos.height, sourcePos.z],
-                [targetPos.x, targetPos.height, targetPos.z],
-              ]}
-              color={isHighlighted ? highlightColor : isDimmed ? dimmedColor : normalColor}
-              lineWidth={isHighlighted ? 2.5 : 1.2}
-              transparent
-              opacity={isHighlighted ? 1 : isDimmed ? 0.15 : 0.6}
+            <IsometricBeam
+              key={`${sourceId}---${targetId}---${i}`}
+              p1={[sourcePos.x, sourcePos.height * 0.7, sourcePos.z]}
+              p2={[targetPos.x, targetPos.height * 0.7, targetPos.z]}
+              color={edgeColor}
+              isHighlighted={isHighlighted}
+              isDimmed={!!isDimmed}
             />
           );
         })}

@@ -2,11 +2,12 @@
 
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrthographicCamera, Line, Html, OrbitControls } from '@react-three/drei';
+import { OrthographicCamera, Html, OrbitControls } from '@react-three/drei';
 import * as d3 from 'd3-force';
 import * as THREE from 'three';
 import GraphDrawingPreview from './GraphDrawingPreview';
 import { ensureHtmlContent } from './Editor';
+import { extractGraphLinks, GraphLink } from '@/lib/graphLinks';
 
 interface NoteItem {
   id: string;
@@ -25,9 +26,100 @@ interface IsometricGraphViewProps {
   onOpenNota: (nota: NoteItem) => void;
 }
 
-interface GraphLink {
-  source: string;
-  target: string;
+// 3D Connection Conduit Beam and Ground Track between towers
+interface IsometricConnectionBeamProps {
+  p1: [number, number, number];
+  p2: [number, number, number];
+  isHighlighted: boolean;
+  isDimmed: boolean;
+}
+
+function IsometricConnectionBeam({
+  p1,
+  p2,
+  isHighlighted,
+  isDimmed,
+}: IsometricConnectionBeamProps) {
+  const beamData = useMemo(() => {
+    const v1 = new THREE.Vector3(p1[0], p1[1], p1[2]);
+    const v2 = new THREE.Vector3(p2[0], p2[1], p2[2]);
+    const dir = new THREE.Vector3().subVectors(v2, v1);
+    const len = dir.length();
+    if (len < 0.001) {
+      return null;
+    }
+    const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.clone().normalize()
+    );
+    return {
+      mid: [mid.x, mid.y, mid.z] as [number, number, number],
+      length: len,
+      quaternion,
+    };
+  }, [p1, p2]);
+
+  const floorData = useMemo(() => {
+    const v1 = new THREE.Vector3(p1[0], 0.05, p1[2]);
+    const v2 = new THREE.Vector3(p2[0], 0.05, p2[2]);
+    const dir = new THREE.Vector3().subVectors(v2, v1);
+    const len = dir.length();
+    if (len < 0.001) {
+      return null;
+    }
+    const mid = new THREE.Vector3().addVectors(v1, v2).multiplyScalar(0.5);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.clone().normalize()
+    );
+    return {
+      mid: [mid.x, mid.y, mid.z] as [number, number, number],
+      length: len,
+      quaternion,
+    };
+  }, [p1, p2]);
+
+  if (!beamData) return null;
+
+  const beamRadius = isHighlighted ? 1.4 : 0.8;
+  const beamColor = isHighlighted ? '#ffffff' : isDimmed ? '#27272a' : '#71717a';
+  const emissiveColor = isHighlighted ? '#ffffff' : isDimmed ? '#000000' : '#27272a';
+  const emissiveIntensity = isHighlighted ? 0.8 : 0.25;
+
+  return (
+    <group>
+      {/* 3D Elevated Conduit Beam connecting towers */}
+      <mesh position={beamData.mid} quaternion={beamData.quaternion}>
+        <cylinderGeometry args={[beamRadius, beamRadius, beamData.length, 8]} />
+        <meshStandardMaterial
+          color={beamColor}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
+          roughness={0.2}
+          metalness={0.3}
+          transparent={isDimmed}
+          opacity={isDimmed ? 0.15 : 0.95}
+        />
+      </mesh>
+
+      {/* Ground Pathway Track */}
+      {floorData && (
+        <mesh position={floorData.mid} quaternion={floorData.quaternion}>
+          <boxGeometry args={[isHighlighted ? 2.4 : 1.2, floorData.length, 0.2]} />
+          <meshStandardMaterial
+            color={isHighlighted ? '#ffffff' : isDimmed ? '#18181b' : '#3f3f46'}
+            emissive={isHighlighted ? '#ffffff' : isDimmed ? '#000000' : '#27272a'}
+            emissiveIntensity={isHighlighted ? 0.6 : 0.1}
+            roughness={0.4}
+            metalness={0.2}
+            transparent={isDimmed}
+            opacity={isDimmed ? 0.15 : 0.75}
+          />
+        </mesh>
+      )}
+    </group>
+  );
 }
 
 // Sub-component inside Canvas to handle camera reset
@@ -76,57 +168,9 @@ export default function IsometricGraphView({
   const [showLabels, setShowLabels] = useState<boolean>(true);
   const [resetCameraCount, setResetCameraCount] = useState<number>(0);
 
-  // 1. Extração de Conexões (Wikilinks [[...]] e data-note-id)
+  // 1. Extração estrita de conexões (Wikilinks [[...]] e data-note-id)
   const links = useMemo<GraphLink[]>(() => {
-    if (!notas || notas.length === 0) return [];
-
-    const titleToIdMap = new Map<string, string>();
-    const idSet = new Set<string>();
-
-    notas.forEach((n) => {
-      idSet.add(n.id);
-      if (n.titulo) {
-        titleToIdMap.set(n.titulo.toLowerCase().trim(), n.id);
-      }
-    });
-
-    const extracted: GraphLink[] = [];
-
-    notas.forEach((sourceNota) => {
-      const content = (sourceNota.conteudo || '').toLowerCase();
-      if (!content) return;
-
-      // Match data-note-id="..."
-      const dataIdRegex = /data-note-id=["']([^"']+)["']/g;
-      let m;
-      while ((m = dataIdRegex.exec(content)) !== null) {
-        const targetId = m[1];
-        if (targetId && targetId !== sourceNota.id && idSet.has(targetId)) {
-          extracted.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-
-      // Match [[title]]
-      const wikiRegex = /\[\[(.*?)\]\]/g;
-      while ((m = wikiRegex.exec(content)) !== null) {
-        const targetTitle = m[1].toLowerCase().trim();
-        const targetId = titleToIdMap.get(targetTitle);
-        if (targetId && targetId !== sourceNota.id) {
-          extracted.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-    });
-
-    // Deduplicate
-    const unique = new Map<string, GraphLink>();
-    extracted.forEach((l) => {
-      const key = [l.source, l.target].sort().join('---');
-      if (!unique.has(key)) {
-        unique.set(key, l);
-      }
-    });
-
-    return Array.from(unique.values());
+    return extractGraphLinks(notas);
   }, [notas]);
 
   // Contagem de conexões por nota
@@ -339,10 +383,10 @@ export default function IsometricGraphView({
           );
         })}
 
-        {/* 3D Conexões (Linhas Retas Tridimensionais) */}
+        {/* 3D Conexões (Dutos e Linhas Isométricas Tridimensionais) */}
         {finalLinks.map((link: any, i) => {
-          const sourceId = link.source.id || link.source;
-          const targetId = link.target.id || link.target;
+          const sourceId = link.source?.id || link.source;
+          const targetId = link.target?.id || link.target;
           const sourcePos = positions.get(sourceId);
           const targetPos = positions.get(targetId);
           if (!sourcePos || !targetPos) return null;
@@ -353,16 +397,12 @@ export default function IsometricGraphView({
           const isDimmed = hoveredNodeId !== null && !isHighlighted;
 
           return (
-            <Line
-              key={i}
-              points={[
-                [sourcePos.x, sourcePos.height, sourcePos.z],
-                [targetPos.x, targetPos.height, targetPos.z],
-              ]}
-              color={isHighlighted ? '#ffffff' : isDimmed ? '#27272a' : '#52525b'}
-              lineWidth={isHighlighted ? 2.4 : 1.2}
-              transparent
-              opacity={isHighlighted ? 1 : isDimmed ? 0.08 : 0.4}
+            <IsometricConnectionBeam
+              key={`${sourceId}---${targetId}---${i}`}
+              p1={[sourcePos.x, sourcePos.height * 0.7, sourcePos.z]}
+              p2={[targetPos.x, targetPos.height * 0.7, targetPos.z]}
+              isHighlighted={isHighlighted}
+              isDimmed={isDimmed}
             />
           );
         })}

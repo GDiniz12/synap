@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import GraphDrawingPreview from './GraphDrawingPreview';
 import { ensureHtmlContent } from './Editor';
 
+import { extractGraphLinks, GraphLink } from '@/lib/graphLinks';
+
 interface NoteItem {
   id: string;
   titulo?: string;
@@ -19,11 +21,6 @@ interface OrthogonalGraphViewProps {
   pastas?: any[];
   activeWorkspace?: any;
   onOpenNota: (nota: NoteItem) => void;
-}
-
-interface GraphLink {
-  source: string;
-  target: string;
 }
 
 const NODE_SIZE = 16; // Tamanho do pequeno quadrado cinza (16x16px)
@@ -49,74 +46,9 @@ export default function OrthogonalGraphView({
   // Hover
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  // 1. Extração de conexões entre as notas (Wikilinks [[...]] e data-note-id)
+  // 1. Extração de conexões estritas entre as notas (Wikilinks [[...]] e data-note-id)
   const links = useMemo<GraphLink[]>(() => {
-    if (!notas || notas.length === 0) return [];
-
-    const titleToIdMap = new Map<string, string>();
-    const idSet = new Set<string>();
-
-    notas.forEach((n) => {
-      idSet.add(n.id);
-      if (n.titulo) {
-        titleToIdMap.set(n.titulo.toLowerCase().trim(), n.id);
-      }
-    });
-
-    const extracted: GraphLink[] = [];
-
-    notas.forEach((sourceNota) => {
-      const content = (sourceNota.conteudo || '').toLowerCase();
-      if (!content) return;
-
-      // Match data-note-id="..."
-      const dataIdRegex = /data-note-id=["']([^"']+)["']/g;
-      let m;
-      while ((m = dataIdRegex.exec(content)) !== null) {
-        const targetId = m[1];
-        if (targetId && targetId !== sourceNota.id && idSet.has(targetId)) {
-          extracted.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-
-      // Match [[Title]]
-      const wikiRegex = /\[\[(.*?)\]\]/g;
-      while ((m = wikiRegex.exec(content)) !== null) {
-        const targetTitle = m[1].toLowerCase().trim();
-        const targetId = titleToIdMap.get(targetTitle);
-        if (targetId && targetId !== sourceNota.id) {
-          extracted.push({ source: sourceNota.id, target: targetId });
-        }
-      }
-    });
-
-    // Fallback: conecta notas da mesma pasta caso não haja links explícitos
-    if (extracted.length === 0 && notas.length > 1) {
-      const folderGroups: Record<string, string[]> = {};
-      notas.forEach((n) => {
-        const fId = n.pastaId || 'root';
-        if (!folderGroups[fId]) folderGroups[fId] = [];
-        folderGroups[fId].push(n.id);
-      });
-
-      Object.values(folderGroups).forEach((groupNoteIds) => {
-        for (let i = 0; i < groupNoteIds.length - 1; i++) {
-          extracted.push({ source: groupNoteIds[i], target: groupNoteIds[i + 1] });
-        }
-      });
-    }
-
-    // Deduplicação
-    const uniqueMap = new Map<string, GraphLink>();
-    extracted.forEach((l) => {
-      const key = `${l.source}__${l.target}`;
-      const revKey = `${l.target}__${l.source}`;
-      if (!uniqueMap.has(key) && !uniqueMap.has(revKey)) {
-        uniqueMap.set(key, l);
-      }
-    });
-
-    return Array.from(uniqueMap.values());
+    return extractGraphLinks(notas);
   }, [notas]);
 
   // Contagem de conexões por nota
