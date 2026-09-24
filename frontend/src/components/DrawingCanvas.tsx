@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
 import DrawingItemPickerModal from './DrawingItemPickerModal';
 import DrawingItemContainer from './DrawingItemContainer';
 import MathEquationModal from './MathEquationModal';
@@ -200,6 +200,7 @@ export default function DrawingCanvas({
   const textMountedAtRef = useRef<number>(0);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const renderCanvasRef = useRef<() => void>(() => undefined);
 
   // Mouse action refs
   const mouseModeRef = useRef<
@@ -581,9 +582,7 @@ export default function DrawingCanvas({
       ctx.save();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1.5 / zoom;
-      ctx.setLineDash([4 / zoom, 4 / zoom]);
       ctx.strokeRect(bMinX, bMinY, bW, bH);
-      ctx.setLineDash([]);
 
       // Alças de redimensionamento (Handles)
       const handleSize = 7 / zoom;
@@ -638,6 +637,8 @@ export default function DrawingCanvas({
     zoom,
   ]);
 
+  renderCanvasRef.current = renderCanvas;
+
   // Redimensionamento do canvas conforme container
   useEffect(() => {
     const handleResize = () => {
@@ -646,15 +647,15 @@ export default function DrawingCanvas({
       if (!container || !canvas) return;
       canvas.width = container.clientWidth;
       canvas.height = container.clientHeight;
-      renderCanvas();
+      renderCanvasRef.current();
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [renderCanvas]);
+  }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     renderCanvas();
   }, [renderCanvas]);
 
@@ -1099,7 +1100,16 @@ export default function DrawingCanvas({
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (editingText) return;
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const isTyping = Boolean(
+        target &&
+          (target.isContentEditable ||
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.closest('[contenteditable="true"]'))
+      );
+      if (editingText || isTyping) return;
 
       if (e.code === 'Space') {
         setIsSpacePressed(true);
@@ -1637,8 +1647,6 @@ export default function DrawingCanvas({
               commitElements(remaining);
               setSelectedIds([]);
             }}
-            onOpenNota={onOpenNota}
-            onOpenCard={onOpenCard}
             onEditMath={(item) =>
               setMathModal({
                 visible: true,

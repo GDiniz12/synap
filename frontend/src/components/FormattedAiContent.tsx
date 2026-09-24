@@ -134,6 +134,28 @@ export default function FormattedAiContent({ content }: FormattedAiContentProps)
             return <div key={lineIdx} className="h-2" />;
           }
 
+          // Markdown Image standalone line
+          const imgMatch = line.trim().match(/^!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/uploads\/[^\s)]+|data:image\/[^\s)]+)\)$/);
+          if (imgMatch) {
+            const altText = imgMatch[1] || 'Imagem';
+            const src = imgMatch[2];
+            return (
+              <div key={lineIdx} className="my-3 max-w-xl rounded-none border border-white/10 bg-[#161616] overflow-hidden shadow-lg">
+                <img
+                  src={src}
+                  alt={altText}
+                  className="w-full max-h-96 object-contain rounded-none bg-black/40"
+                  loading="lazy"
+                />
+                {altText && altText !== 'Imagem' && (
+                  <div className="px-3 py-1.5 bg-white/5 border-t border-white/10 text-[11px] font-mono text-zinc-400">
+                    {altText}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           // Headers
           if (line.startsWith('### ')) {
             return (
@@ -202,8 +224,8 @@ export default function FormattedAiContent({ content }: FormattedAiContentProps)
   };
 
   const parseInlineSpans = (text: string): React.ReactNode[] => {
-    // Regex for inline math $...$, inline code `...`, bold **...**, italic *...*
-    const tokens = text.split(/(\$[^\$]+?\$|`[^`]+?`|\*\*[^\*]+?\*\*|\*[^\*]+?\*)/g);
+    // Regex for inline math $...$, inline code `...`, bold **...**, italic *...*, images ![alt](url), links [text](url)
+    const tokens = text.split(/(\$[^\$]+?\$|`[^`]+?`|\*\*[^\*]+?\*\*|\*[^\*]+?\*|!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\))/g);
 
     return tokens.map((token, idx) => {
       if (token.startsWith('$') && token.endsWith('$') && token.length > 2) {
@@ -247,6 +269,41 @@ export default function FormattedAiContent({ content }: FormattedAiContentProps)
           <em key={idx} className="italic text-zinc-300">
             {token.slice(1, -1)}
           </em>
+        );
+      }
+
+      // Inline Image ![alt](url)
+      const imgMatch = token.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      if (imgMatch) {
+        const altText = imgMatch[1] || 'Imagem';
+        const src = imgMatch[2];
+        return (
+          <span key={idx} className="inline-block my-1 max-w-full align-middle">
+            <img
+              src={src}
+              alt={altText}
+              className="max-h-60 max-w-full rounded-none border border-white/10 object-contain shadow-sm bg-black/40"
+              loading="lazy"
+            />
+          </span>
+        );
+      }
+
+      // Inline Link [text](url)
+      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (linkMatch) {
+        const linkText = linkMatch[1];
+        const href = linkMatch[2];
+        return (
+          <a
+            key={idx}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline underline-offset-2 break-all"
+          >
+            {linkText}
+          </a>
         );
       }
 

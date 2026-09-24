@@ -19,7 +19,7 @@ export class NotaService {
     return prisma.nota.findUnique({ where: { id } });
   }
 
-  async updateNota(id: string, data: Prisma.NotaUpdateInput) {
+  async updateNota(id: string, data: Prisma.NotaUncheckedUpdateInput) {
     return prisma.nota.update({ where: { id }, data });
   }
 

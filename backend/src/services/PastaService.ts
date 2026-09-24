@@ -14,7 +14,7 @@ export class PastaService {
     return prisma.pasta.findUnique({ where: { id } });
   }
 
-  async updatePasta(id: string, data: Prisma.PastaUpdateInput) {
+  async updatePasta(id: string, data: Prisma.PastaUncheckedUpdateInput) {
     return prisma.pasta.update({ where: { id }, data });
   }
 

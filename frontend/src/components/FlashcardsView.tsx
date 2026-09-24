@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { api } from "@/lib/api";
+import { ensureHtmlContent } from "./Editor";
 
 export interface Deck {
   id: string;
@@ -1138,8 +1139,8 @@ export default function FlashcardsView({
                               </div>
                               {currentReviewCard.nota.conteudo && (
                                 <div
-                                  className="max-h-[160px] overflow-y-auto text-xs leading-relaxed text-zinc-300 prose dark:prose-invert max-w-none custom-scrollbar"
-                                  dangerouslySetInnerHTML={{ __html: currentReviewCard.nota.conteudo }}
+                                  className="max-h-[160px] overflow-y-auto text-xs leading-relaxed text-zinc-300 prose dark:prose-invert max-w-none custom-scrollbar notion-editor"
+                                  dangerouslySetInnerHTML={{ __html: ensureHtmlContent(currentReviewCard.nota.conteudo) }}
                                 />
                               )}
                             </div>
@@ -1955,8 +1956,8 @@ export default function FlashcardsView({
             </div>
 
             <div
-              className="p-5 overflow-y-auto text-xs leading-relaxed text-zinc-300 prose dark:prose-invert max-w-none custom-scrollbar"
-              dangerouslySetInnerHTML={{ __html: viewingNote.conteudo || '<p class="text-zinc-500">Esta nota está vazia.</p>' }}
+              className="p-5 overflow-y-auto text-xs leading-relaxed text-zinc-300 prose dark:prose-invert max-w-none custom-scrollbar notion-editor"
+              dangerouslySetInnerHTML={{ __html: ensureHtmlContent(viewingNote.conteudo || '<p class="text-zinc-500">Esta nota está vazia.</p>') }}
             />
 
             <div className="px-5 py-3 border-t border-white/10 bg-[#141414] flex justify-end gap-2">

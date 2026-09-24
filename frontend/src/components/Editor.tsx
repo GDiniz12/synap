@@ -18,15 +18,27 @@ marked.setOptions({
 
 export function ensureHtmlContent(raw: string): string {
   if (!raw || !raw.trim()) return '<p><br></p>';
-  // If already has common HTML block tags, return as-is
-  if (/<\s*(p|h[1-6]|div|table|ul|ol|blockquote|pre)\b/i.test(raw)) {
-    return raw;
+
+  let formatted = raw;
+
+  // Convert markdown images ![alt](url) into proper interactive image elements
+  const mdImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/uploads\/[^\s)]+|data:image\/[^\s)]+)\)/g;
+  if (mdImageRegex.test(formatted)) {
+    formatted = formatted.replace(mdImageRegex, (_match, alt, src) => {
+      const altText = alt || 'Imagem';
+      return `<div class="synap-image-wrapper" contenteditable="false" style="width: 100%; max-width: 100%;"><img src="${src}" alt="${altText}" loading="lazy" /><div class="synap-image-controls"><button type="button" class="synap-img-btn-delete" title="Excluir imagem" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:rgba(0,0,0,0.75);color:#fff;border-radius:6px;border:none;cursor:pointer;backdrop-filter:blur(4px);transition:all 0.15s ease;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></div><div class="synap-resize-handle" title="Arraste para redimensionar"></div></div>`;
+    });
+  }
+
+  // If already has common HTML block tags, return formatted
+  if (/<\s*(p|h[1-6]|div|table|ul|ol|blockquote|pre)\b/i.test(formatted)) {
+    return formatted;
   }
   try {
-    const parsed = marked.parse(raw) as string;
+    const parsed = marked.parse(formatted) as string;
     return parsed;
   } catch (err) {
-    return raw;
+    return formatted;
   }
 }
 
@@ -953,8 +965,10 @@ function Editor({
         body: formData,
       });
 
-      if (data?.url) {
-        insertImageAtRange(data.url, file.name, targetRange);
+      const imageUrl = data?.url || data?.fileUrl || data?.imageUrl || data?.data?.url || data?.secure_url || (data?.filename ? `/uploads/${data.filename}` : null);
+
+      if (imageUrl) {
+        insertImageAtRange(imageUrl, file.name, targetRange);
       }
     } catch (err: any) {
       alert('Erro ao enviar imagem: ' + (err.message || 'Falha no upload'));
@@ -1972,6 +1986,29 @@ function Editor({
             return;
           }
         }
+      }
+    }
+
+    // Check if pasted plain text is markdown image ![alt](url) or direct image URL
+    const text = e.clipboardData?.getData('text/plain')?.trim();
+    if (text) {
+      const mdImgMatch = text.match(/^!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/uploads\/[^\s)]+|data:image\/[^\s)]+)\)$/);
+      if (mdImgMatch) {
+        e.preventDefault();
+        const alt = mdImgMatch[1] || 'Imagem';
+        const src = mdImgMatch[2];
+        const sel = window.getSelection();
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+        insertImageAtRange(src, alt, range);
+        return;
+      }
+
+      if (/^https?:\/\/[^\s]+?\.(png|jpe?g|webp|gif|svg)(\?[^\s]*)?$/i.test(text)) {
+        e.preventDefault();
+        const sel = window.getSelection();
+        const range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).cloneRange() : null;
+        insertImageAtRange(text, 'Imagem', range);
+        return;
       }
     }
   };

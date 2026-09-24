@@ -151,6 +151,28 @@ function FormattedAiContent({ content, onOpenNoteById }: { content: string; onOp
             return <div key={lineIdx} className="h-2" />;
           }
 
+          // Markdown Image standalone line
+          const imgMatch = line.trim().match(/^!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/uploads\/[^\s)]+|data:image\/[^\s)]+)\)$/);
+          if (imgMatch) {
+            const altText = imgMatch[1] || 'Imagem';
+            const src = imgMatch[2];
+            return (
+              <div key={lineIdx} className="my-3 max-w-xl rounded-none border border-[var(--accents-2)] bg-[var(--accents-1)] overflow-hidden shadow-lg">
+                <img
+                  src={src}
+                  alt={altText}
+                  className="w-full max-h-96 object-contain rounded-none bg-black/40"
+                  loading="lazy"
+                />
+                {altText && altText !== 'Imagem' && (
+                  <div className="px-3 py-1.5 bg-[var(--accents-2)]/40 border-t border-[var(--accents-2)] text-[11px] font-mono text-[var(--accents-5)]">
+                    {altText}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
           // Headers
           if (line.startsWith('### ')) {
             return (
@@ -219,8 +241,8 @@ function FormattedAiContent({ content, onOpenNoteById }: { content: string; onOp
   };
 
   const parseInlineSpans = (text: string): React.ReactNode[] => {
-    // Regex for inline math $...$, inline code `...`, bold **...**, italic *...*
-    const tokens = text.split(/(\$[^\$]+?\$|`[^`]+?`|\*\*[^\*]+?\*\*|\*[^\*]+?\*)/g);
+    // Regex for inline math $...$, inline code `...`, bold **...**, italic *...*, images ![alt](url), links [text](url)
+    const tokens = text.split(/(\$[^\$]+?\$|`[^`]+?`|\*\*[^\*]+?\*\*|\*[^\*]+?\*|!\[[^\]]*\]\([^)]+\)|\[[^\]]+\]\([^)]+\))/g);
 
     return tokens.map((token, idx) => {
       if (token.startsWith('$') && token.endsWith('$') && token.length > 2) {
@@ -264,6 +286,41 @@ function FormattedAiContent({ content, onOpenNoteById }: { content: string; onOp
           <em key={idx} className="italic">
             {token.slice(1, -1)}
           </em>
+        );
+      }
+
+      // Inline Image ![alt](url)
+      const imgMatch = token.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+      if (imgMatch) {
+        const altText = imgMatch[1] || 'Imagem';
+        const src = imgMatch[2];
+        return (
+          <span key={idx} className="inline-block my-1 max-w-full align-middle">
+            <img
+              src={src}
+              alt={altText}
+              className="max-h-60 max-w-full rounded-none border border-[var(--accents-2)] object-contain shadow-sm bg-black/40"
+              loading="lazy"
+            />
+          </span>
+        );
+      }
+
+      // Inline Link [text](url)
+      const linkMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (linkMatch) {
+        const linkText = linkMatch[1];
+        const href = linkMatch[2];
+        return (
+          <a
+            key={idx}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:text-blue-300 underline underline-offset-2 break-all"
+          >
+            {linkText}
+          </a>
         );
       }
 
@@ -563,14 +620,16 @@ export default function AiChatView({
         body: formData,
       });
 
-      if (res?.url) {
+      const imageUrl = res?.url || res?.imageUrl || res?.fileUrl || res?.data?.url || res?.secure_url || (res?.filename ? `/uploads/${res.filename}` : null);
+
+      if (imageUrl) {
         setAttachedContexts((prev) => [
           ...prev,
           {
             type: 'file',
             id: `file-${Date.now()}`,
             title: file.name,
-            url: res.url,
+            url: imageUrl,
           },
         ]);
       }
@@ -635,7 +694,7 @@ export default function AiChatView({
   // Send message and handle SSE streaming
   const handleSendMessage = async (customPrompt?: string) => {
     const rawMessage = (customPrompt || inputValue).trim();
-    if (!rawMessage || isLoading) return;
+    if ((!rawMessage && attachedContexts.length === 0) || isLoading) return;
 
     setErrorMessage(null);
     setInputValue('');
@@ -651,6 +710,7 @@ export default function AiChatView({
       createdAt: new Date().toISOString(),
       metadata: {
         contextsCount: attachedContexts.length,
+        contexts: [...attachedContexts],
       },
     };
 
@@ -1014,9 +1074,27 @@ export default function AiChatView({
 
                   {/* Body text */}
                   {isUser ? (
-                    <p className="text-[13px] leading-relaxed text-zinc-200 whitespace-pre-wrap">
-                      {msg.conteudo}
-                    </p>
+                    <div className="space-y-2">
+                      {/* Attached image preview cards */}
+                      {msg.metadata?.contexts?.filter((c: any) => c.type === 'file' && c.url && (/\.(png|jpe?g|webp|gif|svg)($|\?)/i.test(c.url) || /\.(png|jpe?g|webp|gif|svg)$/i.test(c.title || ''))).map((imgCtx: any, i: number) => (
+                        <div key={i} className="my-1.5 max-w-sm rounded-none border border-white/10 bg-[#161616] overflow-hidden">
+                          <img
+                            src={imgCtx.url}
+                            alt={imgCtx.title || 'Imagem anexada'}
+                            className="max-h-56 w-auto object-contain rounded-none bg-black/40"
+                            loading="lazy"
+                          />
+                          <div className="px-2.5 py-1 bg-white/5 border-t border-white/10 text-[10px] font-mono text-zinc-400 truncate">
+                            {imgCtx.title}
+                          </div>
+                        </div>
+                      ))}
+                      {msg.conteudo && (
+                        <p className="text-[13px] leading-relaxed text-zinc-200 whitespace-pre-wrap">
+                          {msg.conteudo}
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <FormattedAiContent
                       content={msg.conteudo}
@@ -1302,36 +1380,45 @@ export default function AiChatView({
                   </span>
                 )}
 
-                {attachedContexts.map((ctx) => (
-                  <span
-                    key={`${ctx.type}-${ctx.id}`}
-                    className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-200 bg-[#121212] border border-white/10 px-2 py-0.5 rounded-none"
-                  >
-                    {ctx.type === 'desenho' ? (
-                      <span className="text-zinc-400 font-bold">/</span>
-                    ) : ctx.type === 'pasta' ? (
-                      <span className="text-zinc-400 font-bold">#</span>
-                    ) : ctx.type === 'file' ? (
-                      <span className="text-zinc-400">📎</span>
-                    ) : (
-                      <span className="text-zinc-400 font-bold">/</span>
-                    )}
-                    <span className="truncate max-w-[140px]">{ctx.title}</span>
-                    {ctx.noteCount !== undefined && (
-                      <span className="text-[10px] text-zinc-500">({ctx.noteCount} notas)</span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveContext(ctx.id, ctx.type)}
-                      className="text-zinc-500 hover:text-white cursor-pointer ml-0.5"
+                {attachedContexts.map((ctx) => {
+                  const isImage = ctx.url && (/\.(png|jpe?g|webp|gif|svg)($|\?)/i.test(ctx.url) || /\.(png|jpe?g|webp|gif|svg)$/i.test(ctx.title || ''));
+                  return (
+                    <span
+                      key={`${ctx.type}-${ctx.id}`}
+                      className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-200 bg-[#121212] border border-white/10 px-2 py-0.5 rounded-none"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
+                      {ctx.type === 'desenho' ? (
+                        <span className="text-zinc-400 font-bold">/</span>
+                      ) : ctx.type === 'pasta' ? (
+                        <span className="text-zinc-400 font-bold">#</span>
+                      ) : ctx.type === 'file' ? (
+                        isImage ? (
+                          <img src={ctx.url} alt={ctx.title} className="w-3.5 h-3.5 object-cover rounded-xs border border-white/15 shrink-0" />
+                        ) : (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-400 shrink-0">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                          </svg>
+                        )
+                      ) : (
+                        <span className="text-zinc-400 font-bold">/</span>
+                      )}
+                      <span className="truncate max-w-[140px]">{ctx.title}</span>
+                      {ctx.noteCount !== undefined && (
+                        <span className="text-[10px] text-zinc-500">({ctx.noteCount} notas)</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveContext(ctx.id, ctx.type)}
+                        className="text-zinc-500 hover:text-white cursor-pointer ml-0.5"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </span>
+                  );
+                })}
               </div>
             )}
 

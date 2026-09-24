@@ -4,16 +4,27 @@ import { marked } from 'marked';
 
 export function ensureHtmlContent(raw: string): string {
   if (!raw || typeof raw !== 'string') return '';
-  const trimmed = raw.trim();
+  let trimmed = raw.trim();
+
+  // Convert markdown image syntax ![alt](url) to HTML img tags
+  const mdImageRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)]+|\/uploads\/[^\s)]+|data:image\/[^\s)]+)\)/g;
+  if (mdImageRegex.test(trimmed)) {
+    trimmed = trimmed.replace(mdImageRegex, (_match, alt, src) => {
+      const altText = alt || 'Imagem';
+      return `<img src="${src}" alt="${altText}" loading="lazy" />`;
+    });
+  }
+
   const hasHtmlTag = /<[a-z][\s\S]*>/i.test(trimmed);
   const hasMarkdownSigns =
     trimmed.startsWith('#') ||
     trimmed.includes('\n#') ||
     trimmed.includes('|---') ||
     trimmed.includes('* ') ||
-    trimmed.includes('- ');
+    trimmed.includes('- ') ||
+    trimmed.includes('![');
   if (hasHtmlTag && !hasMarkdownSigns) {
-    return raw;
+    return trimmed;
   }
   try {
     return marked.parse(trimmed, { gfm: true, breaks: true }) as string;

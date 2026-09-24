@@ -210,6 +210,83 @@ export default function MainPage() {
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Drag and Drop state for Sidebar items (Notes and Folders)
+  const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<{ type: 'folder' | 'root' | 'note'; id: string } | null>(null);
+
+  // Check if candidateChildFolder is descendant of sourceFolder (to prevent cycles)
+  const isDescendantFolder = (sourceFolderId: string, candidateChildFolderId: string): boolean => {
+    if (sourceFolderId === candidateChildFolderId) return true;
+    let current = pastas.find((p) => p.id === candidateChildFolderId);
+    while (current && current.parentId) {
+      if (current.parentId === sourceFolderId) return true;
+      current = pastas.find((p) => p.id === current.parentId);
+    }
+    return false;
+  };
+
+  // Move note to a folder or to root (if targetPastaId is null)
+  const handleMoveNote = async (noteId: string, targetPastaId: string | null) => {
+    const currentNote = notas.find((n) => n.id === noteId);
+    if (!currentNote || currentNote.pastaId === targetPastaId) return;
+
+    // Optimistic local state update
+    setNotas((prev) =>
+      prev.map((n) => (n.id === noteId ? { ...n, pastaId: targetPastaId } : n))
+    );
+    if (selectedNota?.id === noteId) {
+      setSelectedNota((prev: any) => (prev ? { ...prev, pastaId: targetPastaId } : null));
+    }
+
+    if (targetPastaId) {
+      setExpandedFolders((prev) => ({ ...prev, [targetPastaId]: true }));
+    }
+
+    try {
+      await api(`/notas/${noteId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ pastaId: targetPastaId }),
+      });
+    } catch (err) {
+      console.error('Erro ao mover nota:', err);
+      if (activeWorkspace) {
+        const refreshed = await api(`/notas?workspaceId=${activeWorkspace.id}`).catch(() => null);
+        if (refreshed) setNotas(refreshed);
+      }
+    }
+  };
+
+  // Move folder into another folder or to root (if targetParentId is null)
+  const handleMoveFolder = async (folderId: string, targetParentId: string | null) => {
+    const currentFolder = pastas.find((p) => p.id === folderId);
+    if (!currentFolder || currentFolder.parentId === targetParentId) return;
+    if (targetParentId && isDescendantFolder(folderId, targetParentId)) {
+      return; // Cannot move folder into itself or its own subfolders
+    }
+
+    // Optimistic local state update
+    setPastas((prev) =>
+      prev.map((p) => (p.id === folderId ? { ...p, parentId: targetParentId } : p))
+    );
+
+    if (targetParentId) {
+      setExpandedFolders((prev) => ({ ...prev, [targetParentId]: true }));
+    }
+
+    try {
+      await api(`/pastas/${folderId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ parentId: targetParentId }),
+      });
+    } catch (err) {
+      console.error('Erro ao mover pasta:', err);
+      if (activeWorkspace) {
+        const refreshed = await api(`/pastas?workspaceId=${activeWorkspace.id}`).catch(() => null);
+        if (refreshed) setPastas(refreshed);
+      }
+    }
+  };
+
   // Refs para título da nota e desenho
   const noteTitleRef = useRef<HTMLDivElement>(null);
   const drawingTitleInputRef = useRef<HTMLInputElement>(null);
@@ -899,22 +976,78 @@ export default function MainPage() {
   const rootPastas = pastas.filter((p) => !p.parentId);
   const notasSemPasta = notas.filter((n) => !n.pastaId);
 
-  // Renderizador recursivo de pastas com padding amplo e sem cantos arredondados (rounded-none)
+  // Renderizador recursivo de pastas com drag and drop, padding amplo e sem cantos arredondados (rounded-none)
   const renderFolderItem = (pasta: any, depth = 0) => {
     const isFolderExpanded = !!expandedFolders[pasta.id];
     const subpastas = pastas.filter((p) => p.parentId === pasta.id);
     const notasDaPasta = notas.filter((n) => n.pastaId === pasta.id);
 
+    const isOverThisFolder = dragOverTarget?.type === 'folder' && dragOverTarget?.id === pasta.id;
+    const isDraggingThisFolder = draggedItem?.type === 'folder' && draggedItem?.id === pasta.id;
+    const isInvalidDrop = draggedItem?.type === 'folder' && isDescendantFolder(draggedItem.id, pasta.id);
+
     return (
       <div key={pasta.id} className="flex flex-col mt-0.5">
         {/* Linha da Pasta: Texto à esquerda, seta para minimizar/expandir à direita */}
         <div
+          draggable={true}
+          onDragStart={(e) => {
+            e.stopPropagation();
+            setDraggedItem({ type: 'folder', id: pasta.id });
+            e.dataTransfer.setData('application/json', JSON.stringify({ type: 'folder', id: pasta.id }));
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+          onDragEnd={() => {
+            setDraggedItem(null);
+            setDragOverTarget(null);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!isInvalidDrop) {
+              e.dataTransfer.dropEffect = 'move';
+              if (dragOverTarget?.id !== pasta.id || dragOverTarget?.type !== 'folder') {
+                setDragOverTarget({ type: 'folder', id: pasta.id });
+              }
+            }
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!isInvalidDrop) {
+              setDragOverTarget({ type: 'folder', id: pasta.id });
+            }
+          }}
+          onDragLeave={(e) => {
+            e.stopPropagation();
+            if (dragOverTarget?.id === pasta.id) {
+              setDragOverTarget(null);
+            }
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDragOverTarget(null);
+            if (!draggedItem || isInvalidDrop) return;
+            if (draggedItem.type === 'note') {
+              handleMoveNote(draggedItem.id, pasta.id);
+            } else if (draggedItem.type === 'folder' && draggedItem.id !== pasta.id) {
+              handleMoveFolder(draggedItem.id, pasta.id);
+            }
+            setDraggedItem(null);
+          }}
           onClick={() => toggleFolder(pasta.id)}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
-          className="group flex items-center justify-between py-1.5 px-2.5 rounded-none cursor-pointer select-none transition-colors duration-150 hover:bg-white/5 text-zinc-400 hover:text-zinc-200"
+          className={`group flex items-center justify-between py-1.5 px-2.5 rounded-none cursor-pointer select-none transition-all duration-150 ${
+            isDraggingThisFolder
+              ? 'opacity-40 bg-white/5'
+              : isOverThisFolder && !isInvalidDrop
+              ? 'bg-white/15 border-l-2 border-white text-white font-semibold'
+              : 'hover:bg-white/5 text-zinc-400 hover:text-zinc-200'
+          }`}
         >
           {/* Nome da Pasta */}
-          <span className="text-xs font-semibold truncate flex-1 mr-2 text-zinc-400 group-hover:text-zinc-200">
+          <span className="text-xs font-semibold truncate flex-1 mr-2">
             {pasta.nome}
           </span>
 
@@ -952,18 +1085,71 @@ export default function MainPage() {
     );
   };
 
-  // Renderizador de item de nota / desenho com padding refinado e sem cantos arredondados
+  // Renderizador de item de nota / desenho com drag and drop, padding refinado e sem cantos arredondados
   const renderNoteItem = (nota: any, depth = 0) => {
     const isSelected = selectedNota?.id === nota.id;
     const isDrawing = nota.tipo === 'desenho';
 
+    const isOverThisNote = dragOverTarget?.type === 'note' && dragOverTarget?.id === nota.id;
+    const isDraggingThisNote = draggedItem?.type === 'note' && draggedItem?.id === nota.id;
+
     return (
       <div
         key={nota.id}
+        draggable={true}
+        onDragStart={(e) => {
+          e.stopPropagation();
+          setDraggedItem({ type: 'note', id: nota.id });
+          e.dataTransfer.setData('application/json', JSON.stringify({ type: 'note', id: nota.id }));
+          e.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragEnd={() => {
+          setDraggedItem(null);
+          setDragOverTarget(null);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (draggedItem?.id !== nota.id) {
+            e.dataTransfer.dropEffect = 'move';
+            if (dragOverTarget?.id !== nota.id || dragOverTarget?.type !== 'note') {
+              setDragOverTarget({ type: 'note', id: nota.id });
+            }
+          }
+        }}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (draggedItem?.id !== nota.id) {
+            setDragOverTarget({ type: 'note', id: nota.id });
+          }
+        }}
+        onDragLeave={(e) => {
+          e.stopPropagation();
+          if (dragOverTarget?.id === nota.id) {
+            setDragOverTarget(null);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOverTarget(null);
+          if (!draggedItem || draggedItem.id === nota.id) return;
+          if (draggedItem.type === 'note') {
+            handleMoveNote(draggedItem.id, nota.pastaId || null);
+          } else if (draggedItem.type === 'folder') {
+            handleMoveFolder(draggedItem.id, nota.pastaId || null);
+          }
+          setDraggedItem(null);
+        }}
         onClick={() => handleOpenNote(nota)}
         style={{ paddingLeft: `${8 + depth * 8}px` }}
-        className={`group flex items-center justify-between h-7 px-2.5 my-0.5 rounded-none cursor-pointer select-none transition-colors duration-150 ${
-          isSelected
+        className={`group flex items-center justify-between h-7 px-2.5 my-0.5 rounded-none cursor-pointer select-none transition-all duration-150 ${
+          isDraggingThisNote
+            ? 'opacity-40 bg-white/5'
+            : isOverThisNote
+            ? 'bg-white/15 border-l-2 border-white text-white font-medium'
+            : isSelected
             ? 'bg-white/10 text-white font-medium'
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
         }`}
@@ -1589,13 +1775,96 @@ export default function MainPage() {
                         Carregando notas...
                       </div>
                     ) : rootPastas.length === 0 && notasSemPasta.length === 0 ? (
-                      <div className="p-2.5 text-xs text-zinc-500 italic">
-                        Nenhuma nota ou pasta encontrada.
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (draggedItem) {
+                            e.dataTransfer.dropEffect = 'move';
+                            setDragOverTarget({ type: 'root', id: 'root' });
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOverTarget(null);
+                          if (!draggedItem) return;
+                          if (draggedItem.type === 'note') {
+                            handleMoveNote(draggedItem.id, null);
+                          } else if (draggedItem.type === 'folder') {
+                            handleMoveFolder(draggedItem.id, null);
+                          }
+                          setDraggedItem(null);
+                        }}
+                        className="p-2.5 text-xs text-zinc-500 italic border border-dashed border-white/10"
+                      >
+                        Nenhuma nota ou pasta encontrada. Solte arquivos aqui.
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-0.5">
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (draggedItem) {
+                            e.dataTransfer.dropEffect = 'move';
+                            if (dragOverTarget?.type !== 'root' && dragOverTarget?.type !== 'folder' && dragOverTarget?.type !== 'note') {
+                              setDragOverTarget({ type: 'root', id: 'root' });
+                            }
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverTarget?.type === 'root') {
+                            setDragOverTarget(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOverTarget(null);
+                          if (!draggedItem) return;
+                          if (draggedItem.type === 'note') {
+                            handleMoveNote(draggedItem.id, null);
+                          } else if (draggedItem.type === 'folder') {
+                            handleMoveFolder(draggedItem.id, null);
+                          }
+                          setDraggedItem(null);
+                        }}
+                        className="flex flex-col gap-0.5 min-h-[120px] pb-4"
+                      >
                         {rootPastas.map((pasta) => renderFolderItem(pasta))}
                         {notasSemPasta.map((nota) => renderNoteItem(nota))}
+
+                        {/* Drop Zone to move item to workspace root */}
+                        {draggedItem && (
+                          <div
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              e.dataTransfer.dropEffect = 'move';
+                              setDragOverTarget({ type: 'root', id: 'root' });
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDragOverTarget(null);
+                              if (draggedItem.type === 'note') {
+                                handleMoveNote(draggedItem.id, null);
+                              } else if (draggedItem.type === 'folder') {
+                                handleMoveFolder(draggedItem.id, null);
+                              }
+                              setDraggedItem(null);
+                            }}
+                            className={`mt-2 p-2.5 border border-dashed text-center text-xs font-mono transition-colors rounded-none ${
+                              dragOverTarget?.type === 'root'
+                                ? 'border-white bg-white/10 text-white'
+                                : 'border-white/15 text-zinc-500 hover:border-white/30'
+                            }`}
+                          >
+                            <div className="flex items-center justify-center gap-1.5">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                              </svg>
+                              <span>Soltar na Raiz do Workspace</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2228,39 +2497,50 @@ export default function MainPage() {
                 {/* Arquivos Anexados (se houver) */}
                 {uploadedFiles.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 pb-1 border-b border-white/5">
-                    {uploadedFiles.map((file, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-xs text-zinc-300 font-sansation rounded-none"
-                      >
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-zinc-400 shrink-0"
+                    {uploadedFiles.map((file, idx) => {
+                      const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-xs text-zinc-300 font-sansation rounded-none"
                         >
-                          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                          <polyline points="14 2 14 8 20 8" />
-                        </svg>
-                        <span className="max-w-[140px] truncate text-[11px]">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile(idx)}
-                          className="text-zinc-500 hover:text-white p-0.5 cursor-pointer"
-                          aria-label={`Remover ${file.name}`}
-                        >
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                          {isImg ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-3.5 h-3.5 object-cover rounded-xs border border-white/15 shrink-0"
+                            />
+                          ) : (
+                            <svg
+                              width="11"
+                              height="11"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-zinc-400 shrink-0"
+                            >
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                          )}
+                          <span className="max-w-[140px] truncate text-[11px]">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(idx)}
+                            className="text-zinc-500 hover:text-white p-0.5 cursor-pointer"
+                            aria-label={`Remover ${file.name}`}
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -2464,39 +2744,50 @@ export default function MainPage() {
                   {/* Arquivos Anexados (se houver) */}
                   {uploadedFiles.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pb-1 border-b border-white/5">
-                      {uploadedFiles.map((file, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-xs text-zinc-300 font-sansation rounded-none"
-                        >
-                          <svg
-                            width="11"
-                            height="11"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="text-zinc-400 shrink-0"
+                      {uploadedFiles.map((file, idx) => {
+                        const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 text-xs text-zinc-300 font-sansation rounded-none"
                           >
-                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                            <polyline points="14 2 14 8 20 8" />
-                          </svg>
-                          <span className="max-w-[140px] truncate text-[11px]">{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFile(idx)}
-                            className="text-zinc-500 hover:text-white p-0.5 cursor-pointer"
-                            aria-label={`Remover ${file.name}`}
-                          >
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
+                            {isImg ? (
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={file.name}
+                                className="w-3.5 h-3.5 object-cover rounded-xs border border-white/15 shrink-0"
+                              />
+                            ) : (
+                              <svg
+                                width="11"
+                                height="11"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="text-zinc-400 shrink-0"
+                              >
+                                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                                <polyline points="14 2 14 8 20 8" />
+                              </svg>
+                            )}
+                            <span className="max-w-[140px] truncate text-[11px]">{file.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFile(idx)}
+                              className="text-zinc-500 hover:text-white p-0.5 cursor-pointer"
+                              aria-label={`Remover ${file.name}`}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -2638,10 +2929,16 @@ export default function MainPage() {
               {/* Minimalist Drawing Title Header */}
               <div className="px-6 py-2.5 border-b border-white/10 bg-[#141414] flex items-center justify-between shrink-0 z-10">
                 <input
+                  key={selectedNota.id}
                   ref={drawingTitleInputRef}
                   type="text"
+                  name={`drawing-title-${selectedNota.id}`}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Título do desenho"
                   value={selectedNota.titulo || ''}
                   onChange={(e) => handleTitleChange(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
                   onFocus={(e) => {
                     if (e.target.value === 'Novo Desenho' || shouldSelectTitleRef.current) {
                       e.target.setSelectionRange(0, e.target.value.length);
@@ -2860,30 +3157,45 @@ export default function MainPage() {
                   <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                     Arquivos Anexados ({uploadedFiles.length})
                   </span>
-                  {uploadedFiles.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 bg-[#121212] border border-white/10 text-xs rounded-none"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-zinc-300 truncate text-[11px]">{file.name}</span>
-                        <span className="text-zinc-500 text-[10px] font-mono">
-                          {(file.size / 1024).toFixed(0)} KB
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveFile(idx)}
-                        className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer"
-                        aria-label={`Remover ${file.name}`}
+                  {uploadedFiles.map((file, idx) => {
+                    const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 bg-[#121212] border border-white/10 text-xs rounded-none"
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 truncate">
+                          {isImg ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-4 h-4 object-cover rounded-xs border border-white/15 shrink-0"
+                            />
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-zinc-400 shrink-0">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                          )}
+                          <span className="text-zinc-300 truncate text-[11px]">{file.name}</span>
+                          <span className="text-zinc-500 text-[10px] font-mono">
+                            {(file.size / 1024).toFixed(0)} KB
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(idx)}
+                          className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer"
+                          aria-label={`Remover ${file.name}`}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

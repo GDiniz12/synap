@@ -66,8 +66,13 @@ export default function DrawingModal({
             </svg>
             <input
               type="text"
+              name={`drawing-title-${drawingNota.id}`}
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Título do desenho"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
               placeholder="Nome do desenho..."
               className="text-sm font-semibold text-white placeholder-zinc-500 bg-transparent border-none outline-none w-80 font-sansation"
             />
