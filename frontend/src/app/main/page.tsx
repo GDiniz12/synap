@@ -342,9 +342,13 @@ export default function MainPage() {
   const [aiPrompt, setAiPrompt] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [aiStreamingText, setAiStreamingText] = useState<string>('');
+  const [aiActivity, setAiActivity] = useState<string[]>([]);
   const [isLoadingThreads, setIsLoadingThreads] = useState<boolean>(false);
   const [isAiFetchingThread, setIsAiFetchingThread] = useState<boolean>(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const streamingResponseRef = useRef<HTMLDivElement>(null);
+  const completedResponseRef = useRef<HTMLDivElement>(null);
+  const shouldPositionAiResponseRef = useRef(false);
+  const responseStartMessageIdRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleCreateNewChat = () => {
@@ -416,6 +420,9 @@ export default function MainPage() {
     setAiMessages((prev) => [...prev, userMsg]);
     setIsAiLoading(true);
     setAiStreamingText('');
+    setAiActivity([]);
+    shouldPositionAiResponseRef.current = true;
+    responseStartMessageIdRef.current = null;
     setAiPrompt('');
     setUploadedFiles([]);
 
@@ -504,6 +511,29 @@ export default function MainPage() {
                   .then((threads) => setAiThreads(threads || []))
                   .catch(() => {});
               }
+            } else if (eventType === 'status' && parsed.message) {
+              setAiActivity((previous) => [...previous, parsed.message].slice(-4));
+            } else if (eventType === 'tool_call') {
+              const toolLabels: Record<string, string> = {
+                search_workspace_notes: 'Pesquisando notas e desenhos do workspace.',
+                create_note: 'Criando uma nota.',
+                update_note: 'Atualizando uma nota.',
+                create_drawing: 'Criando um desenho.',
+                create_folder: 'Criando uma pasta.',
+                organize_workspace: 'Organizando itens do workspace.',
+                create_flashcards: 'Criando flashcards.',
+              };
+              setAiActivity((previous) => [
+                ...previous,
+                toolLabels[parsed.name] || `Executando ${parsed.name || 'uma ação'} no workspace.`,
+              ].slice(-4));
+            } else if (eventType === 'tool_result') {
+              setAiActivity((previous) => [
+                ...previous,
+                parsed.result?.error
+                  ? `A ação ${parsed.name || 'solicitada'} retornou um erro.`
+                  : `Concluiu ${parsed.name || 'a ação solicitada'}.`,
+              ].slice(-4));
             } else if (eventType === 'delta') {
               const piece = parsed.text ?? parsed.content ?? '';
               if (piece) {
@@ -522,8 +552,10 @@ export default function MainPage() {
                 },
               };
 
+              responseStartMessageIdRef.current = assistantMsg.id;
               setAiMessages((prev) => [...prev, assistantMsg]);
               setAiStreamingText('');
+              setAiActivity([]);
 
               if (
                 parsed.createdEntities?.notesCreated?.length > 0 ||
@@ -543,8 +575,10 @@ export default function MainPage() {
                 conteudo: `Desculpe, ocorreu um erro ao gerar a resposta: ${parsed.error || 'Erro desconhecido'}`,
                 createdAt: new Date().toISOString(),
               };
+              responseStartMessageIdRef.current = errorMsg.id;
               setAiMessages((prev) => [...prev, errorMsg]);
               setAiStreamingText('');
+              setAiActivity([]);
             }
           } catch (parseErr) {
             console.error('Erro ao processar evento SSE:', parseErr, eventData);
@@ -559,8 +593,10 @@ export default function MainPage() {
           conteudo: `Falha na comunicação com o assistente: ${err.message || 'Erro inesperado'}`,
           createdAt: new Date().toISOString(),
         };
+        responseStartMessageIdRef.current = errorMsg.id;
         setAiMessages((prev) => [...prev, errorMsg]);
         setAiStreamingText('');
+        setAiActivity([]);
       }
     } finally {
       setIsAiLoading(false);
@@ -568,10 +604,19 @@ export default function MainPage() {
     }
   };
 
-  // Scroll to bottom when AI conversation updates
+  // Posicionar uma única vez no início da resposta, sem acompanhar seu fim durante o streaming.
   useEffect(() => {
-    if (activeTab === 'ai') {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!shouldPositionAiResponseRef.current || activeTab !== 'ai') return;
+
+    const responseStart = aiStreamingText
+      ? streamingResponseRef.current
+      : responseStartMessageIdRef.current
+        ? completedResponseRef.current
+        : null;
+
+    if (responseStart) {
+      responseStart.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      shouldPositionAiResponseRef.current = false;
     }
   }, [aiMessages, aiStreamingText, isAiLoading, activeTab]);
 
@@ -2703,7 +2748,10 @@ export default function MainPage() {
                           </div>
                         ) : (
                           /* Mensagem da IA: À Esquerda, limpa e fluída direto na tela */
-                          <div className="w-full text-zinc-100 text-sm sm:text-base leading-relaxed select-text font-sansation">
+                          <div
+                            ref={msg.id === responseStartMessageIdRef.current ? completedResponseRef : undefined}
+                            className="w-full text-zinc-100 text-sm sm:text-base leading-relaxed select-text font-sansation"
+                          >
                             <FormattedAiContent content={msg.conteudo} />
                           </div>
                         )}
@@ -2711,14 +2759,18 @@ export default function MainPage() {
                     );
                   })}
 
-                  {/* Estado "Pensando...": Novo ícone do Tesseract pulsando */}
+                  {/* Etapas reais do processamento antes da resposta em streaming */}
                   {isAiLoading && !aiStreamingText && (
-                    <div className="w-full flex justify-start">
-                      <div className="flex items-center gap-2.5 text-zinc-400 select-none py-2 animate-in fade-in duration-200">
+                    <div ref={streamingResponseRef} className="w-full flex justify-start">
+                      <div className="flex items-start gap-2.5 text-zinc-400 select-none py-2 animate-in fade-in duration-200">
                         <TesseractLogo size={18} variant="ai" className="text-zinc-300 shrink-0" />
-                        <span className="text-sm font-sansation text-zinc-400 font-medium tracking-wide">
-                          Pensando...
-                        </span>
+                        <div className="flex flex-col gap-1 text-sm font-sansation text-zinc-400">
+                          {(aiActivity.length > 0 ? aiActivity : ['Conectando ao assistente.']).map((activity, index) => (
+                            <span key={`${activity}-${index}`} className={index === aiActivity.length - 1 ? 'text-zinc-200' : 'text-zinc-500'}>
+                              {activity}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2732,7 +2784,6 @@ export default function MainPage() {
                     </div>
                   )}
 
-                  <div ref={chatEndRef} />
                 </div>
               )}
 

@@ -801,6 +801,11 @@ O usuário está visualizando/editando esta nota agora. Se ele pedir para resumi
 
       while (continueLoop && loopCount < MAX_LOOPS) {
         loopCount++;
+        res.write(
+          `event: status\ndata: ${JSON.stringify({
+            message: loopCount === 1 ? 'Analisando sua solicitação.' : 'Analisando os resultados obtidos.',
+          })}\n\n`
+        );
 
         const requestBody: Record<string, any> = {
           model: process.env.SYNAP_AI_MODEL || process.env.AI_MODEL || process.env.OMNIROUTE_MODEL || 'auto/chat',
@@ -819,6 +824,7 @@ O usuário está visualizando/editando esta nota agora. Se ele pedir para resumi
           headers['Authorization'] = `Bearer ${apiKey.trim()}`;
         }
 
+        res.write(`event: status\ndata: ${JSON.stringify({ message: 'Gerando a resposta.' })}\n\n`);
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers,
@@ -1165,6 +1171,7 @@ O usuário está visualizando/editando esta nota agora. Se ele pedir para resumi
       }
 
       // 7. Save assistant response to DB
+      res.write(`event: status\ndata: ${JSON.stringify({ message: 'Finalizando a resposta.' })}\n\n`);
       const savedAssistantMsg = await prisma.aiChatMessage.create({
         data: {
           threadId,

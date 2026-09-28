@@ -87,6 +87,7 @@ export class AiController {
 
       // Send initial threadId event so client knows the conversation ID
       res.write(`event: init\ndata: ${JSON.stringify({ threadId: targetThreadId })}\n\n`);
+      res.write(`event: status\ndata: ${JSON.stringify({ message: 'Preparando o contexto da conversa.' })}\n\n`);
 
       await aiService.streamChat({
         workspaceId,
