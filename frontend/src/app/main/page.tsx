@@ -290,23 +290,28 @@ export default function MainPage() {
   // Refs para título da nota e desenho
   const noteTitleRef = useRef<HTMLDivElement>(null);
   const drawingTitleInputRef = useRef<HTMLInputElement>(null);
-  const shouldSelectTitleRef = useRef(false);
+  const noteIdToSelectTitleRef = useRef<string | null>(null);
+  const lastSyncedNoteTitleRef = useRef<{ id: string | null; title: string }>({ id: null, title: '' });
 
-  // Sincronizar o título no elemento contentEditable quando mudar a nota ativa
+  // Sincronizar o título no elemento contentEditable quando mudar a nota ativa.
+  // A identidade da nota faz parte da comparação para evitar manter texto de outra nota.
   useEffect(() => {
     if (noteTitleRef.current && selectedNota && selectedNota.tipo !== 'desenho') {
-      const currentText = noteTitleRef.current.innerText.trim();
-      const expectedText = (selectedNota.titulo ?? 'Nova Nota').trim();
-      if (currentText !== expectedText && !noteTitleRef.current.contains(document.activeElement)) {
-        noteTitleRef.current.innerText = selectedNota.titulo ?? 'Nova Nota';
+      const expectedText = selectedNota.titulo ?? '';
+      const noteChanged = lastSyncedNoteTitleRef.current.id !== selectedNota.id;
+      const titleChanged = lastSyncedNoteTitleRef.current.title !== expectedText;
+      const isEditingTitle = noteTitleRef.current.contains(document.activeElement);
+
+      if (noteChanged || (titleChanged && !isEditingTitle)) {
+        noteTitleRef.current.innerText = expectedText;
       }
+      lastSyncedNoteTitleRef.current = { id: selectedNota.id, title: expectedText };
     }
   }, [selectedNota?.id, selectedNota?.titulo, selectedNota?.tipo]);
 
   // Auto-focar e selecionar o texto do título quando uma nota/desenho for criada
   useEffect(() => {
-    if (shouldSelectTitleRef.current) {
-      shouldSelectTitleRef.current = false;
+    if (selectedNota && noteIdToSelectTitleRef.current === selectedNota.id) {
       const selectAll = () => {
         if (selectedNota?.tipo === 'desenho') {
           const el = drawingTitleInputRef.current;
@@ -335,6 +340,7 @@ export default function MainPage() {
       const t1 = setTimeout(selectAll, 50);
       const t2 = setTimeout(selectAll, 150);
       const t3 = setTimeout(selectAll, 300);
+      noteIdToSelectTitleRef.current = null;
 
       return () => {
         clearTimeout(t1);
@@ -631,13 +637,15 @@ export default function MainPage() {
     } else if (tab.id === 'tab:ai') {
       setActiveTab('ai');
     } else if (tab.nota) {
-      setSelectedNota(tab.nota);
+      const latestNota = notas.find((nota) => nota.id === tab.id) || tab.nota;
+      setSelectedNota(latestNota);
       setActiveTab('notes');
     }
   };
 
   const handleOpenNote = (nota: any) => {
-    setSelectedNota(nota);
+    const latestNota = notas.find((item) => item.id === nota.id) || nota;
+    setSelectedNota(latestNota);
     setActiveTab('notes');
     setOpenTabIds((prev) => (prev.includes(nota.id) ? prev : [...prev, nota.id]));
   };
@@ -940,7 +948,7 @@ export default function MainPage() {
     };
 
     // Resposta instantânea na UI: abre a nota na hora e seleciona o título
-    shouldSelectTitleRef.current = true;
+    noteIdToSelectTitleRef.current = tempId;
     setActiveTab('notes');
     setSelectedNota(optimisticNote);
     setOpenTabIds((prev) => (prev.includes(tempId) ? prev : [...prev, tempId]));
@@ -958,6 +966,7 @@ export default function MainPage() {
       const refreshedNotas = await api(`/notas?workspaceId=${activeWorkspace.id}`).catch(() => []);
       setNotas(refreshedNotas || []);
       if (created) {
+        noteIdToSelectTitleRef.current = created.id;
         setSelectedNota(created);
         setOpenTabIds((prev) => prev.map((id) => (id === tempId ? created.id : id)));
       }
@@ -1220,7 +1229,10 @@ export default function MainPage() {
 
         {/* Janelas / Tabs no topo da tela - Totalmente sem bordas */}
         <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-white/10">
-          {openTabsList.map((tab) => {
+          {openTabsList.filter((tab) => {
+            if (tab.type === 'note' || tab.type === 'drawing') return activeTab === 'notes';
+            return true;
+          }).map((tab) => {
             return (
               <div
                 key={tab.id}
@@ -2940,7 +2952,7 @@ export default function MainPage() {
                   onChange={(e) => handleTitleChange(e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()}
                   onFocus={(e) => {
-                    if (e.target.value === 'Novo Desenho' || shouldSelectTitleRef.current) {
+                    if (e.target.value === 'Novo Desenho' || noteIdToSelectTitleRef.current === selectedNota.id) {
                       e.target.setSelectionRange(0, e.target.value.length);
                       e.target.select();
                     }
@@ -3009,11 +3021,11 @@ export default function MainPage() {
                 }}
                 data-title-editor="true"
                 data-placeholder="Nota sem título"
-                className="w-full min-h-[48px] bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700 block"
+                className="w-full min-h-[48px] shrink-0 bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700 block"
               />
 
               {/* Conteúdo da Nota: Editor rico integrado à tela sem molduras */}
-              <div className="flex-1 w-full font-sansation">
+              <div className="relative flex-1 min-h-0 w-full font-sansation">
                 <Editor
                   key={selectedNota.id}
                   notaId={selectedNota.id}
