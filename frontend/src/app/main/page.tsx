@@ -208,7 +208,7 @@ export default function MainPage() {
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // Drag and Drop state for Sidebar items (Notes and Folders)
   const [draggedItem, setDraggedItem] = useState<{ type: 'note' | 'folder'; id: string } | null>(null);
@@ -288,24 +288,15 @@ export default function MainPage() {
   };
 
   // Refs para título da nota e desenho
-  const noteTitleRef = useRef<HTMLDivElement>(null);
+  const noteTitleRef = useRef<HTMLTextAreaElement>(null);
   const drawingTitleInputRef = useRef<HTMLInputElement>(null);
   const noteIdToSelectTitleRef = useRef<string | null>(null);
-  const lastSyncedNoteTitleRef = useRef<{ id: string | null; title: string }>({ id: null, title: '' });
 
-  // Sincronizar o título no elemento contentEditable quando mudar a nota ativa.
-  // A identidade da nota faz parte da comparação para evitar manter texto de outra nota.
+  // Ajustar a altura do título controlado ao trocar de nota ou ao editar seu texto.
   useEffect(() => {
     if (noteTitleRef.current && selectedNota && selectedNota.tipo !== 'desenho') {
-      const expectedText = selectedNota.titulo ?? '';
-      const noteChanged = lastSyncedNoteTitleRef.current.id !== selectedNota.id;
-      const titleChanged = lastSyncedNoteTitleRef.current.title !== expectedText;
-      const isEditingTitle = noteTitleRef.current.contains(document.activeElement);
-
-      if (noteChanged || (titleChanged && !isEditingTitle)) {
-        noteTitleRef.current.innerText = expectedText;
-      }
-      lastSyncedNoteTitleRef.current = { id: selectedNota.id, title: expectedText };
+      noteTitleRef.current.style.height = 'auto';
+      noteTitleRef.current.style.height = `${noteTitleRef.current.scrollHeight}px`;
     }
   }, [selectedNota?.id, selectedNota?.titulo, selectedNota?.tipo]);
 
@@ -324,13 +315,7 @@ export default function MainPage() {
           const el = noteTitleRef.current;
           if (el) {
             el.focus();
-            const sel = window.getSelection();
-            if (sel) {
-              const range = document.createRange();
-              range.selectNodeContents(el);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
+            el.select();
           }
         }
       };
@@ -696,18 +681,24 @@ export default function MainPage() {
     }
   };
 
+  const scheduleNotaSave = (notaId: string, titulo: string, conteudo: string) => {
+    const pendingSave = saveTimeoutsRef.current.get(notaId);
+    if (pendingSave) clearTimeout(pendingSave);
+
+    const timeout = setTimeout(() => {
+      saveTimeoutsRef.current.delete(notaId);
+      autoSaveNota(titulo, conteudo, notaId);
+    }, 600);
+    saveTimeoutsRef.current.set(notaId, timeout);
+  };
+
   const handleTitleChange = (newTitle: string) => {
     if (!selectedNota) return;
     const updated = { ...selectedNota, titulo: newTitle };
     setSelectedNota(updated);
     setNotas((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
 
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    const content = updated.conteudo || '';
-    const noteId = updated.id;
-    saveTimeoutRef.current = setTimeout(() => {
-      autoSaveNota(newTitle, content, noteId);
-    }, 600);
+    scheduleNotaSave(updated.id, newTitle, updated.conteudo || '');
   };
 
   const handleContentChange = useCallback((newContent: string) => {
@@ -717,10 +708,7 @@ export default function MainPage() {
       const title = updated.titulo || '';
       const noteId = updated.id;
 
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = setTimeout(() => {
-        autoSaveNota(title, newContent, noteId);
-      }, 600);
+      scheduleNotaSave(noteId, title, newContent);
 
       return updated;
     });
@@ -1229,10 +1217,7 @@ export default function MainPage() {
 
         {/* Janelas / Tabs no topo da tela - Totalmente sem bordas */}
         <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:h-0.5 [&::-webkit-scrollbar-thumb]:bg-white/10">
-          {openTabsList.filter((tab) => {
-            if (tab.type === 'note' || tab.type === 'drawing') return activeTab === 'notes';
-            return true;
-          }).map((tab) => {
+          {openTabsList.map((tab) => {
             return (
               <div
                 key={tab.id}
@@ -2455,6 +2440,7 @@ export default function MainPage() {
 
       {/* Main Content Area */}
       <main
+        key={`${activeTab}:${activeTab === 'notes' ? selectedNota?.id ?? 'empty' : 'view'}`}
         className={`flex-1 flex flex-col items-center min-h-0 ${
           activeTab === 'graph' ||
           activeTab === 'flashcards' ||
@@ -2980,14 +2966,11 @@ export default function MainPage() {
           ) : (
             <div className="w-full max-w-3xl flex flex-col flex-1 min-h-0 font-sansation animate-in fade-in duration-200">
               {/* Título da Nota: Bloco nativo que quebra linhas para baixo naturalmente e suporta Enter */}
-              <div
+              <textarea
                 ref={noteTitleRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={(e) => {
-                  const text = e.currentTarget.innerText;
-                  handleTitleChange(text);
-                }}
+                rows={1}
+                value={selectedNota.titulo || ''}
+                onChange={(e) => handleTitleChange(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -3019,9 +3002,8 @@ export default function MainPage() {
                     }
                   }
                 }}
-                data-title-editor="true"
-                data-placeholder="Nota sem título"
-                className="w-full min-h-[48px] shrink-0 bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-700 block"
+                placeholder="Nota sem título"
+                className="w-full min-h-[48px] shrink-0 resize-none overflow-hidden bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white placeholder-zinc-700 outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] block"
               />
 
               {/* Conteúdo da Nota: Editor rico integrado à tela sem molduras */}

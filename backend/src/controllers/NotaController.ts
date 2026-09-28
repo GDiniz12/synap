@@ -7,7 +7,7 @@ export class NotaController {
     try {
       const { titulo, conteudo, tipo, workspaceId, pastaId } = req.body;
       if (!workspaceId) return res.status(400).json({ error: 'workspaceId is required' });
-      
+
       const nota = await notaService.createNota({ titulo, conteudo, tipo: tipo || 'texto', workspaceId, pastaId });
       res.status(201).json(nota);
     } catch (error: any) {
