@@ -177,6 +177,7 @@ export default function DrawingCanvas({
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const copiedElementsRef = useRef<DrawingElement[]>([]);
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
     startY: number;
@@ -1111,6 +1112,34 @@ export default function DrawingCanvas({
       );
       if (editingText || isTyping) return;
 
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedIds.length === 0) return;
+        const selectedSet = new Set(selectedIds);
+        copiedElementsRef.current = elements
+          .filter((element) => selectedSet.has(element.id))
+          .map((element) => ({ ...element, points: element.points?.map((point) => ({ ...point })) }));
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        if (copiedElementsRef.current.length === 0) return;
+        e.preventDefault();
+        const copies = copiedElementsRef.current.map((element) => ({
+          ...element,
+          id: `${element.type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          x: element.x + 20,
+          y: element.y + 20,
+          points: element.points?.map((point) => ({ x: point.x + 20, y: point.y + 20 })),
+        }));
+        copiedElementsRef.current = copies.map((element) => ({
+          ...element,
+          points: element.points?.map((point) => ({ ...point })),
+        }));
+        commitElements([...elements, ...copies]);
+        setSelectedIds(copies.map((element) => element.id));
+        setTool('select');
+        return;
+      }
+
       if (e.code === 'Space') {
         setIsSpacePressed(true);
       }
@@ -1264,7 +1293,7 @@ export default function DrawingCanvas({
             <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
             <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             0
           </span>
         </button>
@@ -1284,7 +1313,7 @@ export default function DrawingCanvas({
             <path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
             <path d="m13 13 6 6"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             1
           </span>
         </button>
@@ -1306,7 +1335,7 @@ export default function DrawingCanvas({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             2
           </span>
         </button>
@@ -1328,7 +1357,7 @@ export default function DrawingCanvas({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect width="18" height="18" x="3" y="3" rx="0"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             3
           </span>
         </button>
@@ -1350,7 +1379,7 @@ export default function DrawingCanvas({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="9"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             4
           </span>
         </button>
@@ -1373,7 +1402,7 @@ export default function DrawingCanvas({
             <line x1="5" y1="12" x2="19" y2="12"/>
             <polyline points="12 5 19 12 12 19"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             5
           </span>
         </button>
@@ -1395,7 +1424,7 @@ export default function DrawingCanvas({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="5" y1="19" x2="19" y2="5"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             6
           </span>
         </button>
@@ -1419,7 +1448,7 @@ export default function DrawingCanvas({
             <line x1="9" y1="20" x2="15" y2="20"/>
             <line x1="12" y1="4" x2="12" y2="20"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             7
           </span>
         </button>
@@ -1436,7 +1465,7 @@ export default function DrawingCanvas({
             <circle cx="9" cy="9" r="2"/>
             <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
           </svg>
-          <span className="absolute -top-1 -right-1 text-[8px] font-mono w-3.5 h-3.5 flex items-center justify-center rounded-none bg-[#121212] border border-white/15 text-zinc-400 leading-none select-none">
+          <span className="absolute right-0.5 bottom-0.5 text-[8px] font-mono leading-none select-none">
             8
           </span>
         </button>
