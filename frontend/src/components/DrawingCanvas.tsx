@@ -6,6 +6,7 @@ import DrawingItemContainer from './DrawingItemContainer';
 import MathEquationModal from './MathEquationModal';
 import DrawingYouTubeModal from './DrawingYouTubeModal';
 import { useCollaboration } from '@/hooks/useCollaboration';
+import LiveCursors from './LiveCursors';
 
 export type ToolType =
   | 'hand'
@@ -1698,10 +1699,23 @@ export default function DrawingCanvas({
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
+        onMouseLeave={() => {
+          if (isCollaborative && notaId) broadcastCursor(0, 0, false);
+        }}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         className={`w-full h-full block ${getCanvasCursor()}`}
       />
+
+      {workspaceId && notaId && isCollaborative && (
+        <LiveCursors
+          cursors={cursors}
+          transformCoord={(cursor) => ({
+            x: cursor.x * zoom + pan.x,
+            y: cursor.y * zoom + pan.y,
+          })}
+        />
+      )}
 
       {/* Interactive Embedded Containers (Cards, Notes, Math, YouTube) */}
       {elements
