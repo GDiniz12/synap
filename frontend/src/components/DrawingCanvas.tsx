@@ -199,6 +199,7 @@ export default function DrawingCanvas({
   } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textMountedAtRef = useRef<number>(0);
+  const editingTextIdRef = useRef<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const renderCanvasRef = useRef<() => void>(() => undefined);
@@ -212,6 +213,7 @@ export default function DrawingCanvas({
   const currentElementRef = useRef<DrawingElement | null>(null);
   const startPointRef = useRef<Point>({ x: 0, y: 0 });
   const dragInitialElementsRef = useRef<DrawingElement[]>([]);
+  const dragSelectedIdsRef = useRef<string[]>([]);
   const isPanningRef = useRef(false);
   const panStartRef = useRef<Point>({ x: 0, y: 0 });
 
@@ -220,11 +222,17 @@ export default function DrawingCanvas({
   const initialZoomRef = useRef<number>(1);
 
   useEffect(() => {
-    if (editingText && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-      textMountedAtRef.current = Date.now();
-    }
+    if (!editingText || editingTextIdRef.current === editingText.id) return;
+
+    editingTextIdRef.current = editingText.id;
+    const frameId = window.requestAnimationFrame(() => {
+      if (textareaRef.current && editingTextIdRef.current === editingText.id) {
+        textareaRef.current.focus();
+        textMountedAtRef.current = Date.now();
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [editingText]);
 
   const commitElements = useCallback(
@@ -233,7 +241,6 @@ export default function DrawingCanvas({
       const json = JSON.stringify(newElements);
       onChange(json);
 
-      // Push to history
       setHistory((prev) => {
         const next = prev.slice(0, historyIndex + 1);
         return [...next, newElements];
@@ -242,6 +249,35 @@ export default function DrawingCanvas({
     },
     [historyIndex, onChange]
   );
+
+  const finishTextEditing = useCallback(() => {
+    if (!editingText) return;
+
+    const trimmed = editingText.text.trim();
+    if (trimmed) {
+      const existingIdx = elements.findIndex((el) => el.id === editingText.id);
+      if (existingIdx >= 0) {
+        const updated = [...elements];
+        updated[existingIdx] = { ...updated[existingIdx], text: trimmed };
+        commitElements(updated);
+      } else {
+        const newEl: DrawingElement = {
+          id: editingText.id,
+          type: 'text',
+          x: editingText.worldX,
+          y: editingText.worldY,
+          text: trimmed,
+          fontSize: 18,
+          strokeColor,
+          fillColor: 'transparent',
+          strokeWidth: 1,
+        };
+        commitElements([...elements, newEl]);
+      }
+    }
+    editingTextIdRef.current = null;
+    setEditingText(null);
+  }, [commitElements, editingText, elements, strokeColor]);
 
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
@@ -277,6 +313,21 @@ export default function DrawingCanvas({
   );
 
   const getElementBounds = useCallback((el: DrawingElement): Bounds => {
+    if (el.type === 'text') {
+      const fontSize = el.fontSize || 18;
+      const lines = (el.text || '').split('\n');
+      const canvas = canvasRef.current;
+      const context = canvas?.getContext('2d');
+      if (context) context.font = `${fontSize}px 'Sansation', sans-serif`;
+      const measuredWidth = lines.reduce((width, line) => {
+        const lineWidth = context?.measureText(line).width ?? line.length * fontSize * 0.6;
+        return Math.max(width, lineWidth);
+      }, 0);
+      const width = Math.max(measuredWidth, fontSize * 0.6);
+      const height = Math.max(lines.length, 1) * fontSize * 1.3;
+      return { minX: el.x, minY: el.y, maxX: el.x + width, maxY: el.y + height };
+    }
+
     if (el.points && el.points.length > 0) {
       let minX = Infinity,
         minY = Infinity,
@@ -724,32 +775,8 @@ export default function DrawingCanvas({
 
     if (e.button !== 0) return;
 
-    // Concluir edição de texto se clicou fora
-    if (editingText && Date.now() - textMountedAtRef.current > 300) {
-      const trimmed = editingText.text.trim();
-      if (trimmed) {
-        const existingIdx = elements.findIndex((el) => el.id === editingText.id);
-        if (existingIdx >= 0) {
-          const updated = [...elements];
-          updated[existingIdx] = { ...updated[existingIdx], text: trimmed };
-          commitElements(updated);
-        } else {
-          const newEl: DrawingElement = {
-            id: editingText.id,
-            type: 'text',
-            x: editingText.worldX,
-            y: editingText.worldY,
-            text: trimmed,
-            fontSize: 18,
-            strokeColor,
-            fillColor: 'transparent',
-            strokeWidth: 1,
-          };
-          commitElements([...elements, newEl]);
-        }
-      }
-      setEditingText(null);
-    }
+    // Concluir edição ao clicar fora da área de texto.
+    if (editingText && Date.now() - textMountedAtRef.current > 300) finishTextEditing();
 
     startPointRef.current = worldPoint;
 
@@ -763,6 +790,7 @@ export default function DrawingCanvas({
           activeHandleRef.current = handle;
           resizeInitialBoundsRef.current = bounds;
           dragInitialElementsRef.current = elements.map((el) => ({ ...el }));
+          dragSelectedIdsRef.current = [...selectedIds];
           return;
         }
       }
@@ -783,10 +811,26 @@ export default function DrawingCanvas({
         }
         mouseModeRef.current = 'dragging_elements';
         dragInitialElementsRef.current = elements.map((el) => ({ ...el }));
+        dragSelectedIdsRef.current = selectedIds.includes(hit.id)
+          ? [...selectedIds]
+          : [hit.id];
         return;
       } else {
         if (!e.shiftKey) {
           setSelectedIds([]);
+        }
+        const bounds = getMultiSelectionBounds(selectedIds);
+        if (
+          bounds &&
+          worldPoint.x >= bounds.minX &&
+          worldPoint.x <= bounds.maxX &&
+          worldPoint.y >= bounds.minY &&
+          worldPoint.y <= bounds.maxY
+        ) {
+          mouseModeRef.current = 'dragging_elements';
+          dragInitialElementsRef.current = elements.map((el) => ({ ...el }));
+          dragSelectedIdsRef.current = [...selectedIds];
+          return;
         }
         mouseModeRef.current = 'marquee_selecting';
         setSelectionBox({
@@ -808,6 +852,7 @@ export default function DrawingCanvas({
         worldY: worldPoint.y,
         text: '',
       });
+      setTool('select');
       return;
     }
 
@@ -931,7 +976,7 @@ export default function DrawingCanvas({
 
       const scaleX = (newMaxX - newMinX) / initW;
       const scaleY = (newMaxY - newMinY) / initH;
-      const selectedSet = new Set(selectedIds);
+      const selectedSet = new Set(dragSelectedIdsRef.current);
 
       setElements((prev) =>
         prev.map((el) => {
@@ -985,10 +1030,10 @@ export default function DrawingCanvas({
     }
 
     // 2. Dragging Selected Elements
-    if (mouseModeRef.current === 'dragging_elements' && selectedIds.length > 0) {
+    if (mouseModeRef.current === 'dragging_elements' && dragSelectedIdsRef.current.length > 0) {
       const dx = worldPoint.x - startPointRef.current.x;
       const dy = worldPoint.y - startPointRef.current.y;
-      const selectedSet = new Set(selectedIds);
+      const selectedSet = new Set(dragSelectedIdsRef.current);
 
       setElements((prev) =>
         prev.map((el) => {
@@ -1063,6 +1108,7 @@ export default function DrawingCanvas({
       activeHandleRef.current = null;
       resizeInitialBoundsRef.current = null;
       dragInitialElementsRef.current = [];
+      dragSelectedIdsRef.current = [];
       commitElements(elements);
       return;
     }
@@ -1070,6 +1116,7 @@ export default function DrawingCanvas({
     if (mouseModeRef.current === 'dragging_elements') {
       mouseModeRef.current = 'idle';
       dragInitialElementsRef.current = [];
+      dragSelectedIdsRef.current = [];
       commitElements(elements);
       return;
     }
@@ -1701,16 +1748,21 @@ export default function DrawingCanvas({
             fontFamily: "'Sansation', sans-serif",
             lineHeight: 1.3,
             background: 'transparent',
-            border: '1px dashed rgba(255,255,255,0.4)',
+            border: 'none',
             outline: 'none',
-            padding: '2px 4px',
+            padding: 0,
             resize: 'none',
             minWidth: '100px',
             minHeight: '30px',
             zIndex: 60,
           }}
+          placeholder="Digite aqui"
+          onBlur={() => {
+            if (Date.now() - textMountedAtRef.current > 300) finishTextEditing();
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
+              editingTextIdRef.current = null;
               setEditingText(null);
             }
           }}
