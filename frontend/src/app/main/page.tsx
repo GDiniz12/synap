@@ -409,6 +409,7 @@ export default function MainPage() {
   const handleSendAiMessage = async () => {
     const promptToSend = aiPrompt.trim();
     if (!promptToSend || isAiLoading) return;
+    const previousAiMessageIds = new Set(aiMessages.map((message) => message.id));
 
     // Optimistic user message
     const userMsg = {
@@ -443,6 +444,9 @@ export default function MainPage() {
       setIsAiLoading(false);
       return;
     }
+
+    let responseThreadId: string | null = selectedThread?.id || null;
+    let receivedDoneEvent = false;
 
     try {
       const response = await fetch(`${baseUrl}/ai/workspace/${currentWorkspaceId}/chat`, {
@@ -503,6 +507,7 @@ export default function MainPage() {
             const parsed = JSON.parse(eventData);
 
             if (eventType === 'init') {
+              if (parsed.threadId) responseThreadId = parsed.threadId;
               if (parsed.threadId && parsed.threadId !== selectedThread?.id) {
                 setSelectedThread({
                   id: parsed.threadId,
@@ -542,6 +547,7 @@ export default function MainPage() {
                 setAiStreamingText(currentStreamingAccumulator);
               }
             } else if (eventType === 'done') {
+              receivedDoneEvent = true;
               const finalContent = parsed.fullText ?? parsed.content ?? parsed.text ?? currentStreamingAccumulator;
               const assistantMsg = {
                 id: parsed.messageId || `ai-${Date.now()}`,
@@ -588,6 +594,48 @@ export default function MainPage() {
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
+        if (receivedDoneEvent) {
+          setAiStreamingText('');
+          setAiActivity([]);
+          return;
+        }
+
+        if (responseThreadId) {
+          for (let attempt = 0; attempt < 6; attempt++) {
+            try {
+              const threadData = await api(`/ai/threads/${responseThreadId}`);
+              const messages = Array.isArray(threadData?.mensagens) ? threadData.mensagens : [];
+              const lastUserIndex = messages.reduce((lastIndex: number, message: any, index: number) => (
+                message.role === 'user' && message.conteudo === promptToSend ? index : lastIndex
+              ), -1);
+              const recoveredAssistant = lastUserIndex >= 0
+                ? messages.slice(lastUserIndex + 1).find((message: any) => (
+                  message.role === 'assistant' && !previousAiMessageIds.has(message.id)
+                ))
+                : null;
+
+              if (recoveredAssistant) {
+                setAiMessages(messages);
+                setAiStreamingText('');
+                setAiActivity([]);
+                responseStartMessageIdRef.current = recoveredAssistant.id;
+                const createdEntities = recoveredAssistant.metadata?.createdEntities;
+                if (createdEntities?.notesCreated?.length || createdEntities?.drawingsCreated?.length) {
+                  api(`/notas?workspaceId=${currentWorkspaceId}`).then((n) => setNotas(n || [])).catch(() => {});
+                }
+                if (createdEntities?.foldersCreated?.length) {
+                  api(`/pastas?workspaceId=${currentWorkspaceId}`).then((p) => setPastas(p || [])).catch(() => {});
+                }
+                api(`/ai/workspace/${currentWorkspaceId}/threads`).then((threads) => setAiThreads(threads || [])).catch(() => {});
+                return;
+              }
+            } catch {
+              // Keep checking briefly while the server finishes saving the response.
+            }
+            if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 750));
+          }
+        }
+
         const errorMsg = {
           id: `error-${Date.now()}`,
           role: 'assistant',
