@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { api } from '@/lib/api';
 import DrawingEmbedModal from './DrawingEmbedModal';
 import DrawingModal from './DrawingModal';
@@ -9,6 +9,7 @@ import LiveCursors from './LiveCursors';
 import katex from 'katex';
 import { marked } from 'marked';
 import { parseYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
+import { extractGraphLinks } from '@/lib/graphLinks';
 
 // Configure marked for rich GFM parsing
 marked.setOptions({
@@ -161,6 +162,22 @@ function Editor({
   onCollaboratorsChange
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const plainText = useMemo(() => {
+    const htmlWithLineBreaks = (value || '')
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/<\/(p|div|h[1-6]|li|blockquote|pre|tr)>/gi, '\n');
+    if (typeof DOMParser !== 'undefined') {
+      return new DOMParser().parseFromString(htmlWithLineBreaks, 'text/html').body.textContent || '';
+    }
+    return htmlWithLineBreaks.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&');
+  }, [value]);
+  const trimmedText = plainText.trim();
+  const wordCount = trimmedText ? trimmedText.split(/\s+/).length : 0;
+  const characterCount = plainText.length;
+  const connectionCount = useMemo(
+    () => extractGraphLinks(notas).filter((link) => link.source === notaId || link.target === notaId).length,
+    [notas, notaId]
+  );
 
   // Track cursor line number in contentEditable (1 to infinity, counting both Enter and wrapped visual lines)
   const updateCursorLine = useCallback(() => {
@@ -3100,9 +3117,15 @@ function Editor({
           fontFamily: fontFamily || 'inherit',
           fontSize: fontSize || '15px',
         }}
-        className="notion-editor min-h-[450px] w-full flex-1 outline-none leading-[1.7] text-[var(--foreground)]"
+        className="notion-editor min-h-[450px] w-full flex-1 pb-12 outline-none leading-[1.7] text-[var(--foreground)]"
         data-placeholder={placeholder}
       />
+
+      <div className="pointer-events-none absolute bottom-0 right-0 z-20 flex items-center gap-3 border border-[var(--accents-2)] bg-[var(--background)] px-3 py-1.5 text-[10px] text-[var(--accents-5)] shadow-sm" aria-label={`${wordCount} palavras, ${characterCount} caracteres, ${connectionCount} conexões`}>
+        <span><span className="font-mono text-[var(--foreground)]">{wordCount}</span> palavras</span>
+        <span><span className="font-mono text-[var(--foreground)]">{characterCount}</span> caracteres</span>
+        <span><span className="font-mono text-[var(--foreground)]">{connectionCount}</span> conexões</span>
+      </div>
 
       {/* Minimalist Floating Slash Command Menu with Side Explanation Modal */}
       {slashMenu.visible && (
