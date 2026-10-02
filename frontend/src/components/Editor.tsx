@@ -234,7 +234,7 @@ function Editor({
     };
   }, [updateCursorLine]);
 
-  const { users, cursors, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
+  const { users, cursors, broadcastChange, broadcastTextSelection } = require('../hooks/useCollaboration').useCollaboration(
     isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
     'document_change',
     (newVal: string) => {
@@ -248,6 +248,31 @@ function Editor({
   useEffect(() => {
     onCollaboratorsChange?.(isCollaborative ? users : []);
   }, [isCollaborative, onCollaboratorsChange, users]);
+
+  useEffect(() => {
+    if (!isCollaborative || !notaId) return;
+    const updateRemoteTextSelection = () => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0 || !editor.contains(selection.anchorNode)) {
+        broadcastTextSelection(0, 0, false);
+        return;
+      }
+      const range = selection.getRangeAt(0);
+      const offsetAt = (node: Node, offset: number) => {
+        const before = document.createRange();
+        before.selectNodeContents(editor);
+        before.setEnd(node, offset);
+        return before.toString().length;
+      };
+      broadcastTextSelection(offsetAt(range.startContainer, range.startOffset), offsetAt(range.endContainer, range.endOffset));
+    };
+    document.addEventListener('selectionchange', updateRemoteTextSelection);
+    return () => {
+      document.removeEventListener('selectionchange', updateRemoteTextSelection);
+      broadcastTextSelection(0, 0, false);
+    };
+  }, [broadcastTextSelection, isCollaborative, notaId]);
 
   const onChange = useCallback((val: string) => {
     parentOnChange(val);
@@ -2355,21 +2380,10 @@ function Editor({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onMouseMove={(e) => {
-        if (isCollaborative && notaId) {
-          const rect = e.currentTarget.getBoundingClientRect();
-          broadcastCursor(e.clientX - rect.left, e.clientY - rect.top, true);
-        }
-      }}
-      onMouseLeave={() => {
-        if (isCollaborative && notaId) {
-          broadcastCursor(0, 0, false);
-        }
-      }}
     >
       {/* Real-time Multiplayer Cursors (Miro/Figma style) */}
       {workspaceId && notaId && isCollaborative && (
-        <LiveCursors cursors={cursors} />
+        <LiveCursors cursors={cursors} textEditor={editorRef.current} />
       )}
 
       {/* Hidden File Input for Image Upload */}

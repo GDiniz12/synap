@@ -6,16 +6,63 @@ import { RemoteCursor } from '../hooks/useCollaboration';
 interface LiveCursorsProps {
   cursors: Record<string, RemoteCursor>;
   transformCoord?: (cursor: RemoteCursor) => { x: number; y: number };
+  textEditor?: HTMLElement | null;
 }
 
-export default function LiveCursors({ cursors, transformCoord }: LiveCursorsProps) {
+export default function LiveCursors({ cursors, transformCoord, textEditor }: LiveCursorsProps) {
+  const layerRef = React.useRef<HTMLDivElement>(null);
   const cursorList = Object.values(cursors);
 
   if (cursorList.length === 0) return null;
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-50">
+    <div ref={layerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-50">
       {cursorList.map((cursor) => {
+        if (cursor.textMode) {
+          if (!cursor.active || !textEditor || typeof cursor.selectionStart !== 'number' || typeof cursor.selectionEnd !== 'number') return null;
+          const start = Math.min(cursor.selectionStart, cursor.selectionEnd);
+          const end = Math.max(cursor.selectionStart, cursor.selectionEnd);
+          const nodes: Text[] = [];
+          const walker = document.createTreeWalker(textEditor, NodeFilter.SHOW_TEXT);
+          while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+          const locate = (offset: number): { node: Text; offset: number } | null => {
+            let remaining = offset;
+            for (const node of nodes) {
+              if (remaining <= node.length) return { node, offset: remaining };
+              remaining -= node.length;
+            }
+            const last = nodes[nodes.length - 1];
+            return last ? { node: last, offset: last.length } : null;
+          };
+          const from = locate(start);
+          const to = locate(end);
+          const selectionRects: DOMRect[] = [];
+          let caretRect: DOMRect | null = null;
+          if (from && to) {
+            try {
+              const range = document.createRange();
+              range.setStart(from.node, from.offset);
+              range.setEnd(to.node, to.offset);
+              selectionRects.push(...Array.from(range.getClientRects()));
+              caretRect = range.getBoundingClientRect();
+            } catch { /* The editor may have changed before this render. */ }
+          }
+          const layerRect = layerRef.current?.getBoundingClientRect();
+          if (!layerRect) return null;
+          const firstName = cursor.name.split(' ')[0] || cursor.name;
+          return (
+            <React.Fragment key={cursor.id}>
+              {selectionRects.map((rect, index) => (
+                <span key={`${cursor.id}-selection-${index}`} className="absolute" style={{ left: rect.left - layerRect.left, top: rect.top - layerRect.top, width: rect.width, height: rect.height, backgroundColor: `${cursor.color}45` }} />
+              ))}
+              {caretRect && (
+                <span className="absolute" style={{ left: caretRect.left - layerRect.left, top: caretRect.top - layerRect.top, width: 2, height: Math.max(caretRect.height, 18), backgroundColor: cursor.color }}>
+                  <span className="absolute left-0 top-0 -translate-y-full rounded-sm px-1.5 py-0.5 text-[10px] font-medium leading-none text-white whitespace-nowrap" style={{ backgroundColor: cursor.color }}>{firstName}</span>
+                </span>
+              )}
+            </React.Fragment>
+          );
+        }
         const { x, y } = transformCoord ? transformCoord(cursor) : { x: cursor.x, y: cursor.y };
         const firstName = cursor.name.split(' ')[0] || cursor.name;
 

@@ -18,6 +18,9 @@ export interface RemoteCursor {
   y: number;
   active: boolean;
   lastActive: number;
+  selectionStart?: number;
+  selectionEnd?: number;
+  textMode?: boolean;
 }
 
 function getWebSocketUrl(): string | null {
@@ -148,6 +151,9 @@ export function useCollaboration(
                 color: data.color || '#3b82f6',
                 x: data.x,
                 y: data.y,
+                selectionStart: data.selectionStart,
+                selectionEnd: data.selectionEnd,
+                textMode: data.textMode === true,
                 active: data.active !== false,
                 lastActive: Date.now()
               }
@@ -240,11 +246,41 @@ export function useCollaboration(
     }));
   }, []);
 
+  const lastTextSelectionSendRef = useRef(0);
+  const pendingTextSelectionRef = useRef<{ selectionStart: number; selectionEnd: number; active: boolean } | null>(null);
+  const textSelectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const broadcastTextSelection = useCallback((selectionStart: number, selectionEnd: number, active = true) => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    const payload = { selectionStart, selectionEnd, active };
+    const send = (selection: typeof payload) => wsRef.current?.send(JSON.stringify({ type: 'cursor_move', textMode: true, ...selection }));
+    if (!active) {
+      if (textSelectionTimerRef.current) clearTimeout(textSelectionTimerRef.current);
+      textSelectionTimerRef.current = null;
+      pendingTextSelectionRef.current = null;
+      send(payload);
+      return;
+    }
+    const now = Date.now();
+    if (now - lastTextSelectionSendRef.current >= 50) {
+      lastTextSelectionSendRef.current = now;
+      send(payload);
+      return;
+    }
+    pendingTextSelectionRef.current = payload;
+    if (!textSelectionTimerRef.current) {
+      textSelectionTimerRef.current = setTimeout(() => {
+        if (pendingTextSelectionRef.current) send(pendingTextSelectionRef.current);
+        pendingTextSelectionRef.current = null;
+        textSelectionTimerRef.current = null;
+        lastTextSelectionSendRef.current = Date.now();
+      }, 50);
+    }
+  }, []);
+
   const callbackRef = useRef(onRemoteChange);
   useEffect(() => {
     callbackRef.current = onRemoteChange;
   }, [onRemoteChange]);
 
-  return { users, cursors, status, broadcastChange, broadcastCursor };
+  return { users, cursors, status, broadcastChange, broadcastCursor, broadcastTextSelection };
 }
-

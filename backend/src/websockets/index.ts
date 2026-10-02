@@ -134,6 +134,9 @@ export function initializeWebSockets(wss: WebSocketServer) {
             color: user.color,
             x: data.x,
             y: data.y,
+            selectionStart: data.selectionStart,
+            selectionEnd: data.selectionEnd,
+            textMode: data.textMode === true,
             active: data.active !== false
           }, ws);
         }
