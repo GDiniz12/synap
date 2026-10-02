@@ -205,6 +205,7 @@ export default function MainPage() {
   const [pastas, setPastas] = useState<any[]>([]);
   const [notas, setNotas] = useState<any[]>([]);
   const [selectedNota, setSelectedNota] = useState<any>(null);
+  const [noteCollaborators, setNoteCollaborators] = useState<any[]>([]);
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
@@ -3017,45 +3018,70 @@ export default function MainPage() {
           ) : (
             <div className="w-full max-w-3xl flex flex-col flex-1 min-h-0 font-sansation animate-in fade-in duration-200">
               {/* Título da Nota: Bloco nativo que quebra linhas para baixo naturalmente e suporta Enter */}
-              <textarea
-                ref={noteTitleRef}
-                rows={1}
-                value={selectedNota.titulo || ''}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const editor =
-                      document.querySelector<HTMLElement>('.notion-editor') ||
-                      document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
-                    if (editor) {
-                      editor.focus();
-                      const sel = window.getSelection();
-                      if (sel) {
-                        const range = document.createRange();
-                        if (editor.firstChild) {
-                          range.setStart(editor.firstChild, 0);
-                        } else {
-                          range.setStart(editor, 0);
+              <div className="mb-6 flex w-full items-start gap-4">
+                <textarea
+                  ref={noteTitleRef}
+                  rows={1}
+                  value={selectedNota.titulo || ''}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const editor =
+                        document.querySelector<HTMLElement>('.notion-editor') ||
+                        document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
+                      if (editor) {
+                        editor.focus();
+                        const sel = window.getSelection();
+                        if (sel) {
+                          const range = document.createRange();
+                          if (editor.firstChild) {
+                            range.setStart(editor.firstChild, 0);
+                          } else {
+                            range.setStart(editor, 0);
+                          }
+                          range.collapse(true);
+                          sel.removeAllRanges();
+                          sel.addRange(range);
                         }
-                        range.collapse(true);
-                        sel.removeAllRanges();
-                        sel.addRange(range);
+                      }
+                    } else if (e.key === 'Tab') {
+                      e.preventDefault();
+                      const editor =
+                        document.querySelector<HTMLElement>('.notion-editor') ||
+                        document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
+                      if (editor) {
+                        editor.focus();
                       }
                     }
-                  } else if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const editor =
-                      document.querySelector<HTMLElement>('.notion-editor') ||
-                      document.querySelector<HTMLElement>('[contenteditable="true"]:not([data-title-editor])');
-                    if (editor) {
-                      editor.focus();
-                    }
-                  }
-                }}
-                placeholder="Nota sem título"
-                className="w-full min-h-[48px] shrink-0 resize-none overflow-hidden bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white placeholder-zinc-700 outline-none border-none p-0 mb-6 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] block"
-              />
+                  }}
+                  placeholder="Nota sem título"
+                  className="min-w-0 flex-1 min-h-[48px] shrink-0 resize-none overflow-hidden bg-transparent text-3xl sm:text-4xl font-bold font-sansation text-white placeholder-zinc-700 outline-none border-none p-0 leading-tight select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] block"
+                />
+                {activeWorkspace?.isCollaborative && noteCollaborators.length > 0 && (
+                  <div className="ml-auto mt-1 flex shrink-0 items-center gap-2" aria-label="Pessoas nesta nota">
+                    <div className="flex items-center -space-x-2">
+                      {noteCollaborators.map((user, index) => {
+                        const displayName = user.username ? `@${user.username}` : (user.name || 'Anônimo');
+                        return (
+                          <div key={user.id || index} className="group/note-collaborator relative">
+                            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-[#141414] bg-zinc-800 text-xs font-semibold text-white">
+                              {user.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                              ) : (user.name || user.username || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden whitespace-nowrap rounded border border-white/10 bg-[#121212] px-2 py-1 text-[11px] text-white shadow-xl group-hover/note-collaborator:block">
+                              {displayName}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {noteCollaborators.length > 1 && <span className="text-xs text-zinc-500">{noteCollaborators.length}</span>}
+                  </div>
+                )}
+              </div>
 
               {/* Conteúdo da Nota: Editor rico integrado à tela sem molduras */}
               <div className="relative flex-1 min-h-0 w-full font-sansation">
@@ -3070,6 +3096,7 @@ export default function MainPage() {
                   notas={notas}
                   workspaceId={activeWorkspace?.id}
                   isCollaborative={activeWorkspace?.isCollaborative}
+                  onCollaboratorsChange={setNoteCollaborators}
                   onOpenNota={(nota) => handleOpenNote(nota)}
                   onUpdateNota={(updated) => {
                     setNotas((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));

@@ -59,6 +59,7 @@ interface EditorProps {
   slashMenuEnabled?: boolean;
   wikilinksEnabled?: boolean;
   readOnly?: boolean;
+  onCollaboratorsChange?: (users: any[]) => void;
 }
 
 interface CommandItem {
@@ -156,7 +157,8 @@ function Editor({
   fontSize,
   slashMenuEnabled = true,
   wikilinksEnabled = true,
-  readOnly = false
+  readOnly = false,
+  onCollaboratorsChange
 }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -232,7 +234,7 @@ function Editor({
     };
   }, [updateCursorLine]);
 
-  const { users, cursors, status, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
+  const { users, cursors, broadcastChange, broadcastCursor } = require('../hooks/useCollaboration').useCollaboration(
     isCollaborative && notaId ? `${workspaceId}:${notaId}` : undefined,
     'document_change',
     (newVal: string) => {
@@ -242,6 +244,10 @@ function Editor({
       }
     }
   );
+
+  useEffect(() => {
+    onCollaboratorsChange?.(isCollaborative ? users : []);
+  }, [isCollaborative, onCollaboratorsChange, users]);
 
   const onChange = useCallback((val: string) => {
     parentOnChange(val);
@@ -2364,58 +2370,6 @@ function Editor({
       {/* Real-time Multiplayer Cursors (Miro/Figma style) */}
       {workspaceId && notaId && isCollaborative && (
         <LiveCursors cursors={cursors} />
-      )}
-
-      {/* Active Collaborators Presence Pill (Minimalist Geist Style) */}
-      {workspaceId && notaId && isCollaborative && (
-        <div className="sticky top-2 self-end ml-auto z-30 -mb-8 mr-1 pointer-events-auto flex items-center gap-2 px-2.5 py-1 bg-[#181818] border border-white/10 rounded-none shadow-xl transition-all select-none font-sansation">
-          {status !== 'connected' && (
-            <span className="text-[10px] font-mono text-zinc-400">
-              {status === 'connecting' ? 'Conectando...' : 'Offline'}
-            </span>
-          )}
-          <div className="flex -space-x-1.5 items-center">
-            {users.map((u: any, i: number) => {
-              const displayName = u.username ? `@${u.username}` : (u.name || 'Anônimo');
-              return (
-                <div
-                  key={u.id || i}
-                  className="relative group/avatar cursor-pointer"
-                >
-                  <div
-                    className="w-6 h-6 rounded-none overflow-hidden border border-white/20 shadow-xs flex items-center justify-center text-[10px] text-white font-bold transition-transform duration-150 group-hover/avatar:scale-115 group-hover/avatar:z-20 relative bg-zinc-800"
-                  >
-                    {u.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={u.avatarUrl}
-                        alt={displayName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <span>{(u.name || u.username || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-
-                  {/* Tooltip on hover */}
-                  <div className="absolute right-0 top-full mt-1.5 hidden group-hover/avatar:flex flex-col items-center z-50 pointer-events-none animate-smooth-pop">
-                    <div className="px-2 py-0.5 rounded-none bg-[#121212] border border-white/10 shadow-xl text-[11px] font-medium text-white whitespace-nowrap font-sansation">
-                      {displayName}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {users.length > 1 && (
-            <span className="text-[10px] font-mono text-zinc-400 pl-0.5">
-              {users.length}
-            </span>
-          )}
-        </div>
       )}
 
       {/* Hidden File Input for Image Upload */}
