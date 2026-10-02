@@ -240,13 +240,9 @@ function WorkspaceGraph({ notas, pastas = EMPTY_FOLDERS, activeWorkspace, onOpen
       <button type="button" className="geist-button-secondary inline-flex items-center gap-1.5 cursor-pointer !px-2.5 !py-1.5 text-xs" onClick={reorganize} disabled={!nodes.length}><ControlIcon kind="layout" />Reorganizar</button>
       <button type="button" className="geist-button-secondary inline-flex items-center gap-1.5 cursor-pointer !px-2.5 !py-1.5 text-xs" onClick={() => setReset(value => value + 1)}><ControlIcon kind="reset" />Restaurar vista</button>
     </div>
-    {preview && <aside aria-label="Prévia da nota" onPointerEnter={keepPreview} onPointerLeave={closePreview} onFocus={keepPreview} onBlur={closePreview} onKeyDown={event => { if (event.key === 'Escape') setHovered(null); }} className="geist-card absolute z-50 flex flex-col gap-3 overflow-auto p-4 text-left shadow-xl select-text" style={{ left: previewLeft, top: previewTop, width: previewWidth, maxHeight: previewHeight, background: 'var(--background)' }}>
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--accents-2)] pb-2 text-[10px] text-[var(--accents-5)]" style={{ fontFamily: 'var(--font-mono)' }}>
-        <span className="truncate">{pastas.find(folder => folder.id === preview.note.pastaId)?.nome || (preview.note.tipo === 'desenho' ? 'Desenho' : 'Nota')}</span><span className="shrink-0">{connected.size} conexões</span>
-      </div>
+    {preview && <aside aria-label="Prévia da nota" onPointerEnter={keepPreview} onPointerLeave={closePreview} onFocus={keepPreview} onBlur={closePreview} onKeyDown={event => { if (event.key === 'Escape') setHovered(null); }} className="geist-card absolute z-50 flex flex-col gap-2 overflow-hidden p-4 text-left shadow-xl select-text" style={{ left: previewLeft, top: previewTop, width: previewWidth, maxHeight: previewHeight, background: 'var(--background)' }}>
       <h3 className="text-base font-semibold" style={{ borderLeft: `2px solid ${preview.color}`, paddingLeft: 10 }}>{preview.note.titulo || 'Sem título'}</h3>
-      {preview.note.tipo === 'desenho' ? <GraphDrawingPreview conteudoJson={preview.note.conteudo} height={200} /> : <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--accents-6)]">{preview.text || 'Nota sem conteúdo textual.'}</p>}
-      <button className="geist-button-secondary shrink-0 text-xs" type="button" onClick={() => onOpenNota(preview.note)}>Abrir nota</button>
+      {preview.note.tipo === 'desenho' ? <GraphDrawingPreview conteudoJson={preview.note.conteudo} height={120} /> : <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--accents-6)] line-clamp-6">{preview.text.slice(0, 800) || 'Nota sem conteúdo textual.'}</p>}
     </aside>}
   </div>;
 }

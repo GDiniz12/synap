@@ -817,8 +817,6 @@ export default function OrthogonalGraphView({
         );
 
         const isDrawing = hoveredNota.tipo === 'desenho';
-        const connCount = connectionCounts[hoveredNota.id] || 0;
-        const folderName = pastas?.find((p) => p.id === hoveredNota.pastaId)?.nome;
 
         return (
           <div
@@ -827,32 +825,8 @@ export default function OrthogonalGraphView({
               top: `${topPos}px`,
               width: `${PREVIEW_WIDTH}px`,
             }}
-            className="absolute bg-[#181818] border border-white/20 p-5 shadow-2xl pointer-events-none z-50 rounded-none animate-in fade-in zoom-in-95 duration-100 font-sansation text-left flex flex-col gap-3"
+            className="absolute bg-[#181818] border border-white/20 p-4 shadow-2xl pointer-events-none z-50 rounded-none animate-in fade-in zoom-in-95 duration-100 font-sansation text-left flex flex-col gap-2"
           >
-            {/* Cabeçalho: Tipo, Pasta e Conexões */}
-            <div className="flex items-center justify-between gap-2 border-b border-white/5 pb-2.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400">
-                  {isDrawing ? 'DESENHO' : 'NOTA'}
-                </span>
-                {folderName && (
-                  <>
-                    <span className="text-zinc-600">/</span>
-                    <span className="text-[10px] font-mono text-zinc-400 truncate max-w-[160px]">
-                      {folderName}
-                    </span>
-                  </>
-                )}
-              </div>
-
-              {connCount > 0 && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 bg-white/5 border border-white/10 text-zinc-400">
-                  {connCount} {connCount === 1 ? 'conexão' : 'conexões'}
-                </span>
-              )}
-            </div>
-
-            {/* Título da Nota */}
             <h3 className="font-bold text-lg sm:text-xl text-white tracking-tight leading-snug">
               {hoveredNota.titulo || 'Sem Título'}
             </h3>
@@ -863,15 +837,15 @@ export default function OrthogonalGraphView({
                 <div className="w-full mt-1">
                   <GraphDrawingPreview
                     conteudoJson={hoveredNota.conteudo}
-                    height={230}
-                    className="w-full h-[230px] border border-white/10 rounded-none bg-[#121212]"
+                    height={120}
+                    className="w-full h-[120px] border border-white/10 rounded-none bg-[#121212]"
                   />
                 </div>
               ) : hoveredNota.conteudo && hoveredNota.conteudo.trim() ? (
-                <div className="max-h-[260px] overflow-y-auto no-scrollbar pr-1 relative">
+                <div className="max-h-[140px] overflow-hidden no-scrollbar pr-1 relative">
                   <div
-                    className="notion-editor text-[13px] leading-relaxed text-zinc-300 select-none font-sansation"
-                    dangerouslySetInnerHTML={{ __html: ensureHtmlContent(hoveredNota.conteudo) }}
+                    className="notion-editor text-[13px] leading-relaxed text-zinc-300 select-none font-sansation line-clamp-6"
+                    dangerouslySetInnerHTML={{ __html: ensureHtmlContent(hoveredNota.conteudo).slice(0, 800) }}
                     style={{ wordBreak: 'break-word' }}
                   />
                   {/* Fade sutil na base */}
@@ -882,11 +856,6 @@ export default function OrthogonalGraphView({
               )}
             </div>
 
-            {/* Rodapé: Dica de clique para abrir no editor */}
-            <div className="pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-zinc-500">
-              <span>Prévia da Nota</span>
-              <span className="text-zinc-300 font-medium">Clique no quadrado para abrir ↵</span>
-            </div>
           </div>
         );
       })()}

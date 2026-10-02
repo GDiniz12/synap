@@ -856,40 +856,17 @@ export default function GraphView({
 
       {/* Side Preview Card on Hover */}
       {hoveredNota && (
-        <div
-          className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none"
-        >
-          {/* Top color accent strip */}
-          <div
-            className="h-1.5 w-full"
-            style={{ backgroundColor: resolveNodeColor(hoveredNota, groups) || '#20b8cd' }}
-          />
-
-          {/* Header */}
-          <div className="p-3 bg-[#1e1f22]/50 border-b border-[#383a40]">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-[#949ba4]">
-                {pastas.find((p) => p.id === hoveredNota.pastaId)?.nome || 'Sem pasta'}
-              </span>
-              <span className="text-[10px] font-mono text-[#949ba4]">
-                {connectionCounts[hoveredNota.id] || 0}{' '}
-                {(connectionCounts[hoveredNota.id] || 0) === 1 ? 'conexão' : 'conexões'}
-              </span>
-            </div>
+        <div className="animate-in fade-in duration-100 fixed md:absolute bottom-3 md:bottom-12 right-3 md:right-4 md:w-[320px] max-h-[50vh] bg-[#2b2d31] border border-[#383a40] rounded-[8px] shadow-2xl flex flex-col z-30 overflow-hidden pointer-events-none">
+          <div className="p-3">
             <h4 className="text-sm font-semibold text-white tracking-tight leading-snug">
               {hoveredNota.titulo || 'Sem Título'}
             </h4>
           </div>
 
           {/* Preview Content */}
-          <div className="p-3 overflow-y-auto max-h-48 text-xs text-[#dbdee1] leading-relaxed no-scrollbar">
+          <div className="p-3 pt-0 overflow-y-auto max-h-48 text-xs text-[#dbdee1] leading-relaxed no-scrollbar">
             {hoveredNota.tipo === 'desenho' ? (
-              <div>
-                <GraphDrawingPreview conteudoJson={hoveredNota.conteudo} />
-                <p className="text-[10px] text-[#949ba4] text-center mt-2">
-                  Canvas de Desenho / Diagrama
-                </p>
-              </div>
+              <GraphDrawingPreview conteudoJson={hoveredNota.conteudo} />
             ) : hoveredNota.conteudo && hoveredNota.conteudo.trim() ? (
               <div
                 className="notion-editor text-[12px] leading-[1.5] text-[#dbdee1]"
@@ -901,11 +878,6 @@ export default function GraphView({
             )}
           </div>
 
-          {/* Footer */}
-          <div className="p-2 px-3 bg-[#1e1f22]/60 border-t border-[#383a40] flex items-center justify-between text-[10px] text-[#949ba4]">
-            <span>Pré-visualização</span>
-            <span className="text-[#20b8cd] font-medium">Clique no nó para abrir ↗</span>
-          </div>
         </div>
       )}
     </div>
