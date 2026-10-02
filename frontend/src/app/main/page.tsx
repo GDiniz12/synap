@@ -3065,7 +3065,7 @@ export default function MainPage() {
                         const displayName = user.username ? `@${user.username}` : (user.name || 'Anônimo');
                         return (
                           <div key={user.id || index} className="group/note-collaborator relative">
-                            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-[#141414] bg-zinc-800 text-xs font-semibold text-white">
+                            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-none border-2 border-[#141414] bg-zinc-800 text-xs font-semibold text-white">
                               {user.avatarUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
