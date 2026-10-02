@@ -3121,7 +3121,7 @@ function Editor({
         data-placeholder={placeholder}
       />
 
-      <div className="pointer-events-none absolute bottom-0 right-0 z-20 flex items-center gap-3 border border-[var(--accents-2)] bg-[var(--background)] px-3 py-1.5 text-[10px] text-[var(--accents-5)] shadow-sm" aria-label={`${wordCount} palavras, ${characterCount} caracteres, ${connectionCount} conexões`}>
+      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex items-center gap-3 border border-[var(--accents-2)] bg-[var(--background)] px-3 py-1.5 text-[10px] text-[var(--accents-5)] shadow-lg" aria-label={`${wordCount} palavras, ${characterCount} caracteres, ${connectionCount} conexões`}>
         <span><span className="font-mono text-[var(--foreground)]">{wordCount}</span> palavras</span>
         <span><span className="font-mono text-[var(--foreground)]">{characterCount}</span> caracteres</span>
         <span><span className="font-mono text-[var(--foreground)]">{connectionCount}</span> conexões</span>
