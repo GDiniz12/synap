@@ -1304,6 +1304,30 @@ export default function DrawingCanvas({
       }}
       className="relative w-full h-full flex flex-col bg-[#141414] overflow-hidden select-none font-sansation"
     >
+      {workspaceId && notaId && isCollaborative && users.length > 0 && (
+        <div className="absolute right-4 top-4 z-40 flex items-center gap-2" aria-label="Pessoas neste desenho">
+          <div className="flex items-center -space-x-2">
+            {users.map((user, index) => {
+              const displayName = user.username ? `@${user.username}` : (user.name || 'Anônimo');
+              return (
+                <div key={user.id || index} className="group/drawing-collaborator relative">
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-[#141414] bg-zinc-800 text-xs font-semibold text-white">
+                    {user.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (user.name || user.username || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden whitespace-nowrap rounded border border-white/10 bg-[#121212] px-2 py-1 text-[11px] text-white shadow-xl group-hover/drawing-collaborator:block">
+                    {displayName}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {users.length > 1 && <span className="text-xs text-zinc-400">{users.length}</span>}
+        </div>
+      )}
+
       {/* Input de Imagem Invisível */}
       <input
         type="file"
